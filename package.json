@@ -1,0 +1,20 @@
+{
+	"name": "potree_desktop",
+	"version": "0.1.0",
+	"description": "A WebGL Point Cloud Viewer",
+	"main": "main.js",
+	"scripts": {
+		"start": "electron ."
+	},
+	"repository": "https://github.com/potree/potree",
+	"keywords": [
+		"Potree",
+		"point cloud viewer",
+		"lidar viewer"
+	],
+	"author": "Markus Schuetz",
+	"license": "no license available at this time",
+	"devDependencies": {
+		"electron": "~1.7.8"
+	}
+}
