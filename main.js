@@ -39,10 +39,13 @@ function createWindow () {
 		{
 			label: "Window",
 			submenu: [
-				{label: "Toggle Developer Tools", click() { mainWindow.webContents.toggleDevTools() }}
+				{label: "Reload", click() { mainWindow.webContents.reloadIgnoringCache() }},
+				{label: "Toggle Developer Tools", click() { mainWindow.webContents.toggleDevTools() }},
 			]
 		}
 	];
+
+	
 
 	let menu = Menu.buildFromTemplate(template);
 	mainWindow.setMenu(menu);
@@ -53,7 +56,7 @@ function createWindow () {
 
 
 	// Open the DevTools.
-	 mainWindow.webContents.openDevTools();
+	//mainWindow.webContents.openDevTools();
 
 	// Emitted when the window is closed.
 	mainWindow.on('closed', function () {
