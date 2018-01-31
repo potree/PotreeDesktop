@@ -38,3 +38,8 @@ Start the application:
 npm start
 ```
 
+or if node.js is not installed, e.g. if you're starting it on another PC than the one you've built it on, try this:
+```
+./node_modules/electron/dist/electron.exe ./main
+```
+
