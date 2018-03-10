@@ -389,7 +389,7 @@ onmessage = function (event) {
 
 Potree.Version = function (version) {
 	this.version = version;
-	var vmLength = (version.indexOf('.') === -1) ? version.length : version.indexOf('.');
+	let vmLength = (version.indexOf('.') === -1) ? version.length : version.indexOf('.');
 	this.versionMajor = parseInt(version.substr(0, vmLength));
 	this.versionMinor = parseInt(version.substr(vmLength + 1));
 	if (this.versionMinor.length === 0) {
@@ -398,7 +398,7 @@ Potree.Version = function (version) {
 };
 
 Potree.Version.prototype.newerThan = function (version) {
-	var v = new Potree.Version(version);
+	let v = new Potree.Version(version);
 
 	if (this.versionMajor > v.versionMajor) {
 		return true;
@@ -410,7 +410,7 @@ Potree.Version.prototype.newerThan = function (version) {
 };
 
 Potree.Version.prototype.equalOrHigher = function (version) {
-	var v = new Potree.Version(version);
+	let v = new Potree.Version(version);
 
 	if (this.versionMajor > v.versionMajor) {
 		return true;
@@ -463,8 +463,8 @@ Potree.PointAttributeTypes = {
 	DATA_TYPE_UINT64: {ordinal: 9, size: 8}
 };
 
-var i = 0;
-for (var obj in Potree.PointAttributeTypes) {
+let i = 0;
+for (let obj in Potree.PointAttributeTypes) {
 	Potree.PointAttributeTypes[i] = Potree.PointAttributeTypes[obj];
 	i++;
 }
@@ -559,9 +559,9 @@ Potree.PointAttributes = function (pointAttributes) {
 	this.size = 0;
 
 	if (pointAttributes != null) {
-		for (var i = 0; i < pointAttributes.length; i++) {
-			var pointAttributeName = pointAttributes[i];
-			var pointAttribute = Potree.PointAttribute[pointAttributeName];
+		for (let i = 0; i < pointAttributes.length; i++) {
+			let pointAttributeName = pointAttributes[i];
+			let pointAttribute = Potree.PointAttribute[pointAttributeName];
 			this.attributes.push(pointAttribute);
 			this.byteSize += pointAttribute.byteSize;
 			this.size++;
@@ -576,8 +576,8 @@ Potree.PointAttributes.prototype.add = function (pointAttribute) {
 };
 
 Potree.PointAttributes.prototype.hasColors = function () {
-	for (var name in this.attributes) {
-		var pointAttribute = this.attributes[name];
+	for (let name in this.attributes) {
+		let pointAttribute = this.attributes[name];
 		if (pointAttribute.name === Potree.PointAttributeNames.COLOR_PACKED) {
 			return true;
 		}
@@ -587,8 +587,8 @@ Potree.PointAttributes.prototype.hasColors = function () {
 };
 
 Potree.PointAttributes.prototype.hasNormals = function () {
-	for (var name in this.attributes) {
-		var pointAttribute = this.attributes[name];
+	for (let name in this.attributes) {
+		let pointAttribute = this.attributes[name];
 		if (
 			pointAttribute === Potree.PointAttribute.NORMAL_SPHEREMAPPED ||
 			pointAttribute === Potree.PointAttribute.NORMAL_FLOATS ||

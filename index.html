@@ -68,10 +68,31 @@
 				let path = file.path;
 				let folderName = path.replace(/\\/g, "/").split("/").reverse()[1];
 
-				Potree.loadPointCloud(path, folderName, function(e){
-					viewer.scene.addPointCloud(e.pointcloud);
-					viewer.zoomTo(e.pointcloud);
-				});
+				const fs = require("fs");
+
+				let cloudjsPath = null;
+
+				if(fs.lstatSync(path).isDirectory()){
+
+					if(fs.lstatSync(`${path}/cloud.js`).isFile()){
+						cloudjsPath = `${path}/cloud.js`;
+					}
+
+				}else if(fs.lstatSync(path).isFile() && path.indexOf("cloud.js") >= 0){
+					cloudjsPath = path;
+				}
+
+				if(cloudjsPath !== null){
+					Potree.loadPointCloud(cloudjsPath, folderName, function(e){
+						viewer.scene.addPointCloud(e.pointcloud);
+
+						let material = e.pointcloud.material;
+						material.size = 1;
+						material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+
+						viewer.zoomTo(e.pointcloud);
+					});
+				}
 			}
 		}
 		$("body")[0].addEventListener("dragenter", allowDrag);

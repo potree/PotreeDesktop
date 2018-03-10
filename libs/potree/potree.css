@@ -81,6 +81,19 @@
 				 -1px -1px 1px black;
 }
 
+.potree_message{
+	width: 300px;
+	background-color: var(--bg-color);
+	padding: 5px;
+	margin: 5px;
+	border-radius: 4px;
+	color: var(--font-color);
+	font-family: Arial;
+	opacity: 0.8;
+	border: 1px solid black;
+	display: flex;
+}
+
 #potree_description{
 	position: absolute; 
 	top: 10px; 
@@ -170,6 +183,7 @@ a:hover, a:visited, a:link, a:active{
 	padding:		10px;
 	opacity:		0.5;
 	transform:		translate(-50%, -30px);
+	will-change:	left, top;
 }
 
 .annotation-titlebar{
@@ -366,6 +380,7 @@ body{
 	list-style-type:	none;
 	padding:			0;
 	margin:				15px 0px;
+	overflow:			hidden;
 }
 
 .pv-menu-list > *{
@@ -518,8 +533,8 @@ body{
 	font-weight:	bold;
 	font-size:		90%;
 	letter-spacing:	1px;
-	margin-left:	-20px;
-	margin-right:	-20px;
+	margin-left:	0px;
+	margin-right:	0px;
 	margin-top: 	1px;
 	margin-bottom: 	1px;
 	padding:		1px !important;
@@ -662,4 +677,10 @@ body{
 .ui-state-active{
 	background: #c6c9ca !important;
 	color: black !important;
+}
+
+.cesium-viewer .cesium-viewer-cesiumWidgetContainer{
+	position: absolute;
+	height: 100%;
+	width: 100%;
 }
