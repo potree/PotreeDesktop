@@ -158,6 +158,12 @@
 			//viewer.postMessage(message);
 			viewer.postMessage(message, {duration: 15000});
 		});
+
+		window.addEventListener('error', (e) => {
+			//console.log(e);
+			viewer.postError(e.error.message);
+		});
+
 		
 		
 	</script>

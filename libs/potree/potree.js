@@ -4279,11 +4279,11 @@ Potree.BinaryLoader = class BinaryLoader{
 		xhr.overrideMimeType('text/plain; charset=x-user-defined');
 		xhr.onreadystatechange = () => {
 			if (xhr.readyState === 4) {
-				if (xhr.status === 200 || xhr.status === 0) {
+				if((xhr.status === 200 || xhr.status === 0) &&  xhr.response !== null){
 					let buffer = xhr.response;
 					this.parse(node, buffer);
 				} else {
-					console.log('Failed to load file! HTTP status: ' + xhr.status + ', file: ' + url);
+					throw new Error(`Failed to load file! HTTP status: ${xhr.status}, file: ${url}`);
 				}
 			}
 		};
@@ -20050,6 +20050,14 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		this.resolveTimings(timestamp);
 
 		Potree.framenumber++;
+	}
+
+	postError(content, params = {}){
+		let message = this.postMessage(content, params);
+
+		message.element.addClass("potree_message_error");
+
+		return message;
 	}
 
 	postMessage(content, params = {}){
