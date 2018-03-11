@@ -51,6 +51,13 @@ function createWindow () {
 	mainWindow.setMenu(menu);
 	//mainWindow.setMenu(null);
 
+	//mainWindow.webContents.on('new-window', function(event, url){
+	//	event.preventDefault();
+	//	open(url);
+	//});
+
+	
+
 
 	// require('remote').getCurrentWindow().toggleDevTools();
 

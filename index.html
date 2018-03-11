@@ -44,12 +44,19 @@
 
 		<script>
 
+		{
+			// open links in the standard browser instead of electron
+			// see https://github.com/electron/electron/issues/1344
+			const shell = require('electron').shell;
+			$(document).on('click', 'a[href^="http"]', function(event) {
+				event.preventDefault();
+				shell.openExternal(this.href);
+			});
+		}
+
 		function allowDrag(e) {
-			console.log("allowDrag");
-			if (true) {
-				e.dataTransfer.dropEffect = 'copy';
-				e.preventDefault();
-			}
+			e.dataTransfer.dropEffect = 'copy';
+			e.preventDefault();
 		}
 
 
@@ -66,20 +73,23 @@
 
 				let file = item.getAsFile();
 				let path = file.path;
-				let folderName = path.replace(/\\/g, "/").split("/").reverse()[1];
+				//let folderName = path.replace(/\\/g, "/").split("/").reverse()[1];
 
 				const fs = require("fs");
 
 				let cloudjsPath = null;
+				let folderName = null;
 
 				if(fs.lstatSync(path).isDirectory()){
 
 					if(fs.lstatSync(`${path}/cloud.js`).isFile()){
 						cloudjsPath = `${path}/cloud.js`;
+						folderName = path.replace(/\\/g, "/").split("/").reverse()[0];
 					}
 
 				}else if(fs.lstatSync(path).isFile() && path.indexOf("cloud.js") >= 0){
 					cloudjsPath = path;
+					folderName = path.replace(/\\/g, "/").split("/").reverse()[1];
 				}
 
 				if(cloudjsPath !== null){
@@ -105,7 +115,6 @@
 		viewer.setFOV(60);
 		viewer.setPointBudget(3*1000*1000);
 		viewer.setMinNodeSize(0);
-		viewer.useEDL = false;
 		viewer.loadSettingsFromURL();
 		
 		viewer.setDescription("");
@@ -121,16 +130,35 @@
 		// load a file from your disc or USB drive:
 		//Potree.loadPointCloud("C:/dev/workspaces/potree/develop/pointclouds/lion_takanawa/cloud.js", "Point Cloud Name", function(e){
 		
-		Potree.loadPointCloud("http://5.9.65.151/mschuetz/potree/resources/pointclouds/archpro/heidentor/cloud.js", "Point Cloud Name", function(e){
-			viewer.scene.addPointCloud(e.pointcloud);
-			e.pointcloud.position.z = 0;
-			let material = e.pointcloud.material;
-			material.size = 1;
-			material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+		//Potree.loadPointCloud("http://5.9.65.151/mschuetz/potree/resources/pointclouds/archpro/heidentor/cloud.js", "Point Cloud Name", function(e){
+		//	viewer.scene.addPointCloud(e.pointcloud);
+		//	e.pointcloud.position.z = 0;
+		//	let material = e.pointcloud.material;
+		//	material.size = 1;
+		//	material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
 
-			viewer.scene.view.position.set(13.856734292740617, -9.125174923658731, 14.563928417406354);
-			viewer.scene.view.lookAt(-3.5482630104475366, 2.728596783815762, 6.1406044783018725);
+		//	viewer.scene.view.position.set(13.856734292740617, -9.125174923658731, 14.563928417406354);
+		//	viewer.scene.view.lookAt(-3.5482630104475366, 2.728596783815762, 6.1406044783018725);
+		//});
+
+		
+		viewer.onGUILoaded(() => {
+			let message = `
+			Welcome to Potree Desktop.<br>
+			<p>
+			This portable version can be used to load <a href="https://github.com/potree/PotreeConverter", target="_blank"> converted point clouds</a>
+			directly from disk. Just drag & drop a cloud.js file, or it's parent folder, into this window.
+			</p>
+
+			<p>
+			You can set up a default scene by modifying the index.html file in the potree desktop folder. 
+			</p>
+			`;
+
+			//viewer.postMessage(message);
+			viewer.postMessage(message, {duration: 15000});
 		});
+		
 		
 	</script>
 
