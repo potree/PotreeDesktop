@@ -1,3 +1,167 @@
+class Version{
+
+	constructor(version){
+		this.version = version;
+		let vmLength = (version.indexOf('.') === -1) ? version.length : version.indexOf('.');
+		this.versionMajor = parseInt(version.substr(0, vmLength));
+		this.versionMinor = parseInt(version.substr(vmLength + 1));
+		if (this.versionMinor.length === 0) {
+			this.versionMinor = 0;
+		}
+	}
+
+	newerThan(version){
+		let v = new Version(version);
+
+		if (this.versionMajor > v.versionMajor) {
+			return true;
+		} else if (this.versionMajor === v.versionMajor && this.versionMinor > v.versionMinor) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	equalOrHigher(version){
+		let v = new Version(version);
+
+		if (this.versionMajor > v.versionMajor) {
+			return true;
+		} else if (this.versionMajor === v.versionMajor && this.versionMinor >= v.versionMinor) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	upTo(version){
+		return !this.newerThan(version);
+	}
+
+}
+
+const PointAttributeNames = {
+	POSITION_CARTESIAN: 0, // float x, y, z;
+	COLOR_PACKED: 1, // byte r, g, b, a; 	I: [0,1]
+	COLOR_FLOATS_1: 2, // float r, g, b; 	I: [0,1]
+	COLOR_FLOATS_255: 3, // float r, g, b; 	I: [0,255]
+	NORMAL_FLOATS: 4, // float x, y, z;
+	FILLER: 5,
+	INTENSITY: 6,
+	CLASSIFICATION: 7,
+	NORMAL_SPHEREMAPPED: 8,
+	NORMAL_OCT16: 9,
+	NORMAL: 10,
+	RETURN_NUMBER: 11,
+	NUMBER_OF_RETURNS: 12,
+	SOURCE_ID: 13,
+	INDICES: 14,
+	SPACING: 15,
+	GPS_TIME: 16,
+};
+
+
+/**
+ * Some types of possible point attribute data formats
+ *
+ * @class
+ */
+const PointAttributeTypes = {
+	DATA_TYPE_DOUBLE: {ordinal: 0, size: 8},
+	DATA_TYPE_FLOAT: {ordinal: 1, size: 4},
+	DATA_TYPE_INT8: {ordinal: 2, size: 1},
+	DATA_TYPE_UINT8: {ordinal: 3, size: 1},
+	DATA_TYPE_INT16: {ordinal: 4, size: 2},
+	DATA_TYPE_UINT16: {ordinal: 5, size: 2},
+	DATA_TYPE_INT32: {ordinal: 6, size: 4},
+	DATA_TYPE_UINT32: {ordinal: 7, size: 4},
+	DATA_TYPE_INT64: {ordinal: 8, size: 8},
+	DATA_TYPE_UINT64: {ordinal: 9, size: 8}
+};
+
+let i = 0;
+for (let obj in PointAttributeTypes) {
+	PointAttributeTypes[i] = PointAttributeTypes[obj];
+	i++;
+}
+
+
+class PointAttribute{
+	
+	constructor(name, type, numElements){
+		this.name = name;
+		this.type = type;
+		this.numElements = numElements;
+		this.byteSize = this.numElements * this.type.size;
+	}
+
+}
+PointAttribute.POSITION_CARTESIAN = new PointAttribute(
+	PointAttributeNames.POSITION_CARTESIAN,
+	PointAttributeTypes.DATA_TYPE_FLOAT, 3);
+
+PointAttribute.RGBA_PACKED = new PointAttribute(
+	PointAttributeNames.COLOR_PACKED,
+	PointAttributeTypes.DATA_TYPE_INT8, 4);
+
+PointAttribute.COLOR_PACKED = PointAttribute.RGBA_PACKED;
+
+PointAttribute.RGB_PACKED = new PointAttribute(
+	PointAttributeNames.COLOR_PACKED,
+	PointAttributeTypes.DATA_TYPE_INT8, 3);
+
+PointAttribute.NORMAL_FLOATS = new PointAttribute(
+	PointAttributeNames.NORMAL_FLOATS,
+	PointAttributeTypes.DATA_TYPE_FLOAT, 3);
+
+PointAttribute.FILLER_1B = new PointAttribute(
+	PointAttributeNames.FILLER,
+	PointAttributeTypes.DATA_TYPE_UINT8, 1);
+
+PointAttribute.INTENSITY = new PointAttribute(
+	PointAttributeNames.INTENSITY,
+	PointAttributeTypes.DATA_TYPE_UINT16, 1);
+
+PointAttribute.CLASSIFICATION = new PointAttribute(
+	PointAttributeNames.CLASSIFICATION,
+	PointAttributeTypes.DATA_TYPE_UINT8, 1);
+
+PointAttribute.NORMAL_SPHEREMAPPED = new PointAttribute(
+	PointAttributeNames.NORMAL_SPHEREMAPPED,
+	PointAttributeTypes.DATA_TYPE_UINT8, 2);
+
+PointAttribute.NORMAL_OCT16 = new PointAttribute(
+	PointAttributeNames.NORMAL_OCT16,
+	PointAttributeTypes.DATA_TYPE_UINT8, 2);
+
+PointAttribute.NORMAL = new PointAttribute(
+	PointAttributeNames.NORMAL,
+	PointAttributeTypes.DATA_TYPE_FLOAT, 3);
+	
+PointAttribute.RETURN_NUMBER = new PointAttribute(
+	PointAttributeNames.RETURN_NUMBER,
+	PointAttributeTypes.DATA_TYPE_UINT8, 1);
+	
+PointAttribute.NUMBER_OF_RETURNS = new PointAttribute(
+	PointAttributeNames.NUMBER_OF_RETURNS,
+	PointAttributeTypes.DATA_TYPE_UINT8, 1);
+	
+PointAttribute.SOURCE_ID = new PointAttribute(
+	PointAttributeNames.SOURCE_ID,
+	PointAttributeTypes.DATA_TYPE_UINT16, 1);
+
+PointAttribute.INDICES = new PointAttribute(
+	PointAttributeNames.INDICES,
+	PointAttributeTypes.DATA_TYPE_UINT32, 1);
+
+PointAttribute.SPACING = new PointAttribute(
+	PointAttributeNames.SPACING,
+	PointAttributeTypes.DATA_TYPE_FLOAT, 1);
+
+PointAttribute.GPS_TIME = new PointAttribute(
+	PointAttributeNames.GPS_TIME,
+	PointAttributeTypes.DATA_TYPE_DOUBLE, 1);
+
 /* global onmessage:true postMessage:false */
 /* exported onmessage */
 // http://jsperf.com/uint8array-vs-dataview3/3
@@ -5,8 +169,9 @@ function CustomView (buffer) {
 	this.buffer = buffer;
 	this.u8 = new Uint8Array(buffer);
 
-	let tmp = new ArrayBuffer(4);
+	let tmp = new ArrayBuffer(8);
 	let tmpf = new Float32Array(tmp);
+	let tmpd = new Float64Array(tmp);
 	let tmpu8 = new Uint8Array(tmp);
 
 	this.getUint32 = function (i) {
@@ -26,6 +191,19 @@ function CustomView (buffer) {
 		return tmpf[0];
 	};
 
+	this.getFloat64 = function (i) {
+		tmpu8[0] = this.u8[i + 0];
+		tmpu8[1] = this.u8[i + 1];
+		tmpu8[2] = this.u8[i + 2];
+		tmpu8[3] = this.u8[i + 3];
+		tmpu8[4] = this.u8[i + 4];
+		tmpu8[5] = this.u8[i + 5];
+		tmpu8[6] = this.u8[i + 6];
+		tmpu8[7] = this.u8[i + 7];
+
+		return tmpd[0];
+	};
+
 	this.getUint8 = function (i) {
 		return this.u8[i];
 	};
@@ -41,7 +219,7 @@ onmessage = function (event) {
 	let pointAttributes = event.data.pointAttributes;
 	let numPoints = buffer.byteLength / pointAttributes.byteSize;
 	let cv = new CustomView(buffer);
-	let version = new Potree.Version(event.data.version);
+	let version = new Version(event.data.version);
 	let nodeOffset = event.data.offset;
 	let scale = event.data.scale;
 	let spacing = event.data.spacing;
@@ -57,7 +235,7 @@ onmessage = function (event) {
 	let inOffset = 0;
 	for (let pointAttribute of pointAttributes.attributes) {
 		
-		if (pointAttribute.name === Potree.PointAttribute.POSITION_CARTESIAN.name) {
+		if (pointAttribute.name === PointAttribute.POSITION_CARTESIAN.name) {
 			let buff = new ArrayBuffer(numPoints * 4 * 3);
 			let positions = new Float32Array(buff);
 		
@@ -92,7 +270,7 @@ onmessage = function (event) {
 			}
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
-		} else if (pointAttribute.name === Potree.PointAttribute.COLOR_PACKED.name) {
+		} else if (pointAttribute.name === PointAttribute.COLOR_PACKED.name) {
 			let buff = new ArrayBuffer(numPoints * 4);
 			let colors = new Uint8Array(buff);
 
@@ -103,7 +281,7 @@ onmessage = function (event) {
 			}
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
-		} else if (pointAttribute.name === Potree.PointAttribute.INTENSITY.name) {
+		} else if (pointAttribute.name === PointAttribute.INTENSITY.name) {
 			let buff = new ArrayBuffer(numPoints * 4);
 			let intensities = new Float32Array(buff);
 
@@ -113,7 +291,7 @@ onmessage = function (event) {
 			}
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
-		} else if (pointAttribute.name === Potree.PointAttribute.CLASSIFICATION.name) {
+		} else if (pointAttribute.name === PointAttribute.CLASSIFICATION.name) {
 			let buff = new ArrayBuffer(numPoints);
 			let classifications = new Uint8Array(buff);
 
@@ -123,7 +301,37 @@ onmessage = function (event) {
 			}
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
-		} else if (pointAttribute.name === Potree.PointAttribute.NORMAL_SPHEREMAPPED.name) {
+		} else if (pointAttribute.name === PointAttribute.RETURN_NUMBER.name) {
+			let buff = new ArrayBuffer(numPoints);
+			let returnNumbers = new Uint8Array(buff);
+
+			for (let j = 0; j < numPoints; j++) {
+				let returnNumber = cv.getUint8(inOffset + j * pointAttributes.byteSize);
+				returnNumbers[j] = returnNumber;
+			}
+
+			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
+		} else if (pointAttribute.name === PointAttribute.NUMBER_OF_RETURNS.name) {
+			let buff = new ArrayBuffer(numPoints);
+			let numberOfReturns = new Uint8Array(buff);
+
+			for (let j = 0; j < numPoints; j++) {
+				let numberOfReturn = cv.getUint8(inOffset + j * pointAttributes.byteSize);
+				numberOfReturns[j] = numberOfReturn;
+			}
+
+			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
+		} else if (pointAttribute.name === PointAttribute.SOURCE_ID.name) {
+			let buff = new ArrayBuffer(numPoints * 2);
+			let sourceIDs = new Uint16Array(buff);
+
+			for (let j = 0; j < numPoints; j++) {
+				let sourceID = cv.getUint16(inOffset + j * pointAttributes.byteSize);
+				sourceIDs[j] = sourceID;
+			}
+
+			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
+		} else if (pointAttribute.name === PointAttribute.NORMAL_SPHEREMAPPED.name) {
 			let buff = new ArrayBuffer(numPoints * 4 * 3);
 			let normals = new Float32Array(buff);
 
@@ -154,7 +362,7 @@ onmessage = function (event) {
 			}
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
-		} else if (pointAttribute.name === Potree.PointAttribute.NORMAL_OCT16.name) {
+		} else if (pointAttribute.name === PointAttribute.NORMAL_OCT16.name) {
 			let buff = new ArrayBuffer(numPoints * 4 * 3);
 			let normals = new Float32Array(buff);
 
@@ -188,7 +396,7 @@ onmessage = function (event) {
 			}
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
-		} else if (pointAttribute.name === Potree.PointAttribute.NORMAL.name) {
+		} else if (pointAttribute.name === PointAttribute.NORMAL.name) {
 			let buff = new ArrayBuffer(numPoints * 4 * 3);
 			let normals = new Float32Array(buff);
 
@@ -203,144 +411,46 @@ onmessage = function (event) {
 			}
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
+		} else if (pointAttribute.name === PointAttribute.GPS_TIME.name) {
+			let buff = new ArrayBuffer(numPoints * 8);
+			let gpstimes = new Float64Array(buff);
+
+			for(let j = 0; j < numPoints; j++){
+				let gpstime = cv.getFloat64(inOffset + j * pointAttributes.byteSize, true);
+				gpstimes[j] = gpstime;
+			}
+			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
 		}
 
 		inOffset += pointAttribute.byteSize;
 	}
 
-	//let debugNodes = ["r026", "r0226","r02274"];
-	//if(debugNodes.includes(name)){
-	if(false){
-		console.log("estimate spacing!");
+	// Convert GPS time from double (unsupported by WebGL) to origin-aligned floats
+	if(attributeBuffers[PointAttribute.GPS_TIME.name]){ 
+		let attribute = attributeBuffers[PointAttribute.GPS_TIME.name];
+		let sourceF64 = new Float64Array(attribute.buffer);
+		let target = new ArrayBuffer(numPoints * 4);
+		let targetF32 = new Float32Array(target);
 
-
-		let sparseGrid = new Map();
-		let gridSize = 16;
-
-		let tightBoxSize = tightBoxMax.map( (a, i) => a - tightBoxMin[i]);
-		let cubeLength = Math.max(...tightBoxSize);
-		let cube = {
-			min: tightBoxMin,
-			max: tightBoxMin.map(v => v + cubeLength)
-		};
-
-		let positions = new Float32Array(attributeBuffers[Potree.PointAttribute.POSITION_CARTESIAN.name].buffer);
+		let min = Infinity;
+		let max = -Infinity;
 		for(let i = 0; i < numPoints; i++){
-			let x = positions[3 * i + 0];
-			let y = positions[3 * i + 1];
-			let z = positions[3 * i + 2];
+			let gpstime = sourceF64[i];
 
-			let ix = Math.max(0, Math.min(gridSize * (x - cube.min[0]) / cubeLength, gridSize - 1));
-			let iy = Math.max(0, Math.min(gridSize * (y - cube.min[1]) / cubeLength, gridSize - 1));
-			let iz = Math.max(0, Math.min(gridSize * (z - cube.min[2]) / cubeLength, gridSize - 1));
-
-			ix = Math.floor(ix);
-			iy = Math.floor(iy);
-			iz = Math.floor(iz);
-
-			let cellIndex = ix | (iy << 8) | (iz << 16);
-			
-			if(!sparseGrid.has(cellIndex)){
-				sparseGrid.set(cellIndex, []);
-			}
-
-			sparseGrid.get(cellIndex).push(i);
+			min = Math.min(min, gpstime);
+			max = Math.max(max, gpstime);
 		}
 
-		let kNearest = (pointIndex, candidates, numNearest) => {
-			
-			let x = positions[3 * pointIndex + 0];
-			let y = positions[3 * pointIndex + 1];
-			let z = positions[3 * pointIndex + 2];
-
-			let candidateDistances = [];
-
-			for(let candidateIndex of candidates){
-				if(candidateIndex === pointIndex){
-					continue;
-				}
-
-				let cx = positions[3 * candidateIndex + 0];
-				let cy = positions[3 * candidateIndex + 1];
-				let cz = positions[3 * candidateIndex + 2];
-
-				let squaredDistance = (cx - x) ** 2 + (cy - y) ** 2 + (cz - z) ** 2;
-
-				candidateDistances.push({candidateInde: candidateIndex, squaredDistance: squaredDistance});
-			}
-
-			candidateDistances.sort( (a, b) => a.squaredDistance - b.squaredDistance);
-			let nearest = candidateDistances.slice(0, numNearest);
-
-			return nearest;
-		};
-
-		let meansBuffer = new ArrayBuffer(numPoints * 4);
-		let means = new Float32Array(meansBuffer);
-
-		for(let [key, value] of sparseGrid){
-			
-			for(let pointIndex of value){
-
-				if(value.length === 1){
-					means[pointIndex] = 0;
-					continue;
-				}
-
-				let [ix, iy, iz] = [(key & 255), ((key >> 8) & 255), ((key >> 16) & 255)];
-				
-				//let candidates = value;
-				let candidates = [];
-				for(let i of [-1, 0, 1]){
-					for(let j of [-1, 0, 1]){
-						for(let k of [-1, 0, 1]){
-							let cellIndex = (ix + i) | ((iy + j) << 8) | ((iz + k) << 16);
-
-							if(sparseGrid.has(cellIndex)){
-								candidates.push(...sparseGrid.get(cellIndex));
-							}
-						}
-					}
-				}
-
-
-				let nearestNeighbors = kNearest(pointIndex, candidates, 10);
-
-				let sum = 0;
-				for(let neighbor of nearestNeighbors){
-					sum += Math.sqrt(neighbor.squaredDistance);
-				}
-
-				//let mean = sum / nearestNeighbors.length;
-				let mean = Math.sqrt(Math.max(...nearestNeighbors.map(n => n.squaredDistance)));
-
-				if(Number.isNaN(mean)){
-					debugger;
-				}
-
-
-				means[pointIndex] = mean;
-
-			}
-
+		for(let i = 0; i < numPoints; i++){
+			let gpstime = sourceF64[i];
+			targetF32[i] = gpstime - min;
 		}
 
-
-		let maxMean = Math.max(...means);
-		let minMean = Math.min(...means);
-
-		//let colors = new Uint8Array(attributeBuffers[Potree.PointAttribute.COLOR_PACKED.name].buffer);
-		//for(let i = 0; i < numPoints; i++){
-		//	let v = means[i] / 0.05;
-
-		//	colors[4 * i + 0] = 255 * v;
-		//	colors[4 * i + 1] = 255 * v;
-		//	colors[4 * i + 2] = 255 * v;
-		//}
-
-		attributeBuffers[Potree.PointAttribute.SPACING.name] = { buffer: meansBuffer, attribute: Potree.PointAttribute.SPACING };
-
-
+		attributeBuffers[PointAttribute.GPS_TIME.name] = { 
+			buffer: target, 
+			attribute: PointAttribute.GPS_TIME,
+			offset: min,
+			range: max - min};
 	}
 
 
@@ -352,7 +462,7 @@ onmessage = function (event) {
 			indices[i] = i;
 		}
 		
-		attributeBuffers[Potree.PointAttribute.INDICES.name] = { buffer: buff, attribute: Potree.PointAttribute.INDICES };
+		attributeBuffers[PointAttribute.INDICES.name] = { buffer: buff, attribute: PointAttribute.INDICES };
 	}
 
 	performance.mark("binary-decoder-end");
@@ -384,286 +494,4 @@ onmessage = function (event) {
 	transferables.push(buffer);
 
 	postMessage(message, transferables);
-};
-
-
-Potree.Version = function (version) {
-	this.version = version;
-	let vmLength = (version.indexOf('.') === -1) ? version.length : version.indexOf('.');
-	this.versionMajor = parseInt(version.substr(0, vmLength));
-	this.versionMinor = parseInt(version.substr(vmLength + 1));
-	if (this.versionMinor.length === 0) {
-		this.versionMinor = 0;
-	}
-};
-
-Potree.Version.prototype.newerThan = function (version) {
-	let v = new Potree.Version(version);
-
-	if (this.versionMajor > v.versionMajor) {
-		return true;
-	} else if (this.versionMajor === v.versionMajor && this.versionMinor > v.versionMinor) {
-		return true;
-	} else {
-		return false;
-	}
-};
-
-Potree.Version.prototype.equalOrHigher = function (version) {
-	let v = new Potree.Version(version);
-
-	if (this.versionMajor > v.versionMajor) {
-		return true;
-	} else if (this.versionMajor === v.versionMajor && this.versionMinor >= v.versionMinor) {
-		return true;
-	} else {
-		return false;
-	}
-};
-
-Potree.Version.prototype.upTo = function (version) {
-	return !this.newerThan(version);
-};
-
-
-Potree.PointAttributeNames = {};
-
-Potree.PointAttributeNames.POSITION_CARTESIAN = 0; // float x, y, z;
-Potree.PointAttributeNames.COLOR_PACKED = 1; // byte r, g, b, a; 	I = [0,1]
-Potree.PointAttributeNames.COLOR_FLOATS_1 = 2; // float r, g, b; 		I = [0,1]
-Potree.PointAttributeNames.COLOR_FLOATS_255	= 3; // float r, g, b; 		I = [0,255]
-Potree.PointAttributeNames.NORMAL_FLOATS = 4; // float x, y, z;
-Potree.PointAttributeNames.FILLER = 5;
-Potree.PointAttributeNames.INTENSITY = 6;
-Potree.PointAttributeNames.CLASSIFICATION = 7;
-Potree.PointAttributeNames.NORMAL_SPHEREMAPPED = 8;
-Potree.PointAttributeNames.NORMAL_OCT16 = 9;
-Potree.PointAttributeNames.NORMAL = 10;
-Potree.PointAttributeNames.RETURN_NUMBER = 11;
-Potree.PointAttributeNames.NUMBER_OF_RETURNS = 12;
-Potree.PointAttributeNames.SOURCE_ID = 13;
-Potree.PointAttributeNames.INDICES = 14;
-Potree.PointAttributeNames.SPACING = 15;
-
-/**
- * Some types of possible point attribute data formats
- *
- * @class
- */
-Potree.PointAttributeTypes = {
-	DATA_TYPE_DOUBLE: {ordinal: 0, size: 8},
-	DATA_TYPE_FLOAT: {ordinal: 1, size: 4},
-	DATA_TYPE_INT8: {ordinal: 2, size: 1},
-	DATA_TYPE_UINT8: {ordinal: 3, size: 1},
-	DATA_TYPE_INT16: {ordinal: 4, size: 2},
-	DATA_TYPE_UINT16: {ordinal: 5, size: 2},
-	DATA_TYPE_INT32: {ordinal: 6, size: 4},
-	DATA_TYPE_UINT32: {ordinal: 7, size: 4},
-	DATA_TYPE_INT64: {ordinal: 8, size: 8},
-	DATA_TYPE_UINT64: {ordinal: 9, size: 8}
-};
-
-let i = 0;
-for (let obj in Potree.PointAttributeTypes) {
-	Potree.PointAttributeTypes[i] = Potree.PointAttributeTypes[obj];
-	i++;
-}
-
-/**
- * A single point attribute such as color/normal/.. and its data format/number of elements/...
- *
- * @class
- * @param name
- * @param type
- * @param size
- * @returns
- */
-Potree.PointAttribute = function (name, type, numElements) {
-	this.name = name;
-	this.type = type;
-	this.numElements = numElements;
-	this.byteSize = this.numElements * this.type.size;
-};
-
-Potree.PointAttribute.POSITION_CARTESIAN = new Potree.PointAttribute(
-	Potree.PointAttributeNames.POSITION_CARTESIAN,
-	Potree.PointAttributeTypes.DATA_TYPE_FLOAT, 3);
-
-Potree.PointAttribute.RGBA_PACKED = new Potree.PointAttribute(
-	Potree.PointAttributeNames.COLOR_PACKED,
-	Potree.PointAttributeTypes.DATA_TYPE_INT8, 4);
-
-Potree.PointAttribute.COLOR_PACKED = Potree.PointAttribute.RGBA_PACKED;
-
-Potree.PointAttribute.RGB_PACKED = new Potree.PointAttribute(
-	Potree.PointAttributeNames.COLOR_PACKED,
-	Potree.PointAttributeTypes.DATA_TYPE_INT8, 3);
-
-Potree.PointAttribute.NORMAL_FLOATS = new Potree.PointAttribute(
-	Potree.PointAttributeNames.NORMAL_FLOATS,
-	Potree.PointAttributeTypes.DATA_TYPE_FLOAT, 3);
-
-Potree.PointAttribute.FILLER_1B = new Potree.PointAttribute(
-	Potree.PointAttributeNames.FILLER,
-	Potree.PointAttributeTypes.DATA_TYPE_UINT8, 1);
-
-Potree.PointAttribute.INTENSITY = new Potree.PointAttribute(
-	Potree.PointAttributeNames.INTENSITY,
-	Potree.PointAttributeTypes.DATA_TYPE_UINT16, 1);
-
-Potree.PointAttribute.CLASSIFICATION = new Potree.PointAttribute(
-	Potree.PointAttributeNames.CLASSIFICATION,
-	Potree.PointAttributeTypes.DATA_TYPE_UINT8, 1);
-
-Potree.PointAttribute.NORMAL_SPHEREMAPPED = new Potree.PointAttribute(
-	Potree.PointAttributeNames.NORMAL_SPHEREMAPPED,
-	Potree.PointAttributeTypes.DATA_TYPE_UINT8, 2);
-
-Potree.PointAttribute.NORMAL_OCT16 = new Potree.PointAttribute(
-	Potree.PointAttributeNames.NORMAL_OCT16,
-	Potree.PointAttributeTypes.DATA_TYPE_UINT8, 2);
-
-Potree.PointAttribute.NORMAL = new Potree.PointAttribute(
-	Potree.PointAttributeNames.NORMAL,
-    Potree.PointAttributeTypes.DATA_TYPE_FLOAT, 3);
-    
-Potree.PointAttribute.RETURN_NUMBER = new Potree.PointAttribute(
-	Potree.PointAttributeNames.RETURN_NUMBER,
-    Potree.PointAttributeTypes.DATA_TYPE_UINT8, 1);
-    
-Potree.PointAttribute.NUMBER_OF_RETURNS = new Potree.PointAttribute(
-	Potree.PointAttributeNames.NUMBER_OF_RETURNS,
-    Potree.PointAttributeTypes.DATA_TYPE_UINT8, 1);
-    
-Potree.PointAttribute.SOURCE_ID = new Potree.PointAttribute(
-	Potree.PointAttributeNames.SOURCE_ID,
-	Potree.PointAttributeTypes.DATA_TYPE_UINT8, 1);
-
-Potree.PointAttribute.INDICES = new Potree.PointAttribute(
-	Potree.PointAttributeNames.INDICES,
-	Potree.PointAttributeTypes.DATA_TYPE_UINT32, 1);
-
-Potree.PointAttribute.SPACING = new Potree.PointAttribute(
-	Potree.PointAttributeNames.SPACING,
-	Potree.PointAttributeTypes.DATA_TYPE_FLOAT, 1);
-
-/**
- * Ordered list of PointAttributes used to identify how points are aligned in a buffer.
- *
- * @class
- *
- */
-Potree.PointAttributes = function (pointAttributes) {
-	this.attributes = [];
-	this.byteSize = 0;
-	this.size = 0;
-
-	if (pointAttributes != null) {
-		for (let i = 0; i < pointAttributes.length; i++) {
-			let pointAttributeName = pointAttributes[i];
-			let pointAttribute = Potree.PointAttribute[pointAttributeName];
-			this.attributes.push(pointAttribute);
-			this.byteSize += pointAttribute.byteSize;
-			this.size++;
-		}
-	}
-};
-
-Potree.PointAttributes.prototype.add = function (pointAttribute) {
-	this.attributes.push(pointAttribute);
-	this.byteSize += pointAttribute.byteSize;
-	this.size++;
-};
-
-Potree.PointAttributes.prototype.hasColors = function () {
-	for (let name in this.attributes) {
-		let pointAttribute = this.attributes[name];
-		if (pointAttribute.name === Potree.PointAttributeNames.COLOR_PACKED) {
-			return true;
-		}
-	}
-
-	return false;
-};
-
-Potree.PointAttributes.prototype.hasNormals = function () {
-	for (let name in this.attributes) {
-		let pointAttribute = this.attributes[name];
-		if (
-			pointAttribute === Potree.PointAttribute.NORMAL_SPHEREMAPPED ||
-			pointAttribute === Potree.PointAttribute.NORMAL_FLOATS ||
-			pointAttribute === Potree.PointAttribute.NORMAL ||
-			pointAttribute === Potree.PointAttribute.NORMAL_OCT16) {
-			return true;
-		}
-	}
-
-	return false;
-};
-
-
-Potree.InterleavedBufferAttribute = class InterleavedBufferAttribute{
-	
-	constructor(name, bytes, numElements, type, normalized){
-		this.name = name;
-		this.bytes = bytes;
-		this.numElements = numElements;
-		this.normalized = normalized;
-		this.type = type; // gl type without prefix, e.g. "FLOAT", "UNSIGNED_INT"
-	}
-	
-};
-
-Potree.InterleavedBuffer = class InterleavedBuffer{
-
-	constructor(data, attributes, numElements){
-		this.data = data;
-		this.attributes = attributes;
-		this.stride = attributes.reduce( (a, att) => a + att.bytes, 0);
-		this.stride = Math.ceil(this.stride / 4) * 4;
-		this.numElements = numElements;
-	}
-	
-	offset(name){
-		let offset = 0;
-		
-		for(let att of this.attributes){
-			if(att.name === name){
-				return offset;
-			}
-			
-			offset += att.bytes;
-		}
-		
-		return null;
-	}
-	
-};
-
-Potree.toInterleavedBufferAttribute = function toInterleavedBufferAttribute(pointAttribute){
-	let att = null;
-	
-	if (pointAttribute.name === Potree.PointAttribute.POSITION_CARTESIAN.name) {
-		att = new Potree.InterleavedBufferAttribute("position", 12, 3, "FLOAT", false);
-	} else if (pointAttribute.name === Potree.PointAttribute.COLOR_PACKED.name) {
-		att = new Potree.InterleavedBufferAttribute("color", 4, 4, "UNSIGNED_BYTE", true);
-	} else if (pointAttribute.name === Potree.PointAttribute.INTENSITY.name) {
-		att = new Potree.InterleavedBufferAttribute("intensity", 4, 1, "FLOAT", false);
-	} else if (pointAttribute.name === Potree.PointAttribute.CLASSIFICATION.name) {
-		att = new Potree.InterleavedBufferAttribute("classification", 4, 1, "FLOAT", false);
-	} else if (pointAttribute.name === Potree.PointAttribute.RETURN_NUMBER.name) {
-		att = new Potree.InterleavedBufferAttribute("returnNumber", 4, 1, "FLOAT", false);
-	} else if (pointAttribute.name === Potree.PointAttribute.NUMBER_OF_RETURNS.name) {
-		att = new Potree.InterleavedBufferAttribute("numberOfReturns", 4, 1, "FLOAT", false);
-	} else if (pointAttribute.name === Potree.PointAttribute.SOURCE_ID.name) {
-		att = new Potree.InterleavedBufferAttribute("pointSourceID", 4, 1, "FLOAT", false);
-	} else if (pointAttribute.name === Potree.PointAttribute.NORMAL_SPHEREMAPPED.name) {
-		att = new Potree.InterleavedBufferAttribute("normal", 12, 3, "FLOAT", false);
-	} else if (pointAttribute.name === Potree.PointAttribute.NORMAL_OCT16.name) {
-		att = new Potree.InterleavedBufferAttribute("normal", 12, 3, "FLOAT", false);
-	} else if (pointAttribute.name === Potree.PointAttribute.NORMAL.name) {
-		att = new Potree.InterleavedBufferAttribute("normal", 12, 3, "FLOAT", false);
-	}
-	
-	return att;
 };
