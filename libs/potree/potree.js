@@ -1,8 +1,8 @@
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
-	(factory((global.Potree = {})));
-}(this, (function (exports) { 'use strict';
+	(global = global || self, factory(global.Potree = {}));
+}(this, function (exports) { 'use strict';
 
 	/**
 	 * @author mrdoob / http://mrdoob.com/ https://github.com/mrdoob/eventdispatcher.js
@@ -139,7 +139,7 @@
 				oldIcon: oldIcon
 			});
 		}
-	}
+	};
 
 	//Potree.Actions = {};
 	//
@@ -598,7 +598,7 @@
 
 			this.update();
 		}
-	}
+	};
 
 
 	class BoxVolume extends Volume{
@@ -692,7 +692,7 @@
 			return Math.abs(this.scale.x * this.scale.y * this.scale.z);
 		}
 
-	}
+	};
 
 	class SphereVolume extends Volume{
 
@@ -828,7 +828,7 @@
 			return (4 / 3) * Math.PI * this.scale.x * this.scale.y * this.scale.z;
 		}
 
-	}
+	};
 
 	class Profile extends THREE.Object3D{
 
@@ -1169,7 +1169,7 @@
 			this.sphereGeometry = new THREE.SphereGeometry(0.4, 10, 10);
 			this.color = new THREE.Color(0xff0000);
 
-			this.lengthUnit = {code: 'm'};
+			//this.lengthUnit = {code: 'm'};
 
 			this.spheres = [];
 			this.edges = [];
@@ -1206,7 +1206,7 @@
 					this.heightLabel.setTextColor({r: 180, g: 220, b: 180, a: 1.0});
 					this.heightLabel.material.depthTest = false;
 					this.heightLabel.material.opacity = 1;
-					this.heightLabel.visible = false; 
+					this.heightLabel.visible = false; ;
 					this.add(this.heightLabel);
 				}
 			}
@@ -1217,7 +1217,7 @@
 			this.areaLabel.setTextColor({r: 180, g: 220, b: 180, a: 1.0});
 			this.areaLabel.material.depthTest = false;
 			this.areaLabel.material.opacity = 1;
-			this.areaLabel.visible = false; 
+			this.areaLabel.visible = false; ;
 			this.add(this.areaLabel);
 		}
 
@@ -1520,7 +1520,15 @@
 					let distance = point.position.distanceTo(nextPoint.position);
 
 					edgeLabel.position.copy(center);
-					edgeLabel.setText(Utils.addCommas(distance.toFixed(2)) + ' ' + this.lengthUnit.code);
+
+					let suffix = "";
+					if(this.lengthUnit != null && this.lengthUnitDisplay != null){
+						distance = distance / this.lengthUnit.unitspermeter * this.lengthUnitDisplay.unitspermeter;  //convert to meters then to the display unit
+						suffix = this.lengthUnitDisplay.code;
+					}
+
+					let txtLength = Utils.addCommas(distance.toFixed(2));
+					edgeLabel.setText(`${txtLength} ${suffix}`);
 					edgeLabel.visible = this.showDistances && (index < lastIndex || this.closed) && this.points.length >= 2 && distance > 0;
 				}
 
@@ -1578,7 +1586,15 @@
 
 					let heightLabelPosition = start.clone().add(end).multiplyScalar(0.5);
 					this.heightLabel.position.copy(heightLabelPosition);
-					let msg = Utils.addCommas(height.toFixed(2)) + ' ' + this.lengthUnit.code;
+
+					let suffix = "";
+					if(this.lengthUnit != null && this.lengthUnitDisplay != null){
+						height = height / this.lengthUnit.unitspermeter * this.lengthUnitDisplay.unitspermeter;  //convert to meters then to the display unit
+						suffix = this.lengthUnitDisplay.code;
+					}
+
+					let txtHeight = Utils.addCommas(height.toFixed(2));
+					let msg = `${txtHeight} ${suffix}`;
 					this.heightLabel.setText(msg);
 				}
 			}
@@ -1586,7 +1602,16 @@
 			{ // update area label
 				this.areaLabel.position.copy(centroid);
 				this.areaLabel.visible = this.showArea && this.points.length >= 3;
-				let msg = Utils.addCommas(this.getArea().toFixed(1)) + ' ' + this.lengthUnit.code + '\u00B2';
+				let area = this.getArea();
+
+				let suffix = "";
+				if(this.lengthUnit != null && this.lengthUnitDisplay != null){
+					area = area / Math.pow(this.lengthUnit.unitspermeter, 2) * Math.pow(this.lengthUnitDisplay.unitspermeter, 2);  //convert to square meters then to the square display unit
+					suffix = this.lengthUnitDisplay.code;
+				}
+
+				let txtArea = Utils.addCommas(area.toFixed(1));
+				let msg =  `${txtArea} ${suffix}\u00B2`;
 				this.areaLabel.setText(msg);
 			}
 		};
@@ -1726,109 +1751,6 @@
 			}
 		}
 
-	}
-
-	class EnumItem{
-		constructor(object){
-			for(let key of Object.keys(object)){
-				this[key] = object[key];
-			}
-		}
-
-		inspect(){
-			return `Enum(${this.name}: ${this.value})`;
-		}
-	}
-
-	class Enum{
-
-		constructor(object){
-			this.object = object;
-
-			for(let key of Object.keys(object)){
-				let value = object[key];
-
-				if(typeof value === "object"){
-					value.name = key;
-				}else{
-					value = {name: key, value: value};
-				}
-				
-				this[key] = new EnumItem(value);
-			}
-		}
-
-		fromValue(value){
-			for(let key of Object.keys(this.object)){
-				if(this[key].value === value){
-					return this[key];
-				}
-			}
-
-			throw new Error(`No enum for value: ${value}`);
-		}
-		
-	}
-
-	const CameraMode = {
-		ORTHOGRAPHIC: 0,
-		PERSPECTIVE: 1
-	};
-
-	const ClipTask = {
-		NONE: 0,
-		HIGHLIGHT: 1,
-		SHOW_INSIDE: 2,
-		SHOW_OUTSIDE: 3
-	};
-
-	const ClipMethod = {
-		INSIDE_ANY: 0,
-		INSIDE_ALL: 1
-	};
-
-	const MOUSE = {
-		LEFT: 0b0001,
-		RIGHT: 0b0010,
-		MIDDLE: 0b0100
-	};
-
-	const PointSizeType = {
-		FIXED: 0,
-		ATTENUATED: 1,
-		ADAPTIVE: 2
-	};
-
-	const PointShape = {
-		SQUARE: 0,
-		CIRCLE: 1,
-		PARABOLOID: 2
-	};
-
-	const PointColorType = {
-		RGB: 0,
-		COLOR: 1,
-		DEPTH: 2,
-		HEIGHT: 3,
-		ELEVATION: 3,
-		INTENSITY: 4,
-		INTENSITY_GRADIENT:	5,
-		LOD: 6,
-		LEVEL_OF_DETAIL: 6,
-		POINT_INDEX: 7,
-		CLASSIFICATION: 8,
-		RETURN_NUMBER: 9,
-		SOURCE: 10,
-		NORMAL: 11,
-		PHONG: 12,
-		RGB_HEIGHT: 13,
-		GPS_TIME: 14,
-		COMPOSITE: 50
-	};
-
-	const TreeType = {
-		OCTREE:	0,
-		KDTREE:	1
 	};
 
 	class Utils {
@@ -2127,7 +2049,7 @@
 		static createBackgroundTexture (width, height) {
 			function gauss (x, y) {
 				return (1 / (2 * Math.PI)) * Math.exp(-(x * x + y * y) / 2);
-			}
+			};
 
 			// map.magFilter = THREE.NearestFilter;
 			let size = width * height;
@@ -2379,6 +2301,64 @@
 			camera.zoomTo(node, 1);
 		}
 
+		
+		static findClosestGpsTime(target, viewer){
+			const start = performance.now();
+
+			const nodes = [];
+			for(const pc of viewer.scene.pointclouds){
+				nodes.push(pc.root);
+
+				for(const child of pc.root.children){
+					if(child){
+						nodes.push(child);
+					}
+				}
+			}
+
+			let closestNode = null;
+			let closestIndex = Infinity;
+			let closestDistance = Infinity;
+			let closestValue = 0;
+
+			for(const node of nodes){
+				let geometry = node.geometryNode.geometry;
+				let gpsTime = geometry.attributes["gps-time"];
+				let range = gpsTime.potree.range;
+
+				for(let i = 0; i < gpsTime.array.length; i++){
+					let value = gpsTime.array[i];
+					value = value * (range[1] - range[0]) + range[0];
+					const distance = Math.abs(target - value);
+
+					if(distance < closestDistance){
+						closestIndex = i;
+						closestDistance = distance;
+						closestValue = value;
+						closestNode = node;
+						//console.log("found a closer one: " + value);
+					}
+				}
+			}
+
+			const geometry = closestNode.geometryNode.geometry;
+			const position = new THREE.Vector3(
+				geometry.attributes.position.array[3 * closestIndex + 0],
+				geometry.attributes.position.array[3 * closestIndex + 1],
+				geometry.attributes.position.array[3 * closestIndex + 2],
+			);
+
+			const end = performance.now();
+			const duration = (end - start);
+			console.log(`duration: ${duration.toFixed(3)}ms`);
+
+			return {
+				node: closestNode,
+				index: closestIndex,
+				position: position,
+			};
+		}
+
 		/**
 		 *
 		 * 0: no intersection
@@ -2548,77 +2528,6 @@
 				return `${Potree.resourcePath}/icons/clip-polygon.svg`;
 			}
 		}
-
-		static toMaterialID(materialName){
-			if (materialName === 'RGB'){
-				return PointColorType.RGB;
-			} else if (materialName === 'Color') {
-				return PointColorType.COLOR;
-			} else if (materialName === 'Elevation') {
-				return PointColorType.HEIGHT;
-			} else if (materialName === 'Intensity') {
-				return PointColorType.INTENSITY;
-			} else if (materialName === 'Intensity Gradient') {
-				return PointColorType.INTENSITY_GRADIENT;
-			} else if (materialName === 'Classification') {
-				return PointColorType.CLASSIFICATION;
-			} else if (materialName === 'Return Number') {
-				return PointColorType.RETURN_NUMBER;
-			} else if (materialName === 'Source') {
-				return PointColorType.SOURCE;
-			} else if (materialName === 'Level of Detail') {
-				return PointColorType.LOD;
-			} else if (materialName === 'Point Index') {
-				return PointColorType.POINT_INDEX;
-			} else if (materialName === 'Normal') {
-				return PointColorType.NORMAL;
-			} else if (materialName === 'Phong') {
-				return PointColorType.PHONG;
-			} else if (materialName === 'Index') {
-				return PointColorType.POINT_INDEX;
-			} else if (materialName === 'RGB and Elevation') {
-				return PointColorType.RGB_HEIGHT;
-			} else if (materialName === 'Composite') {
-				return PointColorType.COMPOSITE;
-			} else if (materialName === 'GPS Time') {
-				return PointColorType.GPS_TIME;
-			}
-		};
-
-
-		static toMaterialName(materialID) {
-			if (materialID === PointColorType.RGB) {
-				return 'RGB';
-			} else if (materialID === PointColorType.COLOR) {
-				return 'Color';
-			} else if (materialID === PointColorType.HEIGHT) {
-				return 'Elevation';
-			} else if (materialID === PointColorType.INTENSITY) {
-				return 'Intensity';
-			} else if (materialID === PointColorType.INTENSITY_GRADIENT) {
-				return 'Intensity Gradient';
-			} else if (materialID === PointColorType.CLASSIFICATION) {
-				return 'Classification';
-			} else if (materialID === PointColorType.RETURN_NUMBER) {
-				return 'Return Number';
-			} else if (materialID === PointColorType.SOURCE) {
-				return 'Source';
-			} else if (materialID === PointColorType.LOD) {
-				return 'Level of Detail';
-			} else if (materialID === PointColorType.NORMAL) {
-				return 'Normal';
-			} else if (materialID === PointColorType.PHONG) {
-				return 'Phong';
-			} else if (materialID === PointColorType.POINT_INDEX) {
-				return 'Index';
-			} else if (materialID === PointColorType.RGB_HEIGHT) {
-				return 'RGB and Elevation';
-			} else if (materialID === PointColorType.COMPOSITE) {
-				return 'Composite';
-			} else if (materialID === PointColorType.GPS_TIME) {
-				return 'GPS Time';
-			}
-		};
 
 	}
 
@@ -3229,11 +3138,106 @@
 		toString () {
 			return 'Annotation: ' + this._title;
 		}
-	}
+	};
+
+	class EnumItem{
+		constructor(object){
+			for(let key of Object.keys(object)){
+				this[key] = object[key];
+			}
+		}
+
+		inspect(){
+			return `Enum(${this.name}: ${this.value})`;
+		}
+	};
+
+	class Enum{
+
+		constructor(object){
+			this.object = object;
+
+			for(let key of Object.keys(object)){
+				let value = object[key];
+
+				if(typeof value === "object"){
+					value.name = key;
+				}else{
+					value = {name: key, value: value};
+				}
+				
+				this[key] = new EnumItem(value);
+			}
+		}
+
+		fromValue(value){
+			for(let key of Object.keys(this.object)){
+				if(this[key].value === value){
+					return this[key];
+				}
+			}
+
+			throw new Error(`No enum for value: ${value}`);
+		}
+		
+	};
+
+	const CameraMode = {
+		ORTHOGRAPHIC: 0,
+		PERSPECTIVE: 1,
+		VR: 2,
+	};
+
+	const ClipTask = {
+		NONE: 0,
+		HIGHLIGHT: 1,
+		SHOW_INSIDE: 2,
+		SHOW_OUTSIDE: 3
+	};
+
+	const ClipMethod = {
+		INSIDE_ANY: 0,
+		INSIDE_ALL: 1
+	};
+
+	const ElevationGradientRepeat = {
+		CLAMP: 0,
+		REPEAT: 1,
+		MIRRORED_REPEAT: 2,
+	};
+
+	const MOUSE = {
+		LEFT: 0b0001,
+		RIGHT: 0b0010,
+		MIDDLE: 0b0100
+	};
+
+	const PointSizeType = {
+		FIXED: 0,
+		ATTENUATED: 1,
+		ADAPTIVE: 2
+	};
+
+	const PointShape = {
+		SQUARE: 0,
+		CIRCLE: 1,
+		PARABOLOID: 2
+	};
+
+	const TreeType = {
+		OCTREE:	0,
+		KDTREE:	1
+	};
+
+	const LengthUnits = {
+		METER: {code: 'm', unitspermeter: 1.0},
+		FEET: {code: 'ft', unitspermeter: 3.28084},
+		INCH: {code: '\u2033', unitspermeter: 39.3701}
+	};
 
 	const Features = (function () {
 		let ftCanvas = document.createElement('canvas');
-		let gl = ftCanvas.getContext('webgl2') || ftCanvas.getContext('webgl') || ftCanvas.getContext('experimental-webgl');
+		let gl = ftCanvas.getContext('webgl') || ftCanvas.getContext('experimental-webgl');
 		if (gl === null)		{ return null; }
 
 		// -- code taken from THREE.WebGLRenderer --
@@ -3289,17 +3293,17 @@
 					supported = supported && gl.getExtension('OES_texture_float');
 					supported = supported && gl.getParameter(gl.MAX_VARYING_VECTORS) >= 8;
 
-					supported = supported || (gl instanceof WebGL2RenderingContext);
+					//supported = supported || (gl instanceof WebGL2RenderingContext);
 
 					return supported;
 				}
 
 			},
-			WEBGL2: {
-				isSupported: function(){
-					return gl instanceof WebGL2RenderingContext;
-				}
-			},
+			//WEBGL2: {
+			//	isSupported: function(){
+			//		return gl instanceof WebGL2RenderingContext;
+			//	}
+			//},
 			precision: precision
 		};
 	}());
@@ -3494,32 +3498,6 @@
 
 	}
 
-	class PointCloudGreyhoundGeometry{
-
-		constructor(){
-			this.spacing = 0;
-			this.boundingBox = null;
-			this.root = null;
-			this.nodes = null;
-			this.pointAttributes = {};
-			this.hierarchyStepSize = -1;
-			this.loader = null;
-			this.schema = null;
-
-			this.baseDepth = null;
-			this.offset = null;
-			this.projection = null;
-
-			this.boundingSphere = null;
-
-			// the serverURL will contain the base URL of the greyhound server. f.e. http://dev.greyhound.io/resource/autzen/
-			this.serverURL = null;
-
-			this.normalize = { color: false, intensity: false };
-		}
-
-	}
-
 	class PointCloudTreeNode extends EventDispatcher{
 
 		constructor(){
@@ -3554,7 +3532,7 @@
 		getBoundingSphere () {
 			throw new Error('override function');
 		}
-	}
+	};
 
 	class PointCloudTree extends THREE.Object3D {
 		constructor () {
@@ -3564,14 +3542,350 @@
 		initialized () {
 			return this.root !== null;
 		}
+	};
+
+	class U {
+		static toVector3(v, offset) {
+			return new THREE.Vector3().fromArray(v, offset || 0);
+		}
+
+		static toBox3(b) {
+			return new THREE.Box3(U.toVector3(b), U.toVector3(b, 3));
+		};
+
+		static findDim(schema, name) {
+			var dim = schema.find((dim) => dim.name == name);
+			if (!dim) throw new Error('Failed to find ' + name + ' in schema');
+			return dim;
+		}
+
+		static sphereFrom(b) {
+			return b.getBoundingSphere(new THREE.Sphere());
+		}
+	};
+
+	class PointCloudEptGeometry {
+		constructor(url, info) {
+			let version = info.version;
+			let schema = info.schema;
+			let bounds = info.bounds;
+			let boundsConforming = info.boundsConforming;
+
+			let xyz = [
+				U.findDim(schema, 'X'),
+				U.findDim(schema, 'Y'),
+				U.findDim(schema, 'Z')
+			];
+			let scale = xyz.map((d) => d.scale || 1);
+			let offset = xyz.map((d) => d.offset || 0);
+			this.eptScale = U.toVector3(scale);
+			this.eptOffset = U.toVector3(offset);
+
+			this.url = url;
+			this.info = info;
+			this.type = 'ept';
+
+			this.schema = schema;
+			this.span = info.span || info.ticks;
+			this.boundingBox = U.toBox3(bounds);
+			this.tightBoundingBox = U.toBox3(boundsConforming);
+			this.offset = U.toVector3([0, 0, 0]);
+			this.boundingSphere = U.sphereFrom(this.boundingBox);
+			this.tightBoundingSphere = U.sphereFrom(this.tightBoundingBox);
+			this.version = new Potree.Version('1.6');
+
+			this.projection = null;
+			this.fallbackProjection = null;
+
+			if (info.srs && info.srs.horizontal) {
+				this.projection = info.srs.authority + ':' + info.srs.horizontal;
+			}
+
+			if (info.srs.wkt) {
+				if (!this.projection) this.projection = info.srs.wkt;
+				else this.fallbackProjection = info.srs.wkt;
+			}
+
+			this.pointAttributes = 'LAZ';
+			this.spacing =
+				(this.boundingBox.max.x - this.boundingBox.min.x) / this.span;
+
+			let hierarchyType = info.hierarchyType || 'json';
+
+	        const dataType = info.dataType;
+	        if (dataType == 'laszip') {
+	            this.loader = new Potree.EptLaszipLoader();
+	        }
+	        else if (dataType == 'binary') {
+				this.loader = new Potree.EptBinaryLoader();
+	        }
+	        else if (dataType == 'zstandard') {
+	            this.loader = new Potree.EptZstandardLoader();
+	        }
+	        else {
+	            throw new Error('Could not read data type: ' + dataType);
+	        }
+		}
+	};
+
+	class EptKey {
+		constructor(ept, b, d, x, y, z) {
+			this.ept = ept;
+			this.b = b;
+			this.d = d;
+			this.x = x || 0;
+			this.y = y || 0;
+			this.z = z || 0;
+		}
+
+		name() {
+			return this.d + '-' + this.x + '-' + this.y + '-' + this.z;
+		}
+
+		step(a, b, c) {
+			let min = this.b.min.clone();
+			let max = this.b.max.clone();
+			let dst = new THREE.Vector3().subVectors(max, min);
+
+			if (a)	min.x += dst.x / 2;
+			else	max.x -= dst.x / 2;
+
+			if (b)	min.y += dst.y / 2;
+			else	max.y -= dst.y / 2;
+
+			if (c)	min.z += dst.z / 2;
+			else	max.z -= dst.z / 2;
+
+			return new Potree.EptKey(
+					this.ept,
+					new THREE.Box3(min, max),
+					this.d + 1,
+					this.x * 2 + a,
+					this.y * 2 + b,
+					this.z * 2 + c);
+		}
+
+		children() {
+			var result = [];
+			for (var a = 0; a < 2; ++a) {
+				for (var b = 0; b < 2; ++b) {
+					for (var c = 0; c < 2; ++c) {
+						var add = this.step(a, b, c).name();
+						if (!result.includes(add)) result = result.concat(add);
+					}
+				}
+			}
+			return result;
+		}
 	}
 
-	class PointCloudGreyhoundGeometryNode extends PointCloudTreeNode{
+	class PointCloudEptGeometryNode extends PointCloudTreeNode {
+		constructor(ept, b, d, x, y, z) {
+			super();
 
-		constructor(name, pcoGeometry, boundingBox, scale, offset){
+			this.ept = ept;
+			this.key = new Potree.EptKey(
+					this.ept,
+					b || this.ept.boundingBox,
+					d || 0,
+					x,
+					y,
+					z);
 
-			this.id = PointCloudGreyhoundGeometryNode.IDCount++;
+			this.id = PointCloudEptGeometryNode.IDCount++;
+			this.geometry = null;
+			this.boundingBox = this.key.b;
+			this.tightBoundingBox = this.boundingBox;
+			this.spacing = this.ept.spacing / Math.pow(2, this.key.d);
+			this.boundingSphere = U.sphereFrom(this.boundingBox);
 
+			// These are set during hierarchy loading.
+			this.hasChildren = false;
+			this.children = { };
+			this.numPoints = -1;
+
+			this.level = this.key.d;
+			this.loaded = false;
+			this.loading = false;
+			this.oneTimeDisposeHandlers = [];
+
+			let k = this.key;
+			this.name = this.toPotreeName(k.d, k.x, k.y, k.z);
+			this.index = parseInt(this.name.charAt(this.name.length - 1));
+		}
+
+		isGeometryNode() { return true; }
+		getLevel() { return this.level; }
+		isTreeNode() { return false; }
+		isLoaded() { return this.loaded; }
+		getBoundingSphere() { return this.boundingSphere; }
+		getBoundingBox() { return this.boundingBox; }
+		url() { return this.ept.url + 'ept-data/' + this.filename(); }
+		getNumPoints() { return this.numPoints; }
+
+		filename() { return this.key.name(); }
+
+		getChildren() {
+			let children = [];
+
+			for (let i = 0; i < 8; i++) {
+				if (this.children[i]) {
+					children.push(this.children[i]);
+				}
+			}
+
+			return children;
+		}
+
+		addChild(child) {
+			this.children[child.index] = child;
+			child.parent = this;
+		}
+
+		load() {
+			if (this.loaded || this.loading) return;
+			if (Potree.numNodesLoading >= Potree.maxNodesLoading) return;
+
+			this.loading = true;
+			++Potree.numNodesLoading;
+
+			if (this.numPoints == -1) this.loadHierarchy();
+			this.loadPoints();
+		}
+
+		loadPoints(){
+			this.ept.loader.load(this);
+		}
+
+		async loadHierarchy() {
+			let nodes = { };
+			nodes[this.filename()] = this;
+			this.hasChildren = false;
+
+			let eptHierarchyFile =
+				`${this.ept.url}ept-hierarchy/${this.filename()}.json`;
+
+			let response = await fetch(eptHierarchyFile);
+			let hier = await response.json();
+
+			// Since we want to traverse top-down, and 10 comes
+			// lexicographically before 9 (for example), do a deep sort.
+			var keys = Object.keys(hier).sort((a, b) => {
+				let [da, xa, ya, za] = a.split('-').map((n) => parseInt(n, 10));
+				let [db, xb, yb, zb] = b.split('-').map((n) => parseInt(n, 10));
+				if (da < db) return -1; if (da > db) return 1;
+				if (xa < xb) return -1; if (xa > xb) return 1;
+				if (ya < yb) return -1; if (ya > yb) return 1;
+				if (za < zb) return -1; if (za > zb) return 1;
+				return 0;
+			});
+
+			keys.forEach((v) => {
+				let [d, x, y, z] = v.split('-').map((n) => parseInt(n, 10));
+				let a = x & 1, b = y & 1, c = z & 1;
+				let parentName =
+					(d - 1) + '-' + (x >> 1) + '-' + (y >> 1) + '-' + (z >> 1);
+
+				let parentNode = nodes[parentName];
+				if (!parentNode) return;
+				parentNode.hasChildren = true;
+
+				let key = parentNode.key.step(a, b, c);
+
+				let node = new Potree.PointCloudEptGeometryNode(
+						this.ept,
+						key.b,
+						key.d,
+						key.x,
+						key.y,
+						key.z);
+
+				node.level = d;
+				node.numPoints = hier[v];
+
+				parentNode.addChild(node);
+				nodes[key.name()] = node;
+			});
+		}
+
+		doneLoading(bufferGeometry, tightBoundingBox, np, mean) {
+			bufferGeometry.boundingBox = this.boundingBox;
+			this.geometry = bufferGeometry;
+			this.tightBoundingBox = tightBoundingBox;
+			this.numPoints = np;
+			this.mean = mean;
+			this.loaded = true;
+			this.loading = false;
+			--Potree.numNodesLoading;
+		}
+
+		toPotreeName(d, x, y, z) {
+			var name = 'r';
+
+			for (var i = 0; i < d; ++i) {
+				var shift = d - i - 1;
+				var mask = 1 << shift;
+				var step = 0;
+
+				if (x & mask) step += 4;
+				if (y & mask) step += 2;
+				if (z & mask) step += 1;
+
+				name += step;
+			}
+
+			return name;
+		}
+
+		dispose() {
+			if (this.geometry && this.parent != null) {
+				this.geometry.dispose();
+				this.geometry = null;
+				this.loaded = false;
+
+				// this.dispatchEvent( { type: 'dispose' } );
+				for (let i = 0; i < this.oneTimeDisposeHandlers.length; i++) {
+					let handler = this.oneTimeDisposeHandlers[i];
+					handler();
+				}
+				this.oneTimeDisposeHandlers = [];
+			}
+		}
+	}
+
+	PointCloudEptGeometryNode.IDCount = 0;
+
+	class PointCloudGreyhoundGeometry{
+
+		constructor(){
+			this.spacing = 0;
+			this.boundingBox = null;
+			this.root = null;
+			this.nodes = null;
+			this.pointAttributes = {};
+			this.hierarchyStepSize = -1;
+			this.loader = null;
+			this.schema = null;
+
+			this.baseDepth = null;
+			this.offset = null;
+			this.projection = null;
+
+			this.boundingSphere = null;
+
+			// the serverURL will contain the base URL of the greyhound server. f.e. http://dev.greyhound.io/resource/autzen/
+			this.serverURL = null;
+
+			this.normalize = { color: false, intensity: false };
+		}
+
+	};
+
+	class PointCloudGreyhoundGeometryNode$1 extends PointCloudTreeNode {
+		constructor(name, pcoGeometry, boundingBox, scale, offset) {
+			super();
+
+			this.id = Potree.PointCloudGreyhoundGeometryNode.IDCount++;
 			this.name = name;
 			this.index = parseInt(name.charAt(name.length - 1));
 			this.pcoGeometry = pcoGeometry;
@@ -3588,8 +3902,8 @@
 			this.baseLoaded = false;
 
 			let bounds = this.boundingBox.clone();
-			bounds.min.sub(this.pcoGeometry.boundingBox.getCenter(new THREE.Vector3()));
-			bounds.max.sub(this.pcoGeometry.boundingBox.getCenter(new THREE.Vector3()));
+			bounds.min.sub(this.pcoGeometry.boundingBox.getCenter());
+			bounds.max.sub(this.pcoGeometry.boundingBox.getCenter());
 
 			if (this.scale) {
 				bounds.min.multiplyScalar(1 / this.scale);
@@ -3604,35 +3918,18 @@
 			// This represents the offset between the coordinate system described above
 			// and our pcoGeometry bounds.
 			this.greyhoundOffset = this.pcoGeometry.offset.clone().add(
-				this.pcoGeometry.boundingBox.getSize(new THREE.Vector3()).multiplyScalar(0.5)
+				this.pcoGeometry.boundingBox.getSize().multiplyScalar(0.5)
 			);
 		}
 
-		isGeometryNode(){
-			return true;
-		}
 
-		isTreeNode(){
-			return false;
-		}
-
-		isLoaded(){
-			return this.loaded;
-		}
-
-		getBoundingSphere(){
-			return this.boundingSphere;
-		}
-
-		getBoundingBox(){
-			return this.boundingBox;
-		}
-
-		getLevel(){
-			return this.level;
-		}
-
-		getChildren(){
+		isGeometryNode() { return true; }
+		isTreeNode() { return false; }
+		isLoaded() { return this.loaded; }
+		getBoundingSphere() { return this.boundingSphere; }
+		getBoundingBox() { return this.boundingBox; }
+		getLevel() { return this.level; };
+		getChildren() {
 			let children = [];
 
 			for (let i = 0; i < 8; ++i) {
@@ -3644,7 +3941,7 @@
 			return children;
 		}
 
-		getURL(){
+		getURL() {
 			let schema = this.pcoGeometry.schema;
 			let bounds = this.greyhoundBounds;
 
@@ -3654,7 +3951,8 @@
 
 			let url = '' + this.pcoGeometry.serverURL +
 						'read?depthBegin=' +
-						(this.baseLoaded ? (this.level + this.pcoGeometry.baseDepth) : 0) +
+						(this.baseLoaded ?
+							(this.level + this.pcoGeometry.baseDepth) : 0) +
 						'&depthEnd=' + (this.level + this.pcoGeometry.baseDepth + 1) +
 						'&bounds=[' + boundsString + ']' +
 						'&schema=' + JSON.stringify(schema) +
@@ -3672,14 +3970,14 @@
 			if (!this.baseLoaded) this.baseLoaded = true;
 
 			return url;
-		}
+		};
 
-		addChild(child){
+		addChild(child) {
 			this.children[child.index] = child;
 			child.parent = this;
-		}
+		};
 
-		load(){
+		load() {
 			if (
 				this.loading === true ||
 				this.loaded === true ||
@@ -3699,11 +3997,9 @@
 			}
 		}
 
-		loadPoints(){
-			this.pcoGeometry.loader.load(this);
-		}
+		loadPoints() { this.pcoGeometry.loader.load(this); };
 
-		loadHierarchyThenPoints(){
+		loadHierarchyThenPoints() {
 			// From Greyhound (Cartesian) ordering for the octree to Potree-default
 			let transform = [0, 2, 1, 3, 4, 6, 5, 7];
 
@@ -3830,7 +4126,7 @@
 				xhr.open('GET', hurl, true);
 
 				let that = this;
-				xhr.onreadystatechange = () => {
+				xhr.onreadystatechange = function () {
 					if (xhr.readyState === 4) {
 						if (xhr.status === 200 || xhr.status === 0) {
 							let greyhoundHierarchy = JSON.parse(xhr.responseText) || { };
@@ -3852,11 +4148,9 @@
 			}
 		}
 
-		getNumPoints(){
-			return this.numPoints;
-		}
+		getNumPoints() { return this.numPoints; };
 
-		dispose(){
+		dispose() {
 			if (this.geometry && this.parent != null) {
 				this.geometry.dispose();
 				this.geometry = null;
@@ -3870,11 +4164,9 @@
 				this.oneTimeDisposeHandlers = [];
 			}
 		}
+	};
 
-
-	}
-
-	PointCloudGreyhoundGeometryNode.IDCount = 0;
+	PointCloudGreyhoundGeometryNode$1.IDCount = 0;
 
 	class PointCloudOctreeGeometry{
 
@@ -4244,7 +4536,34 @@
 		GRAYSCALE: [
 			[0, new THREE.Color(0, 0, 0)],
 			[1, new THREE.Color(1, 1, 1)]
-		]
+		],
+		// 16 samples of the TURBU color scheme
+		// values taken from: https://gist.github.com/mikhailov-work/ee72ba4191942acecc03fe6da94fc73f
+		// original file licensed under Apache-2.0
+		TURBO: [
+			[0.00, new THREE.Color(0.18995, 0.07176, 0.23217)],
+			[0.07, new THREE.Color(0.25107, 0.25237, 0.63374)],
+			[0.13, new THREE.Color(0.27628, 0.42118, 0.89123)],
+			[0.20, new THREE.Color(0.25862, 0.57958, 0.99876)],
+			[0.27, new THREE.Color(0.15844, 0.73551, 0.92305)],
+			[0.33, new THREE.Color(0.09267, 0.86554, 0.7623)],
+			[0.40, new THREE.Color(0.19659, 0.94901, 0.59466)],
+			[0.47, new THREE.Color(0.42778, 0.99419, 0.38575)],
+			[0.53, new THREE.Color(0.64362, 0.98999, 0.23356)],
+			[0.60, new THREE.Color(0.80473, 0.92452, 0.20459)],
+			[0.67, new THREE.Color(0.93301, 0.81236, 0.22667)],
+			[0.73, new THREE.Color(0.99314, 0.67408, 0.20348)],
+			[0.80, new THREE.Color(0.9836, 0.49291, 0.12849)],
+			[0.87, new THREE.Color(0.92105, 0.31489, 0.05475)],
+			[0.93, new THREE.Color(0.81608, 0.18462, 0.01809)],
+			[1.00, new THREE.Color(0.66449, 0.08436, 0.00424)],
+		],
+		CONTOUR: [
+			[0.00, new THREE.Color(0, 0, 0)],
+			[0.03, new THREE.Color(0, 0, 0)],
+			[0.04, new THREE.Color(1, 1, 1)],
+			[1.00, new THREE.Color(1, 1, 1)]
+		],
 	};
 
 	let Shaders = {};
@@ -4266,6 +4585,8 @@ attribute float pointSourceID;
 attribute vec4 indices;
 attribute float spacing;
 attribute float gpsTime;
+attribute vec3 normal;
+attribute float aExtra;
 
 uniform mat4 modelMatrix;
 uniform mat4 modelViewMatrix;
@@ -4284,7 +4605,6 @@ uniform bool uDebug;
 uniform bool uUseOrthographicCamera;
 uniform float uOrthoWidth;
 uniform float uOrthoHeight;
-
 
 #define CLIPTASK_NONE 0
 #define CLIPTASK_HIGHLIGHT 1
@@ -4334,8 +4654,7 @@ uniform vec2 uFilterReturnNumberRange;
 uniform vec2 uFilterNumberOfReturnsRange;
 uniform vec2 uFilterGPSTimeClipRange;
 
-uniform float uGPSOffset;
-uniform float uGPSRange;
+uniform vec2 uNormalizedGpsBufferRange;
 uniform float intensityGamma;
 uniform float intensityContrast;
 uniform float intensityBrightness;
@@ -4350,11 +4669,20 @@ uniform float wClassification;
 uniform float wReturnNumber;
 uniform float wSourceID;
 
+uniform vec2 uExtraNormalizedRange;
+uniform vec2 uExtraRange;
+uniform vec3 uExtraGammaBrightContr;
+
 uniform vec3 uShadowColor;
 
 uniform sampler2D visibleNodes;
 uniform sampler2D gradient;
 uniform sampler2D classificationLUT;
+
+#if defined(color_type_matcap)
+uniform sampler2D matcapTextureUniform;
+#endif
+uniform bool backfaceCulling;
 
 #if defined(num_shadowmaps) && num_shadowmaps > 0
 uniform sampler2D uShadowMap[num_shadowmaps];
@@ -4458,7 +4786,7 @@ float getLOD(){
 	int iOffset = int(uVNStart);
 	float depth = uLevel;
 	for(float i = 0.0; i <= 30.0; i++){
-		float nodeSizeAtLevel = uOctreeSize  / pow(2.0, i + uLevel + 0.0);
+		float nodeSizeAtLevel = uOctreeSize / pow(2.0, i + uLevel + 0.0);
 		
 		vec3 index3d = (position-offset) / nodeSizeAtLevel;
 		index3d = floor(index3d + 0.5);
@@ -4495,7 +4823,7 @@ float getSpacing(){
 	float depth = uLevel;
 	float spacing = uNodeSpacing;
 	for(float i = 0.0; i <= 30.0; i++){
-		float nodeSizeAtLevel = uOctreeSize  / pow(2.0, i + uLevel + 0.0);
+		float nodeSizeAtLevel = uOctreeSize / pow(2.0, i + uLevel + 0.0);
 		
 		vec3 index3d = (position-offset) / nodeSizeAtLevel;
 		index3d = floor(index3d + 0.5);
@@ -4635,13 +4963,9 @@ vec3 getRGB(){
 	
 	rgb = pow(rgb, vec3(rgbGamma));
 	rgb = rgb + rgbBrightness;
-	//rgb = (rgb - 0.5) * getContrastFactor(rgbContrast) + 0.5;
+	rgb = (rgb - 0.5) * getContrastFactor(rgbContrast) + 0.5;
 	rgb = clamp(rgb, 0.0, 1.0);
 
-		//rgb = indices.rgb;
-	//rgb.b = pcIndex / 255.0;
-	
-	
 	return rgb;
 }
 
@@ -4655,11 +4979,16 @@ float getIntensity(){
 	return w;
 }
 
-float getGpsTime(){
-	float w = (gpsTime + uGPSOffset) / uGPSRange;
+vec3 getGpsTime(){
+	vec2 r = uNormalizedGpsBufferRange;
+
+	float w = gpsTime * (r.y - r.x) + r.x;
+
 	w = clamp(w, 0.0, 1.0);
 
-	return w;
+	vec3 c = texture2D(gradient, vec2(w,1.0-w)).rgb;
+	
+	return c;
 }
 
 vec3 getElevation(){
@@ -4716,7 +5045,7 @@ vec3 getCompositeColor(){
 	w += wSourceID;
 	
 	vec4 cl = wClassification * getClassification();
-    c += cl.a * cl.rgb;
+	c += cl.a * cl.rgb;
 	w += wClassification * cl.a;
 
 	c = c / w;
@@ -4730,24 +5059,72 @@ vec3 getCompositeColor(){
 }
 
 
-// 
-//  ######  ##       #### ########  ########  #### ##    ##  ######   
-// ##    ## ##        ##  ##     ## ##     ##  ##  ###   ## ##    ##  
-// ##       ##        ##  ##     ## ##     ##  ##  ####  ## ##        
-// ##       ##        ##  ########  ########   ##  ## ## ## ##   #### 
-// ##       ##        ##  ##        ##         ##  ##  #### ##    ##  
-// ##    ## ##        ##  ##        ##         ##  ##   ### ##    ##  
-//  ######  ######## #### ##        ##        #### ##    ##  ######                                                          
-// 
+vec3 getNormal(){
+	//vec3 n_hsv = vec3( modelMatrix * vec4( normal, 0.0 )) * 0.5 + 0.5; // (n_world.xyz + vec3(1.,1.,1.)) / 2.;
+	vec3 n_view = normalize( vec3(modelViewMatrix * vec4( normal, 0.0 )) );
+	return n_view;
+}
+bool applyBackfaceCulling() {
+	// Black not facing vertices / Backface culling
+	vec3 e = normalize(vec3(modelViewMatrix * vec4( position, 1. )));
+	vec3 n = getNormal(); // normalize( vec3(modelViewMatrix * vec4( normal, 0.0 )) );
 
+	if((uUseOrthographicCamera && n.z <= 0.) || (!uUseOrthographicCamera && dot( n, e ) >= 0.)) { 
+		return true;
+	} else {
+		return false;
+	}
+}
 
+#if defined(color_type_matcap)
+// Matcap Material
+vec3 getMatcap(){ 
+	vec3 eye = normalize( vec3( modelViewMatrix * vec4( position, 1. ) ) ); 
+	if(uUseOrthographicCamera) { 
+		eye = vec3(0., 0., -1.);
+	}
+	vec3 r_en = reflect( eye, getNormal() ); // or r_en = e - 2. * dot( n, e ) * n;
+	float m = 2. * sqrt(pow( r_en.x, 2. ) + pow( r_en.y, 2. ) + pow( r_en.z + 1., 2. ));
+	vec2 vN = r_en.xy / m + .5;
+	return texture2D(matcapTextureUniform, vN).rgb; 
+}
+#endif
+
+vec3 getExtra(){
+	vec2 r = uExtraNormalizedRange;
+
+	float w = aExtra * (r.y - r.x) + r.x;
+
+	w = (w - uExtraRange.x) / (uExtraRange.y - uExtraRange.x);
+
+	w = clamp(w, 0.0, 1.0);
+
+	vec3 color = texture2D(gradient, vec2(w,1.0-w)).rgb;
+
+	// float w = (aExtra - uExtraRange.x) / (uExtraRange.y - uExtraRange.x);
+
+	// float gamma = uExtraGammaBrightContr[0];
+	// float brightness = uExtraGammaBrightContr[1];
+	// float contrast = uExtraGammaBrightContr[2];
+
+	// w = pow(w, gamma);
+	// w = w + brightness;
+	// w = (w - 0.5) * getContrastFactor(contrast) + 0.5;
+	// w = clamp(w, 0.0, 1.0);
+
+	// vec3 color = texture2D(gradient, vec2(w, 1.0 - w)).rgb;
+
+	return color;
+
+	//return vec3(1.0, 0.0, 0.0);
+}
 
 vec3 getColor(){
 	vec3 color;
 	
-	#ifdef color_type_rgb
+	#ifdef color_type_RGBA
 		color = getRGB();
-	#elif defined color_type_height
+	#elif defined color_type_height || defined color_type_elevation
 		color = getElevation();
 	#elif defined color_type_rgb_height
 		vec3 cHeight = getElevation();
@@ -4759,19 +5136,18 @@ vec3 getColor(){
 	#elif defined color_type_intensity
 		float w = getIntensity();
 		color = vec3(w, w, w);
-	#elif defined color_type_gpstime
-		float w = getGpsTime();
-		color = vec3(w, w, w);
+	#elif defined color_type_gps_time
+		color = getGpsTime();
 	#elif defined color_type_intensity_gradient
 		float w = getIntensity();
 		color = texture2D(gradient, vec2(w,1.0-w)).rgb;
 	#elif defined color_type_color
 		color = uColor;
-	#elif defined color_type_lod
+	#elif defined color_type_level_of_detail
 		float depth = getLOD();
 		float w = depth / 10.0;
 		color = texture2D(gradient, vec2(w,1.0-w)).rgb;
-	#elif defined color_type_point_index
+	#elif defined color_type_indices
 		color = indices.rgb;
 	#elif defined color_type_classification
 		vec4 cl = getClassification(); 
@@ -4786,8 +5162,16 @@ vec3 getColor(){
 		color = color;
 	#elif defined color_type_composite
 		color = getCompositeColor();
+	#elif defined color_type_matcap
+		color = getMatcap();
+	#else 
+		color = getExtra();
 	#endif
 	
+	if (backfaceCulling && applyBackfaceCulling()) {
+		color = vec3(0.);
+	}
+
 	return color;
 }
 
@@ -4873,14 +5257,14 @@ bool pointInClipPolygon(vec3 point, int polyIdx) {
 
 void doClipping(){
 
-	#if !defined color_type_composite
+	{
 		vec4 cl = getClassification(); 
 		if(cl.a == 0.0){
 			gl_Position = vec4(100.0, 100.0, 100.0, 0.0);
 			
 			return;
 		}
-	#endif
+	}
 
 	#if defined(clip_return_number_enabled)
 	{ // return number filter
@@ -5077,6 +5461,14 @@ void main() {
 
 	#endif
 
+	// {
+	// 	float f = aExtra;
+
+	// 	vColor = vec3(f, f, f) / 90.0;
+
+	// 	//vColor = vec3(f, f, f) * 0.001;
+	// }
+
 	//vColor = vec3(1.0, 0.0, 0.0);
 
 	//if(uDebug){
@@ -5087,6 +5479,7 @@ void main() {
 
 }
 `;
+
 	Shaders["pointcloud.fs"] = `
 #if defined paraboloid_point_shape
 	#extension GL_EXT_frag_depth : enable
@@ -5141,7 +5534,7 @@ void main() {
 		}
 	#endif
 		
-	#if defined color_type_point_index
+	#if defined color_type_indices
 		gl_FragColor = vec4(color, uPCIndex / 255.0);
 	#else
 		gl_FragColor = vec4(color, uOpacity);
@@ -5186,6 +5579,7 @@ void main() {
 
 
 `;
+
 	Shaders["pointcloud_sm.vs"] = `
 precision mediump float;
 precision mediump int;
@@ -5329,6 +5723,7 @@ void main() {
 
 }
 `;
+
 	Shaders["pointcloud_sm.fs"] = `
 precision mediump float;
 precision mediump int;
@@ -5347,6 +5742,7 @@ void main() {
 
 
 `;
+
 	Shaders["normalize.vs"] = `
 precision mediump float;
 precision mediump int;
@@ -5363,6 +5759,7 @@ void main() {
 	vUv = uv;
 	gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
 }`;
+
 	Shaders["normalize.fs"] = `
 #extension GL_EXT_frag_depth : enable
 
@@ -5392,8 +5789,14 @@ void main() {
 
 
 }`;
+
 	Shaders["normalize_and_edl.fs"] = `
 #extension GL_EXT_frag_depth : enable
+
+// 
+// adapted from the EDL shader code from Christian Boucheny in cloud compare:
+// https://github.com/cloudcompare/trunk/tree/master/plugins/qEDL/shaders/EDL
+//
 
 precision mediump float;
 precision mediump int;
@@ -5451,7 +5854,16 @@ void main() {
 
 	gl_FragDepthEXT = depth;
 }`;
+
 	Shaders["edl.vs"] = `
+precision mediump float;
+precision mediump int;
+
+attribute vec3 position;
+attribute vec2 uv;
+
+uniform mat4 projectionMatrix;
+uniform mat4 modelViewMatrix;
 
 varying vec2 vUv;
 
@@ -5462,10 +5874,17 @@ void main() {
 
 	gl_Position = projectionMatrix * mvPosition;
 }`;
-	Shaders["edl.fs"] = `// 
+
+	Shaders["edl.fs"] = `
+#extension GL_EXT_frag_depth : enable
+
+// 
 // adapted from the EDL shader code from Christian Boucheny in cloud compare:
 // https://github.com/cloudcompare/trunk/tree/master/plugins/qEDL/shaders/EDL
 //
+
+precision mediump float;
+precision mediump int;
 
 uniform float screenWidth;
 uniform float screenHeight;
@@ -5474,9 +5893,11 @@ uniform float edlStrength;
 uniform float radius;
 uniform float opacity;
 
-//uniform sampler2D colorMap;
-uniform sampler2D uRegularColor;
-uniform sampler2D uRegularDepth;
+uniform float uNear;
+uniform float uFar;
+
+uniform mat4 uProj;
+
 uniform sampler2D uEDLColor;
 uniform sampler2D uEDLDepth;
 
@@ -5506,7 +5927,6 @@ float response(float depth){
 }
 
 void main(){
-	vec4 cReg = texture2D(uRegularColor, vUv);
 	vec4 cEDL = texture2D(uEDLColor, vUv);
 	
 	float depth = cEDL.a;
@@ -5514,17 +5934,25 @@ void main(){
 	float res = response(depth);
 	float shade = exp(-res * 300.0 * edlStrength);
 
-	float dReg = texture2D(uRegularDepth, vUv).r;
-	float dEDL = texture2D(uEDLDepth, vUv).r;
+	gl_FragColor = vec4(cEDL.rgb * shade, opacity);
 
-	if(dEDL < dReg){
-		gl_FragColor = vec4(cEDL.rgb * shade, opacity);
-	}else{
-		gl_FragColor = vec4(cReg.rgb * shade, cReg.a);
+	{ // write regular hyperbolic depth values to depth buffer
+		float dl = pow(2.0, depth);
+
+		vec4 dp = uProj * vec4(0.0, 0.0, -dl, 1.0);
+		float pz = dp.z / dp.w;
+		float fragDepth = (pz + 1.0) / 2.0;
+
+		gl_FragDepthEXT = fragDepth;
+	}
+
+	if(depth == 0.0){
+		discard;
 	}
 
 }
 `;
+
 	Shaders["blur.vs"] = `
 varying vec2 vUv;
 
@@ -5533,6 +5961,7 @@ void main() {
 
 	gl_Position =   projectionMatrix * modelViewMatrix * vec4(position,1.0);
 }`;
+
 	Shaders["blur.fs"] = `
 uniform mat4 projectionMatrix;
 
@@ -5565,945 +5994,6 @@ void main() {
 	
 	gl_FragColor = vec4(color, 1.0);
 }`;
-	Shaders["pointcloud.gl2.vs"] = `#version 300 es
-
-precision highp float;
-precision highp int;
-
-#define max_clip_polygons 8
-#define PI 3.141592653589793
-
-in vec3 position;
-in vec3 color;
-in float intensity;
-in float classification;
-in float returnNumber;
-in float numberOfReturns;
-in float pointSourceID;
-in vec4 indices;
-in float spacing;
-in float gpsTime;
-
-uniform mat4 modelMatrix;
-uniform mat4 modelViewMatrix;
-uniform mat4 projectionMatrix;
-uniform mat4 viewMatrix;
-uniform mat4 uViewInv;
-
-uniform float uScreenWidth;
-uniform float uScreenHeight;
-uniform float fov;
-uniform float near;
-uniform float far;
-
-uniform bool uDebug;
-
-uniform bool uUseOrthographicCamera;
-uniform float uOrthoWidth;
-uniform float uOrthoHeight;
-
-
-#define CLIPTASK_NONE 0
-#define CLIPTASK_HIGHLIGHT 1
-#define CLIPTASK_SHOW_INSIDE 2
-#define CLIPTASK_SHOW_OUTSIDE 3
-
-#define CLIPMETHOD_INSIDE_ANY 0
-#define CLIPMETHOD_INSIDE_ALL 1
-
-uniform int clipTask;
-uniform int clipMethod;
-#if defined(num_clipboxes) && num_clipboxes > 0
-	uniform mat4 clipBoxes[num_clipboxes];
-#endif
-
-#if defined(num_clipspheres) && num_clipspheres > 0
-	uniform mat4 uClipSpheres[num_clipspheres];
-#endif
-
-#if defined(num_clippolygons) && num_clippolygons > 0
-	uniform int uClipPolygonVCount[num_clippolygons];
-	uniform vec3 uClipPolygonVertices[num_clippolygons * 8];
-	uniform mat4 uClipPolygonWVP[num_clippolygons];
-#endif
-
-layout(std140) uniform ubo_point{
-	float size;
-	float minSize;
-	float maxSize;
-} pointData;
-
-struct Node{
-	float level;
-	float vnStart;
-};
-
-uniform float uPCIndex;
-uniform float uOctreeSpacing;
-uniform float uNodeSpacing;
-uniform float uOctreeSize;
-uniform vec3 uBBSize;
-uniform float uLevel;
-uniform float uVNStart;
-uniform bool uIsLeafNode;
-
-uniform vec3 uColor;
-uniform float uOpacity;
-
-uniform vec2 elevationRange;
-uniform vec2 intensityRange;
-
-uniform vec2 uFilterReturnNumberRange;
-uniform vec2 uFilterNumberOfReturnsRange;
-uniform vec2 uFilterGPSTimeClipRange;
-
-uniform float uGPSOffset;
-uniform float uGPSRange;
-uniform float intensityGamma;
-uniform float intensityContrast;
-uniform float intensityBrightness;
-uniform float rgbGamma;
-uniform float rgbContrast;
-uniform float rgbBrightness;
-uniform float uTransition;
-uniform float wRGB;
-uniform float wIntensity;
-uniform float wElevation;
-uniform float wClassification;
-uniform float wReturnNumber;
-uniform float wSourceID;
-
-uniform vec3 uShadowColor;
-
-uniform sampler2D visibleNodes;
-uniform sampler2D gradient;
-uniform sampler2D classificationLUT;
-
-#if defined(num_shadowmaps) && num_shadowmaps > 0
-uniform sampler2D uShadowMap[num_shadowmaps];
-uniform mat4 uShadowWorldView[num_shadowmaps];
-uniform mat4 uShadowProj[num_shadowmaps];
-#endif
-
-out vec3	vColor;
-out float	vLogDepth;
-out vec3	vViewPosition;
-out float 	vRadius;
-out float 	vPointSize;
-
-
-//float round(float number){
-//	return floor(number + 0.5);
-//}
-
-// 
-//    ###    ########     ###    ########  ######## #### ##     ## ########     ######  #### ######## ########  ######  
-//   ## ##   ##     ##   ## ##   ##     ##    ##     ##  ##     ## ##          ##    ##  ##       ##  ##       ##    ## 
-//  ##   ##  ##     ##  ##   ##  ##     ##    ##     ##  ##     ## ##          ##        ##      ##   ##       ##       
-// ##     ## ##     ## ##     ## ########     ##     ##  ##     ## ######       ######   ##     ##    ######    ######  
-// ######### ##     ## ######### ##           ##     ##   ##   ##  ##                ##  ##    ##     ##             ## 
-// ##     ## ##     ## ##     ## ##           ##     ##    ## ##   ##          ##    ##  ##   ##      ##       ##    ## 
-// ##     ## ########  ##     ## ##           ##    ####    ###    ########     ######  #### ######## ########  ######  
-// 																			
-
-
-// ---------------------
-// OCTREE
-// ---------------------
-
-#if (defined(adaptive_point_size) || defined(color_type_lod)) && defined(tree_type_octree)
-/**
- * number of 1-bits up to inclusive index position
- * number is treated as if it were an integer in the range 0-255
- *
- */
-int numberOfOnes(int number, int index){
-	int numOnes = 0;
-	int tmp = 128;
-	for(int i = 7; i >= 0; i--){
-		
-		if(number >= tmp){
-			number = number - tmp;
-
-			if(i <= index){
-				numOnes++;
-			}
-		}
-		
-		tmp = tmp / 2;
-	}
-
-	return numOnes;
-}
-
-
-/**
- * checks whether the bit at index is 1
- * number is treated as if it were an integer in the range 0-255
- *
- */
-bool isBitSet(int number, int index){
-
-	// weird multi else if due to lack of proper array, int and bitwise support in WebGL 1.0
-	int powi = 1;
-	if(index == 0){
-		powi = 1;
-	}else if(index == 1){
-		powi = 2;
-	}else if(index == 2){
-		powi = 4;
-	}else if(index == 3){
-		powi = 8;
-	}else if(index == 4){
-		powi = 16;
-	}else if(index == 5){
-		powi = 32;
-	}else if(index == 6){
-		powi = 64;
-	}else if(index == 7){
-		powi = 128;
-	}else{
-		return false;
-	}
-
-	int ndp = number / powi;
-
-	return mod(float(ndp), 2.0) != 0.0;
-}
-
-
-/**
- * find the LOD at the point position
- */
-float getLOD(){
-	
-	vec3 offset = vec3(0.0, 0.0, 0.0);
-	int iOffset = int(uVNStart);
-	float depth = uLevel;
-	for(float i = 0.0; i <= 30.0; i++){
-		float nodeSizeAtLevel = uOctreeSize  / pow(2.0, i + uLevel + 0.0);
-		
-		vec3 index3d = (position-offset) / nodeSizeAtLevel;
-		index3d = floor(index3d + 0.5);
-		int index = int(round(4.0 * index3d.x + 2.0 * index3d.y + index3d.z));
-		
-		vec4 value = texture(visibleNodes, vec2(float(iOffset) / 2048.0, 0.0));
-		int mask = int(round(value.r * 255.0));
-
-		if(isBitSet(mask, index)){
-			// there are more visible child nodes at this position
-			int advanceG = int(round(value.g * 255.0)) * 256;
-			int advanceB = int(round(value.b * 255.0));
-			int advanceChild = numberOfOnes(mask, index - 1);
-			int advance = advanceG + advanceB + advanceChild;
-
-			iOffset = iOffset + advance;
-			
-			depth++;
-		}else{
-			// no more visible child nodes at this position
-			return value.a * 255.0;
-			//return depth;
-		}
-		
-		offset = offset + (vec3(1.0, 1.0, 1.0) * nodeSizeAtLevel * 0.5) * index3d;
-	}
-		
-	return depth;
-}
-
-float getSpacing(){
-	vec3 offset = vec3(0.0, 0.0, 0.0);
-	int iOffset = int(uVNStart);
-	float depth = uLevel;
-	float spacing = uNodeSpacing;
-	for(float i = 0.0; i <= 30.0; i++){
-		float nodeSizeAtLevel = uOctreeSize  / pow(2.0, i + uLevel + 0.0);
-		
-		vec3 index3d = (position-offset) / nodeSizeAtLevel;
-		index3d = floor(index3d + 0.5);
-		int index = int(round(4.0 * index3d.x + 2.0 * index3d.y + index3d.z));
-		
-		vec4 value = texture(visibleNodes, vec2(float(iOffset) / 2048.0, 0.0));
-		int mask = int(round(value.r * 255.0));
-		float spacingFactor = value.a;
-
-		if(i > 0.0){
-			spacing = spacing / (255.0 * spacingFactor);
-		}
-		
-
-		if(isBitSet(mask, index)){
-			// there are more visible child nodes at this position
-			int advanceG = int(round(value.g * 255.0)) * 256;
-			int advanceB = int(round(value.b * 255.0));
-			int advanceChild = numberOfOnes(mask, index - 1);
-			int advance = advanceG + advanceB + advanceChild;
-
-			iOffset = iOffset + advance;
-
-			//spacing = spacing / (255.0 * spacingFactor);
-			//spacing = spacing / 3.0;
-			
-			depth++;
-		}else{
-			// no more visible child nodes at this position
-			return spacing;
-		}
-		
-		offset = offset + (vec3(1.0, 1.0, 1.0) * nodeSizeAtLevel * 0.5) * index3d;
-	}
-		
-	return spacing;
-}
-
-float getPointSizeAttenuation(){
-	return pow(2.0, getLOD());
-}
-
-
-#endif
-
-
-// ---------------------
-// KD-TREE
-// ---------------------
-
-#if (defined(adaptive_point_size) || defined(color_type_lod)) && defined(tree_type_kdtree)
-
-float getLOD(){
-	vec3 offset = vec3(0.0, 0.0, 0.0);
-	float iOffset = 0.0;
-	float depth = 0.0;
-		
-		
-	vec3 size = uBBSize;	
-	vec3 pos = position;
-		
-	for(float i = 0.0; i <= 1000.0; i++){
-		
-		vec4 value = texture(visibleNodes, vec2(iOffset / 2048.0, 0.0));
-		
-		int children = int(value.r * 255.0);
-		float next = value.g * 255.0;
-		int split = int(value.b * 255.0);
-		
-		if(next == 0.0){
-		 	return depth;
-		}
-		
-		vec3 splitv = vec3(0.0, 0.0, 0.0);
-		if(split == 1){
-			splitv.x = 1.0;
-		}else if(split == 2){
-		 	splitv.y = 1.0;
-		}else if(split == 4){
-		 	splitv.z = 1.0;
-		}
-		
-		iOffset = iOffset + next;
-		
-		float factor = length(pos * splitv / size);
-		if(factor < 0.5){
-			// left
-		if(children == 0 || children == 2){
-				return depth;
-			}
-		}else{
-			// right
-			pos = pos - size * splitv * 0.5;
-			if(children == 0 || children == 1){
-				return depth;
-			}
-			if(children == 3){
-				iOffset = iOffset + 1.0;
-			}
-		}
-		size = size * ((1.0 - (splitv + 1.0) / 2.0) + 0.5);
-		
-		depth++;
-	}
-		
-		
-	return depth;	
-}
-
-float getPointSizeAttenuation(){
-	return 0.5 * pow(1.3, getLOD());
-}
-
-#endif
-
-
-
-// 
-//    ###    ######## ######## ########  #### ########  ##     ## ######## ########  ######  
-//   ## ##      ##       ##    ##     ##  ##  ##     ## ##     ##    ##    ##       ##    ## 
-//  ##   ##     ##       ##    ##     ##  ##  ##     ## ##     ##    ##    ##       ##       
-// ##     ##    ##       ##    ########   ##  ########  ##     ##    ##    ######    ######  
-// #########    ##       ##    ##   ##    ##  ##     ## ##     ##    ##    ##             ## 
-// ##     ##    ##       ##    ##    ##   ##  ##     ## ##     ##    ##    ##       ##    ## 
-// ##     ##    ##       ##    ##     ## #### ########   #######     ##    ########  ######                                                                               
-// 
-
-
-
-// formula adapted from: http://www.dfstudios.co.uk/articles/programming/image-programming-algorithms/image-processing-algorithms-part-5-contrast-adjustment/
-float getContrastFactor(float contrast){
-	return (1.0158730158730156 * (contrast + 1.0)) / (1.0158730158730156 - contrast);
-}
-
-vec3 getRGB(){
-	vec3 rgb = color;
-	
-	rgb = pow(rgb, vec3(rgbGamma));
-	rgb = rgb + rgbBrightness;
-	//rgb = (rgb - 0.5) * getContrastFactor(rgbContrast) + 0.5;
-	rgb = clamp(rgb, 0.0, 1.0);
-
-		//rgb = indices.rgb;
-	//rgb.b = pcIndex / 255.0;
-	
-	
-	return rgb;
-}
-
-float getIntensity(){
-	float w = (intensity - intensityRange.x) / (intensityRange.y - intensityRange.x);
-	w = pow(w, intensityGamma);
-	w = w + intensityBrightness;
-	w = (w - 0.5) * getContrastFactor(intensityContrast) + 0.5;
-	w = clamp(w, 0.0, 1.0);
-
-	return w;
-}
-
-float getGpsTime(){
-	float w = (gpsTime + uGPSOffset) / uGPSRange;
-	w = clamp(w, 0.0, 1.0);
-
-	return w;
-}
-
-vec3 getElevation(){
-	vec4 world = modelMatrix * vec4( position, 1.0 );
-	float w = (world.z - elevationRange.x) / (elevationRange.y - elevationRange.x);
-	vec3 cElevation = texture(gradient, vec2(w,1.0-w)).rgb;
-	
-	return cElevation;
-}
-
-vec4 getClassification(){
-	vec2 uv = vec2(classification / 255.0, 0.5);
-	vec4 classColor = texture(classificationLUT, uv);
-	
-	return classColor;
-}
-
-vec3 getReturnNumber(){
-	if(numberOfReturns == 1.0){
-		return vec3(1.0, 1.0, 0.0);
-	}else{
-		if(returnNumber == 1.0){
-			return vec3(1.0, 0.0, 0.0);
-		}else if(returnNumber == numberOfReturns){
-			return vec3(0.0, 0.0, 1.0);
-		}else{
-			return vec3(0.0, 1.0, 0.0);
-		}
-	}
-}
-
-vec3 getSourceID(){
-	float w = mod(pointSourceID, 10.0) / 10.0;
-	return texture(gradient, vec2(w,1.0 - w)).rgb;
-}
-
-vec3 getCompositeColor(){
-	vec3 c;
-	float w;
-
-	c += wRGB * getRGB();
-	w += wRGB;
-	
-	c += wIntensity * getIntensity() * vec3(1.0, 1.0, 1.0);
-	w += wIntensity;
-	
-	c += wElevation * getElevation();
-	w += wElevation;
-	
-	c += wReturnNumber * getReturnNumber();
-	w += wReturnNumber;
-	
-	c += wSourceID * getSourceID();
-	w += wSourceID;
-	
-	vec4 cl = wClassification * getClassification();
-    c += cl.a * cl.rgb;
-	w += wClassification * cl.a;
-
-	c = c / w;
-	
-	if(w == 0.0){
-		//c = color;
-		gl_Position = vec4(100.0, 100.0, 100.0, 0.0);
-	}
-	
-	return c;
-}
-
-
-// 
-//  ######  ##       #### ########  ########  #### ##    ##  ######   
-// ##    ## ##        ##  ##     ## ##     ##  ##  ###   ## ##    ##  
-// ##       ##        ##  ##     ## ##     ##  ##  ####  ## ##        
-// ##       ##        ##  ########  ########   ##  ## ## ## ##   #### 
-// ##       ##        ##  ##        ##         ##  ##  #### ##    ##  
-// ##    ## ##        ##  ##        ##         ##  ##   ### ##    ##  
-//  ######  ######## #### ##        ##        #### ##    ##  ######                                                          
-// 
-
-
-
-vec3 getColor(){
-	vec3 color;
-	
-	#ifdef color_type_rgb
-		color = getRGB();
-	#elif defined color_type_height
-		color = getElevation();
-	#elif defined color_type_rgb_height
-		vec3 cHeight = getElevation();
-		color = (1.0 - uTransition) * getRGB() + uTransition * cHeight;
-	#elif defined color_type_depth
-		float linearDepth = gl_Position.w;
-		float expDepth = (gl_Position.z / gl_Position.w) * 0.5 + 0.5;
-		color = vec3(linearDepth, expDepth, 0.0);
-	#elif defined color_type_intensity
-		float w = getIntensity();
-		color = vec3(w, w, w);
-	#elif defined color_type_gpstime
-		float w = getGpsTime();
-		color = vec3(w, w, w);
-	#elif defined color_type_intensity_gradient
-		float w = getIntensity();
-		color = texture(gradient, vec2(w,1.0-w)).rgb;
-	#elif defined color_type_color
-		color = uColor;
-	#elif defined color_type_lod
-		float depth = getLOD();
-		float w = depth / 10.0;
-		color = texture(gradient, vec2(w,1.0-w)).rgb;
-	#elif defined color_type_point_index
-		color = indices.rgb;
-	#elif defined color_type_classification
-		vec4 cl = getClassification(); 
-		color = cl.rgb;
-	#elif defined color_type_return_number
-		color = getReturnNumber();
-	#elif defined color_type_source
-		color = getSourceID();
-	#elif defined color_type_normal
-		color = (modelMatrix * vec4(normal, 0.0)).xyz;
-	#elif defined color_type_phong
-		color = color;
-	#elif defined color_type_composite
-		color = getCompositeColor();
-	#endif
-	
-	return color;
-}
-
-float getPointSize(){
-	float pointSize = 1.0;
-	
-	float slope = tan(fov / 2.0);
-	float projFactor = -0.5 * uScreenHeight / (slope * vViewPosition.z);
-	
-	float r = uOctreeSpacing * 1.7;
-	vRadius = r;
-	#if defined fixed_point_size
-		pointSize = pointData.size;
-	#elif defined attenuated_point_size
-		if(uUseOrthographicCamera){
-			pointSize = pointData.size;
-		}else{
-			pointSize = pointData.size * spacing * projFactor;
-			//pointSize = pointSize * projFactor;
-		}
-	#elif defined adaptive_point_size
-		if(uUseOrthographicCamera) {
-			float worldSpaceSize = 1.0 * pointData.size * r / getPointSizeAttenuation();
-			pointSize = (worldSpaceSize / uOrthoWidth) * uScreenWidth;
-		} else {
-
-			if(uIsLeafNode && false){
-				pointSize = pointData.size * spacing * projFactor;
-			}else{
-				float worldSpaceSize = 1.0 * pointData.size * r / getPointSizeAttenuation();
-				pointSize = worldSpaceSize * projFactor;
-			}
-		}
-	#endif
-
-	pointSize = max(pointData.minSize, pointSize);
-	pointSize = min(pointData.maxSize, pointSize);
-	
-	vRadius = pointSize / projFactor;
-
-	return pointSize;
-}
-
-#if defined(num_clippolygons) && num_clippolygons > 0
-bool pointInClipPolygon(vec3 point, int polyIdx) {
-
-	mat4 wvp = uClipPolygonWVP[polyIdx];
-	//vec4 screenClipPos = uClipPolygonVP[polyIdx] * modelMatrix * vec4(point, 1.0);
-	//screenClipPos.xy = screenClipPos.xy / screenClipPos.w * 0.5 + 0.5;
-
-	vec4 pointNDC = wvp * vec4(point, 1.0);
-	pointNDC.xy = pointNDC.xy / pointNDC.w;
-
-	int j = uClipPolygonVCount[polyIdx] - 1;
-	bool c = false;
-	for(int i = 0; i < 8; i++) {
-		if(i == uClipPolygonVCount[polyIdx]) {
-			break;
-		}
-
-		//vec4 verti = wvp * vec4(uClipPolygonVertices[polyIdx * 8 + i], 1);
-		//vec4 vertj = wvp * vec4(uClipPolygonVertices[polyIdx * 8 + j], 1);
-
-		//verti.xy = verti.xy / verti.w;
-		//vertj.xy = vertj.xy / vertj.w;
-
-		//verti.xy = verti.xy / verti.w * 0.5 + 0.5;
-		//vertj.xy = vertj.xy / vertj.w * 0.5 + 0.5;
-
-		vec3 verti = uClipPolygonVertices[polyIdx * 8 + i];
-		vec3 vertj = uClipPolygonVertices[polyIdx * 8 + j];
-
-		if( ((verti.y > pointNDC.y) != (vertj.y > pointNDC.y)) && 
-			(pointNDC.x < (vertj.x-verti.x) * (pointNDC.y-verti.y) / (vertj.y-verti.y) + verti.x) ) {
-			c = !c;
-		}
-		j = i;
-	}
-
-	return c;
-}
-#endif
-
-void doClipping(){
-
-	#if !defined color_type_composite
-		vec4 cl = getClassification(); 
-		if(cl.a == 0.0){
-			gl_Position = vec4(100.0, 100.0, 100.0, 0.0);
-			
-			return;
-		}
-	#endif
-
-	#if defined(clip_return_number_enabled)
-	{ // return number filter
-		vec2 range = uFilterReturnNumberRange;
-		if(returnNumber < range.x || returnNumber > range.y){
-			gl_Position = vec4(100.0, 100.0, 100.0, 0.0);
-			
-			return;
-		}
-	}
-	#endif
-
-	#if defined(clip_number_of_returns_enabled)
-	{ // number of return filter
-		vec2 range = uFilterNumberOfReturnsRange;
-		if(numberOfReturns < range.x || numberOfReturns > range.y){
-			gl_Position = vec4(100.0, 100.0, 100.0, 0.0);
-			
-			return;
-		}
-	}
-	#endif
-
-	#if defined(clip_gps_enabled)
-	{ // GPS time filter
-		float time = gpsTime + uGPSOffset;
-		vec2 range = uFilterGPSTimeClipRange;
-
-		if(time < range.x || time > range.y){
-			gl_Position = vec4(100.0, 100.0, 100.0, 0.0);
-			
-			return;
-		}
-	}
-	#endif
-
-	int clipVolumesCount = 0;
-	int insideCount = 0;
-
-	#if defined(num_clipboxes) && num_clipboxes > 0
-		for(int i = 0; i < num_clipboxes; i++){
-			vec4 clipPosition = clipBoxes[i] * modelMatrix * vec4( position, 1.0 );
-			bool inside = -0.5 <= clipPosition.x && clipPosition.x <= 0.5;
-			inside = inside && -0.5 <= clipPosition.y && clipPosition.y <= 0.5;
-			inside = inside && -0.5 <= clipPosition.z && clipPosition.z <= 0.5;
-
-			insideCount = insideCount + (inside ? 1 : 0);
-			clipVolumesCount++;
-		}	
-	#endif
-
-	#if defined(num_clippolygons) && num_clippolygons > 0
-		for(int i = 0; i < num_clippolygons; i++) {
-			bool inside = pointInClipPolygon(position, i);
-
-			insideCount = insideCount + (inside ? 1 : 0);
-			clipVolumesCount++;
-		}
-	#endif
-
-	bool insideAny = insideCount > 0;
-	bool insideAll = (clipVolumesCount > 0) && (clipVolumesCount == insideCount);
-
-	if(clipMethod == CLIPMETHOD_INSIDE_ANY){
-		if(insideAny && clipTask == CLIPTASK_HIGHLIGHT){
-			vColor.r += 0.5;
-		}else if(!insideAny && clipTask == CLIPTASK_SHOW_INSIDE){
-			gl_Position = vec4(100.0, 100.0, 100.0, 1.0);
-		}else if(insideAny && clipTask == CLIPTASK_SHOW_OUTSIDE){
-			gl_Position = vec4(100.0, 100.0, 100.0, 1.0);
-		}
-	}else if(clipMethod == CLIPMETHOD_INSIDE_ALL){
-		if(insideAll && clipTask == CLIPTASK_HIGHLIGHT){
-			vColor.r += 0.5;
-		}else if(!insideAll && clipTask == CLIPTASK_SHOW_INSIDE){
-			gl_Position = vec4(100.0, 100.0, 100.0, 1.0);
-		}else if(insideAll && clipTask == CLIPTASK_SHOW_OUTSIDE){
-			gl_Position = vec4(100.0, 100.0, 100.0, 1.0);
-		}
-	}
-}
-
-
-
-// 
-// ##     ##    ###    #### ##    ## 
-// ###   ###   ## ##    ##  ###   ## 
-// #### ####  ##   ##   ##  ####  ## 
-// ## ### ## ##     ##  ##  ## ## ## 
-// ##     ## #########  ##  ##  #### 
-// ##     ## ##     ##  ##  ##   ### 
-// ##     ## ##     ## #### ##    ## 
-//
-
-void main() {
-	vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-	vViewPosition = mvPosition.xyz;
-	gl_Position = projectionMatrix * mvPosition;
-	vLogDepth = log2(-mvPosition.z);
-
-	// POINT SIZE
-	float pointSize = getPointSize();
-	gl_PointSize = pointSize;
-	vPointSize = pointSize;
-
-	// COLOR
-	vColor = getColor();
-
-
-	#if defined hq_depth_pass
-		float originalDepth = gl_Position.w;
-		float adjustedDepth = originalDepth + 2.0 * vRadius;
-		float adjust = adjustedDepth / originalDepth;
-
-		mvPosition.xyz = mvPosition.xyz * adjust;
-		gl_Position = projectionMatrix * mvPosition;
-	#endif
-
-
-	// CLIPPING
-	doClipping();
-
-	#if defined(num_clipspheres) && num_clipspheres > 0
-		for(int i = 0; i < num_clipspheres; i++){
-			vec4 sphereLocal = uClipSpheres[i] * mvPosition;
-
-			float distance = length(sphereLocal.xyz);
-
-			if(distance < 1.0){
-				float w = distance;
-				vec3 cGradient = texture(gradient, vec2(w, 1.0 - w)).rgb;
-				
-				vColor = cGradient;
-				//vColor = cGradient * 0.7 + vColor * 0.3;
-			}
-		}
-	#endif
-
-	#if defined(num_shadowmaps) && num_shadowmaps > 0
-
-		const float sm_near = 0.1;
-		const float sm_far = 10000.0;
-
-		for(int i = 0; i < num_shadowmaps; i++){
-			vec3 viewPos = (uShadowWorldView[i] * vec4(position, 1.0)).xyz;
-			float distanceToLight = abs(viewPos.z);
-			
-			vec4 projPos = uShadowProj[i] * uShadowWorldView[i] * vec4(position, 1);
-			vec3 nc = projPos.xyz / projPos.w;
-			
-			float u = nc.x * 0.5 + 0.5;
-			float v = nc.y * 0.5 + 0.5;
-
-			vec2 sampleStep = vec2(1.0 / (2.0*1024.0), 1.0 / (2.0*1024.0)) * 1.5;
-			vec2 sampleLocations[9];
-			sampleLocations[0] = vec2(0.0, 0.0);
-			sampleLocations[1] = sampleStep;
-			sampleLocations[2] = -sampleStep;
-			sampleLocations[3] = vec2(sampleStep.x, -sampleStep.y);
-			sampleLocations[4] = vec2(-sampleStep.x, sampleStep.y);
-
-			sampleLocations[5] = vec2(0.0, sampleStep.y);
-			sampleLocations[6] = vec2(0.0, -sampleStep.y);
-			sampleLocations[7] = vec2(sampleStep.x, 0.0);
-			sampleLocations[8] = vec2(-sampleStep.x, 0.0);
-
-			float visibleSamples = 0.0;
-			float numSamples = 0.0;
-
-			float bias = vRadius * 2.0;
-
-			for(int j = 0; j < 9; j++){
-				vec4 depthMapValue = texture(uShadowMap[i], vec2(u, v) + sampleLocations[j]);
-
-				float linearDepthFromSM = depthMapValue.x + bias;
-				float linearDepthFromViewer = distanceToLight;
-
-				if(linearDepthFromSM > linearDepthFromViewer){
-					visibleSamples += 1.0;
-				}
-
-				numSamples += 1.0;
-			}
-
-			float visibility = visibleSamples / numSamples;
-
-			if(u < 0.0 || u > 1.0 || v < 0.0 || v > 1.0 || nc.x < -1.0 || nc.x > 1.0 || nc.y < -1.0 || nc.y > 1.0 || nc.z < -1.0 || nc.z > 1.0){
-				//vColor = vec3(0.0, 0.0, 0.2);
-			}else{
-				//vColor = vec3(1.0, 1.0, 1.0) * visibility + vec3(1.0, 1.0, 1.0) * vec3(0.5, 0.0, 0.0) * (1.0 - visibility);
-				vColor = vColor * visibility + vColor * uShadowColor * (1.0 - visibility);
-			}
-		}
-
-	#endif
-
-}
-`;
-	Shaders["pointcloud.gl2.fs"] = `#version 300 es
-
-#if defined paraboloid_point_shape
-	#extension GL_EXT_frag_depth : enable
-#endif
-
-precision highp float;
-precision highp int;
-
-uniform mat4 viewMatrix;
-uniform mat4 uViewInv;
-uniform mat4 uProjInv;
-uniform vec3 cameraPosition;
-
-
-uniform mat4 projectionMatrix;
-uniform float uOpacity;
-
-uniform float blendHardness;
-uniform float blendDepthSupplement;
-uniform float fov;
-uniform float uSpacing;
-uniform float near;
-uniform float far;
-uniform float uPCIndex;
-uniform float uScreenWidth;
-uniform float uScreenHeight;
-
-in vec3	vColor;
-in float	vLogDepth;
-in vec3	vViewPosition;
-in float	vRadius;
-in float 	vPointSize;
-in vec3 	vPosition;
-
-out vec4 out_color;
-
-
-float specularStrength = 1.0;
-
-void main() {
-
-	vec3 color = vColor;
-	float depth = gl_FragCoord.z;
-
-	#if defined(circle_point_shape) || defined(paraboloid_point_shape) 
-		float u = 2.0 * gl_PointCoord.x - 1.0;
-		float v = 2.0 * gl_PointCoord.y - 1.0;
-	#endif
-	
-	#if defined(circle_point_shape) 
-		float cc = u*u + v*v;
-		if(cc > 1.0){
-			discard;
-		}
-	#endif
-		
-	#if defined color_type_point_index
-		out_color = vec4(color, uPCIndex / 255.0);
-	#else
-		out_color = vec4(color, uOpacity);
-	#endif
-
-	#if defined paraboloid_point_shape
-		float wi = 0.0 - ( u*u + v*v);
-		vec4 pos = vec4(vViewPosition, 1.0);
-		pos.z += wi * vRadius;
-		float linearDepth = -pos.z;
-		pos = projectionMatrix * pos;
-		pos = pos / pos.w;
-		float expDepth = pos.z;
-		depth = (pos.z + 1.0) / 2.0;
-		gl_FragDepthEXT = depth;
-		
-		#if defined(color_type_depth)
-			color.r = linearDepth;
-			color.g = expDepth;
-		#endif
-		
-		#if defined(use_edl)
-			out_color.a = log2(linearDepth);
-		#endif
-		
-	#else
-		#if defined(use_edl)
-			out_color.a = vLogDepth;
-		#endif
-	#endif
-
-	#if defined(weighted_splats)
-		float distance = 2.0 * length(gl_PointCoord.xy - 0.5);
-		float weight = max(0.0, 1.0 - distance);
-		weight = pow(weight, 1.5);
-
-		out_color.a = weight;
-		out_color.xyz = out_color.xyz * weight;
-	#endif
-	
-}
-
-
-`;
 
 	const ClassificationScheme = {
 
@@ -6562,8 +6052,6 @@ void main() {
 	});
 
 	//
-	//
-	//
 	// how to calculate the radius of a projected sphere in screen space
 	// http://stackoverflow.com/questions/21648630/radius-of-projected-sphere-in-screen-space
 	// http://stackoverflow.com/questions/3717226/radius-of-projected-sphere
@@ -6593,7 +6081,6 @@ void main() {
 
 			this._pointSizeType = PointSizeType.FIXED;
 			this._shape = PointShape.SQUARE;
-			this._pointColorType = PointColorType.RGB;
 			this._useClipBox = false;
 			this.clipBoxes = [];
 			//this.clipSpheres = [];
@@ -6601,6 +6088,8 @@ void main() {
 			this._weighted = false;
 			this._gradient = Gradients.SPECTRAL;
 			this.gradientTexture = PointCloudMaterial.generateGradientTexture(this._gradient);
+			this._matcap = "matcap.jpg";
+			this.matcapTexture = Potree.PointCloudMaterial.generateMatcapTexture(this._matcap);
 			this.lights = false;
 			this.fog = false;
 			this._treeType = treeType;
@@ -6608,6 +6097,8 @@ void main() {
 			this._snapEnabled = false;
 			this._numSnapshots = 0;
 			this.defines = new Map();
+
+			this._activeAttributeName = null;
 
 			this._defaultIntensityRangeChanged = false;
 			this._defaultElevationRangeChanged = false;
@@ -6661,7 +6152,7 @@ void main() {
 				toModel:			{ type: "Matrix4f", value: [] },
 				diffuse:			{ type: "fv", value: [1, 1, 1] },
 				transition:			{ type: "f", value: 0.5 },
-				intensityRange:		{ type: "fv", value: [0, 65000] },
+				intensityRange:		{ type: "fv", value: [Infinity, -Infinity] },
 				intensityGamma:		{ type: "f", value: 1 },
 				intensityContrast:	{ type: "f", value: 0 },
 				intensityBrightness:{ type: "f", value: 0 },
@@ -6675,6 +6166,7 @@ void main() {
 				wReturnNumber:		{ type: "f", value: 0 },
 				wSourceID:			{ type: "f", value: 0 },
 				useOrthographicCamera: { type: "b", value: false },
+				elevationGradientRepat: { type: "i", value: ElevationGradientRepeat.CLAMP },
 				clipTask:			{ type: "i", value: 1 },
 				clipMethod:			{ type: "i", value: 1 },
 				uSnapshot:			{ type: "tv", value: [] },
@@ -6685,9 +6177,14 @@ void main() {
 				uSnapViewInv:		{ type: "Matrix4fv", value: [] },
 				uShadowColor:		{ type: "3fv", value: [0, 0, 0] },
 
+				uExtraRange:		{ type: "2fv", value: [0, 1] },
+				uExtraGammaBrightContr:	{ type: "3fv", value: [1, 0, 0] },
+
 				uFilterReturnNumberRange:		{ type: "fv", value: [0, 7]},
 				uFilterNumberOfReturnsRange:	{ type: "fv", value: [0, 7]},
 				uFilterGPSTimeClipRange:		{ type: "fv", value: [0, 7]},
+				matcapTextureUniform: 	{ type: "t", value: this.matcapTexture },
+				backfaceCulling: { type: "b", value: false },
 			};
 
 			this.classification = ClassificationScheme.DEFAULT;
@@ -6696,19 +6193,12 @@ void main() {
 			this.defaultAttributeValues.classification = [0, 0, 0];
 			this.defaultAttributeValues.indices = [0, 0, 0, 0];
 
-			//if(Potree.Features.WEBGL2.isSupported()){
-			//	this.vertexShader = this.getDefines() + Shaders['pointcloud.gl2.vs'];
-			//	this.fragmentShader = this.getDefines() + Shaders['pointcloud.fs'];
-			//}else{
-			//	this.vertexShader = this.getDefines() + Shaders['pointcloud.vs'];
-			//	this.fragmentShader = this.getDefines() + Shaders['pointcloud.fs'];
-			//}
-
 			this.vertexShader = Shaders['pointcloud.vs'];
 			this.fragmentShader = Shaders['pointcloud.fs'];
-
 			
 			this.vertexColors = THREE.VertexColors;
+
+			this.updateShaderSource();
 		}
 
 		setDefine(key, value){
@@ -6728,10 +6218,8 @@ void main() {
 
 		updateShaderSource () {
 
-			let vs = Potree.Features.WEBGL2.isSupported() ?
-				Shaders['pointcloud.gl2.vs'] : Shaders['pointcloud.vs'];
-			let fs = Potree.Features.WEBGL2.isSupported() ?
-				Shaders['pointcloud.gl2.fs'] : Shaders['pointcloud.fs'];
+			let vs = Shaders['pointcloud.vs'];
+			let fs = Shaders['pointcloud.fs'];
 			let definesString = this.getDefines();
 
 			let vsVersionIndex = vs.indexOf("#version ");
@@ -6803,38 +6291,11 @@ void main() {
 				defines.push('#define snap_enabled');
 			}
 
-			if (this._pointColorType === PointColorType.RGB) {
-				defines.push('#define color_type_rgb');
-			} else if (this._pointColorType === PointColorType.COLOR) {
-				defines.push('#define color_type_color');
-			} else if (this._pointColorType === PointColorType.DEPTH) {
-				defines.push('#define color_type_depth');
-			} else if (this._pointColorType === PointColorType.HEIGHT) {
-				defines.push('#define color_type_height');
-			} else if (this._pointColorType === PointColorType.INTENSITY) {
-				defines.push('#define color_type_intensity');
-			} else if (this._pointColorType === PointColorType.INTENSITY_GRADIENT) {
-				defines.push('#define color_type_intensity_gradient');
-			} else if (this._pointColorType === PointColorType.LOD) {
-				defines.push('#define color_type_lod');
-			} else if (this._pointColorType === PointColorType.POINT_INDEX) {
-				defines.push('#define color_type_point_index');
-			} else if (this._pointColorType === PointColorType.CLASSIFICATION) {
-				defines.push('#define color_type_classification');
-			} else if (this._pointColorType === PointColorType.RETURN_NUMBER) {
-				defines.push('#define color_type_return_number');
-			} else if (this._pointColorType === PointColorType.SOURCE) {
-				defines.push('#define color_type_source');
-			} else if (this._pointColorType === PointColorType.NORMAL) {
-				defines.push('#define color_type_normal');
-			} else if (this._pointColorType === PointColorType.PHONG) {
-				defines.push('#define color_type_phong');
-			} else if (this._pointColorType === PointColorType.RGB_HEIGHT) {
-				defines.push('#define color_type_rgb_height');
-			} else if (this._pointColorType === PointColorType.GPS_TIME) {
-				defines.push('#define color_type_gpstime');
-			} else if (this._pointColorType === PointColorType.COMPOSITE) {
-				defines.push('#define color_type_composite');
+			if(this.activeAttributeName){
+				let attributeName = this.activeAttributeName.replace(/[^a-zA-Z0-9]/g, '_');
+
+				defines.push(`#define color_type_${attributeName}`);
+				console.log(`#define color_type_${attributeName}`);
 			}
 			
 			if(this._treeType === TreeType.OCTREE){
@@ -6937,7 +6398,18 @@ void main() {
 				this.uniforms.gradient.value = this.gradientTexture;
 			}
 		}
-		
+
+		get matcap(){
+			return this._matcap;
+		}
+
+		set matcap (value) {
+			if (this._matcap !== value) {
+				this._matcap = value;
+				this.matcapTexture = Potree.PointCloudMaterial.generateMatcapTexture(this._matcap);
+				this.uniforms.matcapTextureUniform.value = this.matcapTexture;
+			}
+		}
 		get useOrthographicCamera() {
 			return this.uniforms.useOrthographicCamera.value;
 		}
@@ -6947,6 +6419,18 @@ void main() {
 				this.uniforms.useOrthographicCamera.value = value;
 			}
 		}
+		get backfaceCulling() {
+			return this.uniforms.backfaceCulling.value;
+		}
+
+		set backfaceCulling(value) {
+			if(this.uniforms.backfaceCulling.value !== value){
+				this.uniforms.backfaceCulling.value = value;
+				this.dispatchEvent({type: 'backface_changed', target: this});
+			}
+		}
+
+		
 
 
 		get classification () {
@@ -7035,6 +6519,14 @@ void main() {
 
 		set clipTask(mode){
 			this.uniforms.clipTask.value = mode;
+		}
+
+		get elevationGradientRepat(){
+			return this.uniforms.elevationGradientRepat.value;
+		}
+
+		set elevationGradientRepat(mode){
+			this.uniforms.elevationGradientRepat.value = mode;
 		}
 
 		get clipMethod(){
@@ -7130,18 +6622,20 @@ void main() {
 			}
 		}
 
-		get pointColorType () {
-			return this._pointColorType;
+		get activeAttributeName(){
+			return this._activeAttributeName;
 		}
 
-		set pointColorType (value) {
-			if (this._pointColorType !== value) {
-				this._pointColorType = value;
+		set activeAttributeName(value){
+			if (this._activeAttributeName !== value) {
+				this._activeAttributeName = value;
+
 				this.updateShaderSource();
 				this.dispatchEvent({
-					type: 'point_color_type_changed',
+					type: 'active_attribute_changed',
 					target: this
 				});
+
 				this.dispatchEvent({
 					type: 'material_property_changed',
 					target: this
@@ -7404,6 +6898,73 @@ void main() {
 			}
 		}
 
+		
+		get extraGamma () {
+			return this.uniforms.uExtraGammaBrightContr.value[0];
+		}
+
+		set extraGamma (value) {
+			if (this.uniforms.uExtraGammaBrightContr.value[0] !== value) {
+				this.uniforms.uExtraGammaBrightContr.value[0] = value;
+				this.dispatchEvent({
+					type: 'material_property_changed',
+					target: this
+				});
+			}
+		}
+
+		get extraBrightness () {
+			return this.uniforms.uExtraGammaBrightContr.value[1];
+		}
+
+		set extraBrightness (value) {
+			if (this.uniforms.uExtraGammaBrightContr.value[1] !== value) {
+				this.uniforms.uExtraGammaBrightContr.value[1] = value;
+				this.dispatchEvent({
+					type: 'material_property_changed',
+					target: this
+				});
+			}
+		}
+
+		get extraContrast () {
+			return this.uniforms.uExtraGammaBrightContr.value[2];
+		}
+
+		set extraContrast (value) {
+			if (this.uniforms.uExtraGammaBrightContr.value[2] !== value) {
+				this.uniforms.uExtraGammaBrightContr.value[2] = value;
+				this.dispatchEvent({
+					type: 'material_property_changed',
+					target: this
+				});
+			}
+		}
+
+		get extraRange () {
+			return this.uniforms.uExtraRange.value;
+		}
+
+		set extraRange (value) {
+			if (!(value instanceof Array && value.length === 2)) {
+				return;
+			}
+
+			if (value[0] === this.uniforms.uExtraRange.value[0] &&
+				value[1] === this.uniforms.uExtraRange.value[1]) {
+				return;
+			}
+
+			this.uniforms.uExtraRange.value = value;
+
+			this._defaultExtraRangeChanged = true;
+
+			this.dispatchEvent({
+				type: 'material_property_changed',
+				target: this
+			});
+		}
+
 		get weightRGB () {
 			return this.uniforms.wRGB.value;
 		}
@@ -7517,9 +7078,33 @@ void main() {
 			texture.needsUpdate = true;
 			
 			texture.minFilter = THREE.LinearFilter;
+			texture.wrap = THREE.RepeatWrapping;
+			texture.repeat = 2;
 			// textureImage = texture.image;
 
 			return texture;
+		}
+		
+		static generateMatcapTexture (matcap) {
+		var url = new URL(Potree.resourcePath + "/textures/matcap/" + matcap).href;
+		let texture = new THREE.TextureLoader().load( url );
+			texture.magFilter = texture.minFilter = THREE.LinearFilter; 
+			texture.needsUpdate = true;
+			// PotreeConverter_1.6_2018_07_29_windows_x64\PotreeConverter.exe autzen_xyzrgbXYZ_ascii.xyz -f xyzrgbXYZ -a RGB NORMAL -o autzen_xyzrgbXYZ_ascii_a -p index --overwrite
+			// Switch matcap texture on the fly : viewer.scene.pointclouds[0].material.matcap = 'matcap1.jpg'; 
+			// For non power of 2, use LinearFilter and dont generate mipmaps, For power of 2, use NearestFilter and generate mipmaps : matcap2.jpg 1 2 8 11 12 13
+			return texture; 
+		}
+
+		static generateMatcapTexture (matcap) {
+		var url = new URL(Potree.resourcePath + "/textures/matcap/" + matcap).href;
+		let texture = new THREE.TextureLoader().load( url );
+			texture.magFilter = texture.minFilter = THREE.LinearFilter; 
+			texture.needsUpdate = true;
+			// PotreeConverter_1.6_2018_07_29_windows_x64\PotreeConverter.exe autzen_xyzrgbXYZ_ascii.xyz -f xyzrgbXYZ -a RGB NORMAL -o autzen_xyzrgbXYZ_ascii_a -p index --overwrite
+			// Switch matcap texture on the fly : viewer.scene.pointclouds[0].material.matcap = 'matcap1.jpg'; 
+			// For non power of 2, use LinearFilter and dont generate mipmaps, For power of 2, use NearestFilter and generate mipmaps : matcap2.jpg 1 2 8 11 12 13
+			return texture; 
 		}
 
 		static generateClassificationTexture (classification) {
@@ -7670,7 +7255,7 @@ void main() {
 		get name () {
 			return this.geometryNode.name;
 		}
-	}
+	};
 
 	class PointCloudOctree extends PointCloudTree {
 		constructor (geometry, material) {
@@ -7686,6 +7271,14 @@ void main() {
 			this.level = 0;
 			this.position.copy(geometry.offset);
 			this.updateMatrix();
+
+			{
+				let attributeName = "color";
+				if(this.pcoGeometry.pointAttributes.attributes.length > 1){
+					attributeName = this.pcoGeometry.pointAttributes.attributes[1].name;
+				}
+				this.material.activeAttributeName = attributeName;
+			}
 
 			this.showBoundingBox = false;
 			this.boundingBoxNodes = [];
@@ -7713,6 +7306,7 @@ void main() {
 
 			// TODO read projection from file instead
 			this.projection = geometry.projection;
+			this.fallbackProjection = geometry.fallbackProjection;
 
 			this.root = this.pcoGeometry.root;
 		}
@@ -7845,7 +7439,7 @@ void main() {
 		}
 
 		computeVisibilityTextureData(nodes, camera){
-			
+
 			if(Potree.measureTimings) performance.mark("computeVisibilityTextureData-start");
 
 			let data = new Uint8Array(nodes.length * 4);
@@ -7925,11 +7519,11 @@ void main() {
 			}
 
 			var a = 10;
-			
+
 			if(Potree.measureTimings){
 				performance.mark("computeVisibilityTextureData-end");
 				performance.measure("render.computeVisibilityTextureData", "computeVisibilityTextureData-start", "computeVisibilityTextureData-end");
-			} 
+			}
 
 			return {
 				data: data,
@@ -7947,7 +7541,7 @@ void main() {
 
 				let start = new THREE.Vector3(profile.points[i + 0].x, profile.points[i + 0].y, bsWorld.center.z);
 				let end = new THREE.Vector3(profile.points[i + 1].x, profile.points[i + 1].y, bsWorld.center.z);
-				
+
 				let closest = new THREE.Line3(start, end).closestPointToPoint(bsWorld.center, true, new THREE.Vector3());
 				let distance = closest.distanceTo(bsWorld.center);
 
@@ -7957,6 +7551,38 @@ void main() {
 			//console.log(`${node.name}: ${intersects}`);
 
 			return intersects;
+		}
+
+		deepestNodeAt(position){
+			
+			const toObjectSpace = new THREE.Matrix4().getInverse(this.matrixWorld);
+
+			const objPos = position.clone().applyMatrix4(toObjectSpace);
+
+			let current = this.root;
+			while(true){
+
+				let containingChild = null;
+
+				for(const child of current.children){
+
+					if(child !== undefined){
+						if(child.getBoundingBox().containsPoint(objPos)){
+							containingChild = child;
+						}
+					}
+				}
+
+				if(containingChild !== null && containingChild instanceof PointCloudOctreeNode){
+					current = containingChild;
+				}else{
+					break;
+				}
+			}
+
+			const deepest = current;
+
+			return deepest;
 		}
 
 		nodesOnRay (nodes, ray) {
@@ -8049,12 +7675,12 @@ void main() {
 		 *
 		 *
 		 * The return value is an array with all segments of the profile path
-		 *  let segment = {
-		 * 		start: 	THREE.Vector3,
-		 * 		end: 	THREE.Vector3,
-		 * 		points: {}
-		 * 		project: function()
-		 *  };
+		 *	let segment = {
+		 *		start:	THREE.Vector3,
+		 *		end:	THREE.Vector3,
+		 *		points: {}
+		 *		project: function()
+		 *	};
 		 *
 		 * The project() function inside each segment can be used to transform
 		 * that segments point coordinates to line up along the x-axis.
@@ -8169,7 +7795,7 @@ void main() {
 		 *
 		 *
 		 * params.pickWindowSize:	Look for points inside a pixel window of this size.
-		 * 							Use odd values: 1, 3, 5, ...
+		 *							Use odd values: 1, 3, 5, ...
 		 *
 		 *
 		 * TODO: only draw pixels that are actually read with readPixels().
@@ -8179,9 +7805,9 @@ void main() {
 
 			let renderer = viewer.renderer;
 			let pRenderer = viewer.pRenderer;
-			
+
 			performance.mark("pick-start");
-			
+
 			let getVal = (a, b) => a !== undefined ? a : b;
 
 			let pickWindowSize = getVal(params.pickWindowSize, 17);
@@ -8202,12 +7828,12 @@ void main() {
 			if (nodes.length === 0) {
 				return null;
 			}
-			
+
 			if (!this.pickState) {
 				let scene = new THREE.Scene();
 
 				let material = new Potree.PointCloudMaterial();
-				material.pointColorType = Potree.PointColorType.POINT_INDEX;
+				material.activeAttributeName = "indices";
 
 				let renderTarget = new THREE.WebGLRenderTarget(
 					1, 1,
@@ -8221,8 +7847,8 @@ void main() {
 					material: material,
 					scene: scene
 				};
-			}
-			
+			};
+
 			let pickState = this.pickState;
 			let pickMaterial = pickState.material;
 
@@ -8233,6 +7859,8 @@ void main() {
 				pickMaterial.uniforms.uFilterReturnNumberRange.value = this.material.uniforms.uFilterReturnNumberRange.value;
 				pickMaterial.uniforms.uFilterNumberOfReturnsRange.value = this.material.uniforms.uFilterNumberOfReturnsRange.value;
 				pickMaterial.uniforms.uFilterGPSTimeClipRange.value = this.material.uniforms.uFilterGPSTimeClipRange.value;
+
+				pickMaterial.activeAttributeName = "indices";
 
 				pickMaterial.size = pointSize;
 				pickMaterial.uniforms.minSize.value = this.material.uniforms.minSize.value;
@@ -8250,16 +7878,14 @@ void main() {
 				}else{
 					pickMaterial.clipBoxes = [];
 				}
-				
+
 				this.updateMaterial(pickMaterial, nodes, camera, renderer);
 			}
-
-			//pickMaterial.pointColorType = Potree.PointColorType.LOD;
 
 			pickState.renderTarget.setSize(width, height);
 
 			let pixelPos = new THREE.Vector2(params.x, params.y);
-			
+
 			let gl = renderer.getContext();
 			gl.enable(gl.SCISSOR_TEST);
 			gl.scissor(
@@ -8267,24 +7893,24 @@ void main() {
 				parseInt(pixelPos.y - (pickWindowSize - 1) / 2),
 				parseInt(pickWindowSize), parseInt(pickWindowSize));
 
-			
+
 			renderer.state.buffers.depth.setTest(pickMaterial.depthTest);
 			renderer.state.buffers.depth.setMask(pickMaterial.depthWrite);
 			renderer.state.setBlending(THREE.NoBlending);
-			
+
 			{ // RENDER
 				renderer.setRenderTarget(pickState.renderTarget);
 				gl.clearColor(0, 0, 0, 0);
 				renderer.clearTarget( pickState.renderTarget, true, true, true );
-				
+
 				let tmp = this.material;
 				this.material = pickMaterial;
-				
+
 				pRenderer.renderOctree(this, nodes, camera, pickState.renderTarget);
-				
+
 				this.material = tmp;
 			}
-			
+
 			let clamp = (number, min, max) => Math.min(Math.max(min, number), max);
 
 			let x = parseInt(clamp(pixelPos.x - (pickWindowSize - 1) / 2, 0, width));
@@ -8294,14 +7920,14 @@ void main() {
 
 			let pixelCount = w * h;
 			let buffer = new Uint8Array(4 * pixelCount);
-			
-			gl.readPixels(x, y, pickWindowSize, pickWindowSize, gl.RGBA, gl.UNSIGNED_BYTE, buffer); 
-			
+
+			gl.readPixels(x, y, pickWindowSize, pickWindowSize, gl.RGBA, gl.UNSIGNED_BYTE, buffer);
+
 			renderer.setRenderTarget(null);
 			renderer.state.reset();
 			renderer.setScissorTest(false);
 			gl.disable(gl.SCISSOR_TEST);
-			
+
 			let pixels = buffer;
 			let ibuffer = new Uint32Array(buffer.buffer);
 
@@ -8336,69 +7962,75 @@ void main() {
 							}
 						}
 
-						
+
 					}
 				}
 			}
-			
+
 			// DEBUG: show panel with pick image
-			//{ 
-			//	let img = Utils.pixelsArrayToImage(buffer, w, h);
-			//	let screenshot = img.src;
-			//
-			//	if(!this.debugDIV){
-			//		this.debugDIV = $(`
-			//			<div id="pickDebug"
-			//			style="position: absolute;
-			//			right: 400px; width: 300px;
-			//			bottom: 44px; width: 300px;
-			//			z-index: 1000;
-			//			"></div>`);
-			//		$(document.body).append(this.debugDIV);
-			//	}
-			//
-			//	this.debugDIV.empty();
-			//	this.debugDIV.append($(`<img src="${screenshot}"
-			//		style="transform: scaleY(-1); width: 300px"/>`));
-			//	//$(this.debugWindow.document).append($(`<img src="${screenshot}"/>`));
-			//	//this.debugWindow.document.write('<img src="'+screenshot+'"/>');
-			//}
+			// {
+			// 	let img = Utils.pixelsArrayToImage(buffer, w, h);
+			// 	let screenshot = img.src;
 			
+			// 	if(!this.debugDIV){
+			// 		this.debugDIV = $(`
+			// 			<div id="pickDebug"
+			// 			style="position: absolute;
+			// 			right: 400px; width: 300px;
+			// 			bottom: 44px; width: 300px;
+			// 			z-index: 1000;
+			// 			"></div>`);
+			// 		$(document.body).append(this.debugDIV);
+			// 	}
+			
+			// 	this.debugDIV.empty();
+			// 	this.debugDIV.append($(`<img src="${screenshot}"
+			// 		style="transform: scaleY(-1); width: 300px"/>`));
+			// 	//$(this.debugWindow.document).append($(`<img src="${screenshot}"/>`));
+			// 	//this.debugWindow.document.write('<img src="'+screenshot+'"/>');
+			// }
+
 
 			for(let hit of hits){
 				let point = {};
-			
+
 				if (!nodes[hit.pcIndex]) {
 					return null;
 				}
-			
+
 				let node = nodes[hit.pcIndex];
 				let pc = node.sceneNode;
 				let geometry = node.geometryNode.geometry;
-				
+
 				for(let attributeName in geometry.attributes){
 					let attribute = geometry.attributes[attributeName];
-			
+
 					if (attributeName === 'position') {
 						let x = attribute.array[3 * hit.pIndex + 0];
 						let y = attribute.array[3 * hit.pIndex + 1];
 						let z = attribute.array[3 * hit.pIndex + 2];
-						
+
 						let position = new THREE.Vector3(x, y, z);
 						position.applyMatrix4(pc.matrixWorld);
-			
+
 						point[attributeName] = position;
 					} else if (attributeName === 'indices') {
-			
+
 					} else if (attributeName === 'gpsTime') {
 						let values = attribute.array.slice(attribute.itemSize * hit.pIndex, attribute.itemSize * (hit.pIndex + 1)) ;
-						
+
 						values[0] += node.geometryNode.gpsTime.offset;
 
 						point[attributeName] = values;
 					} else {
 
 						let values = attribute.array.slice(attribute.itemSize * hit.pIndex, attribute.itemSize * (hit.pIndex + 1)) ;
+
+						if(attribute.potree){
+							const {scale, offset} = attribute.potree;
+							values = values.map(v => v / scale + offset);
+						}
+
 						point[attributeName] = values;
 
 						//debugger;
@@ -8412,7 +8044,7 @@ void main() {
 						//	point[attribute.name] = value;
 						//}
 					}
-					
+
 				}
 
 				hit.point = point;
@@ -8433,7 +8065,7 @@ void main() {
 					//return sorted[0].point;
 				}
 			}
-			
+
 		};
 
 		* getFittedBoxGen(boxNode){
@@ -8452,7 +8084,7 @@ void main() {
 				let posOffset = buffer.offset("position");
 				let stride = buffer.stride;
 				let view = new DataView(buffer.data);
-				
+
 				let objectToBox = new THREE.Matrix4().multiplyMatrices(worldToBox, node.sceneNode.matrixWorld);
 
 				let pos = new THREE.Vector4();
@@ -8511,7 +8143,7 @@ void main() {
 				let posOffset = buffer.offset("position");
 				let stride = buffer.stride;
 				let view = new DataView(buffer.data);
-				
+
 				let objectToBox = new THREE.Matrix4().multiplyMatrices(worldToBox, node.sceneNode.matrixWorld);
 
 				let pos = new THREE.Vector4();
@@ -8693,7 +8325,7 @@ void main() {
 		exports.lru.freeMemory();
 
 		return result;
-	}
+	};
 
 
 
@@ -8760,7 +8392,7 @@ void main() {
 			'camObjPositions': camObjPositions,
 			'priorityQueue': priorityQueue
 		};
-	}
+	};
 
 
 	function updateVisibility(pointclouds, camera, renderer){
@@ -8843,14 +8475,6 @@ void main() {
 			visible = visible && !(numVisiblePointsInPointclouds.get(pointcloud) + node.getNumPoints() > pointcloud.pointBudget);
 			visible = visible && level < maxLevel;
 			//visible = visible && node.name !== "r613";
-
-			
-
-
-			if(!window.warned125){
-				console.log("TODO");
-				window.warned125 = true;
-			}
 
 			let clipBoxes = pointcloud.material.clipBoxes;
 			if(true && clipBoxes.length > 0){
@@ -9077,7 +8701,7 @@ void main() {
 			numVisiblePoints: numVisiblePoints,
 			lowestSpacing: lowestSpacing
 		};
-	}
+	};
 
 	class PointCloudArena4DNode extends PointCloudTreeNode {
 		constructor () {
@@ -9155,7 +8779,7 @@ void main() {
 
 			return children;
 		}
-	}
+	};
 
 	class PointCloudArena4D$1 extends PointCloudTree{
 		constructor (geometry) {
@@ -9395,7 +9019,7 @@ void main() {
 				let scene = new THREE.Scene();
 
 				let material = new PointCloudMaterial();
-				material.pointColorType = PointColorType.POINT_INDEX;
+				material.activeAttributeName = "indices";
 
 				let renderTarget = new THREE.WebGLRenderTarget(
 					1, 1,
@@ -9409,7 +9033,7 @@ void main() {
 					material: material,
 					scene: scene
 				};
-			}
+			};
 
 			let pickState = this.pickState;
 			let pickMaterial = pickState.material;
@@ -9658,7 +9282,7 @@ void main() {
 				return 0;
 			}
 		}
-	}
+	};
 
 	// Copied from three.js: WebGLRenderer.js
 	function paramThreeToGL(_gl, p) {
@@ -9785,20 +9409,22 @@ void main() {
 
 		return 0;
 
-	}
+	};
 
 	let attributeLocations = {
-		"position": 0,
-		"color": 1,
-		"intensity": 2,
-		"classification": 3, 
-		"returnNumber": 4,
-		"numberOfReturns": 5,
-		"pointSourceID": 6,
-		"indices": 7,
-		"normal": 8,
-		"spacing": 9,
-		"gpsTime": 10,
+		"position": {name: "position", location: 0},
+		"color": {name: "color", location: 1},
+		"RGBA": {name: "color", location: 1},
+		"intensity": {name: "intensity", location: 2},
+		"classification": {name: "classification", location: 3},
+		"returnNumber": {name: "returnNumber", location: 4},
+		"numberOfReturns": {name: "numberOfReturns", location: 5},
+		"pointSourceID": {name: "pointSourceID", location: 6},
+		"indices": {name: "indices", location: 7},
+		"normal": {name: "normal", location: 8},
+		"spacing": {name: "spacing", location: 9},
+		"gps-time":  {name: "gpsTime", location: 10},
+		"aExtra":  {name: "aExtra", location: 11},
 	};
 
 	class Shader {
@@ -9874,8 +9500,9 @@ void main() {
 				this.program = gl.createProgram();
 
 				for(let name of Object.keys(attributeLocations)){
-					let location = attributeLocations[name];
-					gl.bindAttribLocation(this.program, location, name);
+					let location = attributeLocations[name].location;
+					let glslName = attributeLocations[name].name;
+					gl.bindAttribLocation(this.program, location, glslName);
 				}
 
 				this.compileShader(this.vs, this.vsSource);
@@ -10098,7 +9725,7 @@ void main() {
 			gl.uniform1i(location, value);
 		}
 
-	}
+	};
 
 	class WebGLTexture {
 
@@ -10158,7 +9785,7 @@ void main() {
 				gl.texImage2D(this.target, level, internalFormat,
 					width, height, border, srcFormat, srcType,
 					data);
-			} else if (texture instanceof THREE.CanvasTexture) {
+			} else if ((texture instanceof THREE.CanvasTexture) || (texture instanceof THREE.Texture)) {
 				data = texture.image;
 
 				gl.texParameteri(this.target, gl.TEXTURE_WRAP_S, paramThreeToGL(gl, texture.wrapS));
@@ -10169,6 +9796,8 @@ void main() {
 
 				gl.texImage2D(this.target, level, internalFormat,
 					internalFormat, srcType, data);
+
+				if (texture instanceof THREE.Texture) {gl.generateMipmap(gl.TEXTURE_2D);}
 			}
 
 			gl.bindTexture(this.target, null);
@@ -10176,7 +9805,7 @@ void main() {
 			this.version = texture.version;
 		}
 
-	}
+	};
 
 	class WebGLBuffer {
 
@@ -10186,7 +9815,7 @@ void main() {
 			this.vbos = new Map();
 		}
 
-	}
+	};
 
 	class Renderer {
 
@@ -10221,12 +9850,18 @@ void main() {
 				gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
 				gl.bufferData(gl.ARRAY_BUFFER, bufferAttribute.array, gl.STATIC_DRAW);
 
-				let attributeLocation = attributeLocations[attributeName];
 				let normalized = bufferAttribute.normalized;
 				let type = this.glTypeMapping.get(bufferAttribute.array.constructor);
 
-				gl.vertexAttribPointer(attributeLocation, bufferAttribute.itemSize, type, normalized, 0, 0);
-				gl.enableVertexAttribArray(attributeLocation);
+				if(attributeLocations[attributeName] === undefined){
+					//attributeLocation = attributeLocations["aExtra"];
+				}else{
+					let attributeLocation = attributeLocations[attributeName].location;
+
+					gl.vertexAttribPointer(attributeLocation, bufferAttribute.itemSize, type, normalized, 0, 0);
+					gl.enableVertexAttribArray(attributeLocation);
+				}
+
 
 				webglBuffer.vbos.set(attributeName, {
 					handle: vbo,
@@ -10254,7 +9889,7 @@ void main() {
 			for(let attributeName in geometry.attributes){
 				let bufferAttribute = geometry.attributes[attributeName];
 
-				let attributeLocation = attributeLocations[attributeName];
+				let attributeLocation = attributeLocations[attributeName].location;
 				let normalized = bufferAttribute.normalized;
 				let type = this.glTypeMapping.get(bufferAttribute.array.constructor);
 
@@ -10326,27 +9961,6 @@ void main() {
 
 			let mat4holder = new Float32Array(16);
 
-			let gpsMin = Infinity;
-			let gpsMax = -Infinity;
-			for (let node of nodes) {
-
-				if(node instanceof PointCloudOctreeNode){
-					let geometryNode = node.geometryNode;
-
-					if(geometryNode.gpsTime){
-						let {offset, range} = geometryNode.gpsTime;
-						let nodeMin = offset;
-						let nodeMax = offset + range;
-
-						gpsMin = Math.min(gpsMin, nodeMin);
-						gpsMax = Math.max(gpsMax, nodeMax);
-					}
-				}
-
-				break;
-
-			}
-
 			let i = 0;
 			for (let node of nodes) {
 
@@ -10356,16 +9970,9 @@ void main() {
 					}
 				}
 
-				//if(![
-				//	"r42006420226",
-				//	]
-				//	.includes(node.name)){
-				//	continue;
-				//}
 
 				let world = node.sceneNode.matrixWorld;
 				worldView.multiplyMatrices(view, world);
-				//this.multiplyViewWithScaleTrans(view, world, worldView);
 
 				if (visibilityTextureData) {
 					let vnStart = visibilityTextureData.offsets.get(node);
@@ -10492,17 +10099,26 @@ void main() {
 					}
 				}
 
-				let geometry = node.geometryNode.geometry;
+				const geometry = node.geometryNode.geometry;
 
-				if(node.geometryNode.gpsTime){
-					let nodeMin = node.geometryNode.gpsTime.offset;
-					let nodeMax = nodeMin + node.geometryNode.gpsTime.range;
+				if(geometry.attributes["gps-time"]){
+					const bufferAttribute = geometry.attributes["gps-time"];
+					const attGPS = octree.pcoGeometry.pointAttributes.attributes.find(a => a.name === "gps-time");
 
-					let gpsOffset = (+nodeMin - gpsMin);
-					let gpsRange = (gpsMax - gpsMin);
+					// ranges in full gps coordinate system
+					const globalRange = attGPS.range;
+					const bufferRange = bufferAttribute.potree.range;
 
-					shader.setUniform1f("uGPSOffset", gpsOffset);
-					shader.setUniform1f("uGPSRange", gpsRange);
+					// ranges in [0, 1]
+					// normalizedGlobalRange = [0, 1]
+					// normalizedBufferRange: norm buffer within norm global range e.g. [0.2, 0.8]
+					const globalWidth = globalRange[1] - globalRange[0];
+					const normalizedBufferRange = [
+						(bufferRange[0] - globalRange[0]) / globalWidth,
+						(bufferRange[1] - globalRange[0]) / globalWidth,
+					];
+
+					shader.setUniform2f("uNormalizedGpsBufferRange", normalizedBufferRange);
 				}
 
 				{
@@ -10510,12 +10126,12 @@ void main() {
 					let uFilterNumberOfReturnsRange = material.uniforms.uFilterNumberOfReturnsRange.value;
 					let uFilterGPSTimeClipRange = material.uniforms.uFilterGPSTimeClipRange.value;
 					
-					let gpsCliPRangeMin = uFilterGPSTimeClipRange[0] - gpsMin;
-					let gpsCliPRangeMax = uFilterGPSTimeClipRange[1] - gpsMin;
+					//let gpsCliPRangeMin = uFilterGPSTimeClipRange[0] - gpsMin;
+					//let gpsCliPRangeMax = uFilterGPSTimeClipRange[1] - gpsMin;
 					
 					shader.setUniform2f("uFilterReturnNumberRange", uFilterReturnNumberRange);
 					shader.setUniform2f("uFilterNumberOfReturnsRange", uFilterNumberOfReturnsRange);
-					shader.setUniform2f("uFilterGPSTimeClipRange", [gpsCliPRangeMin, gpsCliPRangeMax]);
+					//shader.setUniform2f("uFilterGPSTimeClipRange", [gpsCliPRangeMin, gpsCliPRangeMax]);
 				}
 
 				let webglBuffer = null;
@@ -10534,6 +10150,99 @@ void main() {
 				}
 
 				gl.bindVertexArray(webglBuffer.vao);
+
+				let isExtraAttribute =
+					attributeLocations[material.activeAttributeName] === undefined
+					&& Object.keys(geometry.attributes).includes(material.activeAttributeName);
+
+				if(isExtraAttribute){
+
+					const attributeLocation = attributeLocations["aExtra"].location;
+
+					for(const attributeName in geometry.attributes){
+						const bufferAttribute = geometry.attributes[attributeName];
+						const vbo = webglBuffer.vbos.get(attributeName);
+						
+						gl.bindBuffer(gl.ARRAY_BUFFER, vbo.handle);
+						gl.disableVertexAttribArray(attributeLocation);
+					}
+
+					const attName = material.activeAttributeName;
+					const bufferAttribute = geometry.attributes[attName];
+					const vbo = webglBuffer.vbos.get(attName);
+
+					if(bufferAttribute !== undefined && vbo !== undefined){
+						let type = this.glTypeMapping.get(bufferAttribute.array.constructor);
+						let normalized = bufferAttribute.normalized;
+
+						gl.bindBuffer(gl.ARRAY_BUFFER, vbo.handle);
+						gl.vertexAttribPointer(attributeLocation, bufferAttribute.itemSize, type, normalized, 0, 0);
+						gl.enableVertexAttribArray(attributeLocation);
+					}
+
+
+
+
+					{
+
+						const attExtra = octree.pcoGeometry.pointAttributes.attributes
+							.find(a => a.name === attName);
+
+						const offset = bufferAttribute.potree.offset;
+						const scale = bufferAttribute.potree.scale;
+
+						// ranges in full gps coordinate system
+						const globalRange = attExtra.range;
+						const bufferRange = bufferAttribute.potree.range;
+
+						const globalWidth = globalRange[1] - globalRange[0];
+						const normalizedBufferRange = [
+							(bufferRange[0] - globalRange[0]) / globalWidth,
+							(bufferRange[1] - globalRange[0]) / globalWidth,
+						];
+
+						shader.setUniform2f("uExtraNormalizedRange", normalizedBufferRange);
+						
+						if(offset === 0 && scale === 1){
+							shader.setUniform2f("uExtraRange", material.extraRange);
+						}else{
+							const extraRange = [
+								(material.extraRange[0] - globalRange[0]) / globalWidth,
+								(material.extraRange[1] - globalRange[0]) / globalWidth,
+							];
+							shader.setUniform2f("uExtraRange", extraRange);
+						}
+
+						
+					}
+
+
+
+
+
+
+
+
+				}else{
+
+					for(const attributeName in geometry.attributes){
+						const bufferAttribute = geometry.attributes[attributeName];
+						const vbo = webglBuffer.vbos.get(attributeName);
+
+
+						if(attributeLocations[attributeName] !== undefined){
+							const attributeLocation = attributeLocations[attributeName].location;
+
+							let type = this.glTypeMapping.get(bufferAttribute.array.constructor);
+							let normalized = bufferAttribute.normalized;
+							
+							gl.bindBuffer(gl.ARRAY_BUFFER, vbo.handle);
+							gl.vertexAttribPointer(attributeLocation, bufferAttribute.itemSize, type, normalized, 0, 0);
+							gl.enableVertexAttribArray(attributeLocation);
+							
+						}
+					}
+				}
 
 				let numPoints = webglBuffer.numElements;
 				gl.drawArrays(gl.POINTS, 0, numPoints);
@@ -10568,7 +10277,7 @@ void main() {
 
 			if (material.pointSizeType >= 0) {
 				if (material.pointSizeType === PointSizeType.ADAPTIVE ||
-					material.pointColorType === PointColorType.LOD) {
+					material.activeAttributeName === "level of detail") {
 
 					let vnNodes = (params.vnTextureNodes != null) ? params.vnTextureNodes : nodes;
 					visibilityTextureData = octree.computeVisibilityTextureData(vnNodes, camera);
@@ -10794,26 +10503,26 @@ void main() {
 					//gl.uniformMatrix4fv(lClipSpheres, false, material.uniforms.clipSpheres.value);
 				}
 
-				if(Potree.Features.WEBGL2.isSupported()){
-					let buffer = new ArrayBuffer(12);
-					let bufferf32 = new Float32Array(buffer);
-					bufferf32[0] = material.size;
-					bufferf32[1] = material.uniforms.minSize.value;
-					bufferf32[2] = material.uniforms.maxSize.value;
+				//if(Potree.Features.WEBGL2.isSupported()){
+				//	let buffer = new ArrayBuffer(12);
+				//	let bufferf32 = new Float32Array(buffer);
+				//	bufferf32[0] = material.size;
+				//	bufferf32[1] = material.uniforms.minSize.value;
+				//	bufferf32[2] = material.uniforms.maxSize.value;
 
-					let block = shader.uniformBlocks["ubo_point"];
+				//	let block = shader.uniformBlocks["ubo_point"];
 
-					gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, block.buffer);
+				//	gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, block.buffer);
 
-					gl.bindBuffer(gl.UNIFORM_BUFFER, block.buffer);
-					gl.bufferSubData(gl.UNIFORM_BUFFER, 0, buffer);
-					gl.bindBuffer(gl.UNIFORM_BUFFER, null);
-					
-				}else{
+				//	gl.bindBuffer(gl.UNIFORM_BUFFER, block.buffer);
+				//	gl.bufferSubData(gl.UNIFORM_BUFFER, 0, buffer);
+				//	gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+				//	
+				//}else{
 					shader.setUniform1f("size", material.size);
 					shader.setUniform1f("maxSize", material.uniforms.maxSize.value);
 					shader.setUniform1f("minSize", material.uniforms.minSize.value);
-				}
+				//}
 
 
 
@@ -10848,6 +10557,8 @@ void main() {
 				shader.setUniform1f("wReturnNumber", material.weightReturnNumber);
 				shader.setUniform1f("wSourceID", material.weightSourceID);
 
+				shader.setUniform("backfaceCulling", material.uniforms.backfaceCulling.value);
+
 				let vnWebGLTexture = this.textures.get(material.visibleNodesTexture);
 				shader.setUniform1i("visibleNodesTexture", currentTextureBindingPoint);
 				gl.activeTexture(gl.TEXTURE0 + currentTextureBindingPoint);
@@ -10858,12 +10569,30 @@ void main() {
 				shader.setUniform1i("gradient", currentTextureBindingPoint);
 				gl.activeTexture(gl.TEXTURE0 + currentTextureBindingPoint);
 				gl.bindTexture(gradientTexture.target, gradientTexture.id);
+
+				const repeat = material.elevationGradientRepeat;
+				if(repeat === ElevationGradientRepeat.REPEAT){
+					gl.texParameteri(gradientTexture.target, gl.TEXTURE_WRAP_S, gl.REPEAT);
+					gl.texParameteri(gradientTexture.target, gl.TEXTURE_WRAP_T, gl.REPEAT);
+				}else if(repeat === ElevationGradientRepeat.MIRRORED_REPEAT){
+					gl.texParameteri(gradientTexture.target, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+					gl.texParameteri(gradientTexture.target, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+				}else{
+					gl.texParameteri(gradientTexture.target, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+					gl.texParameteri(gradientTexture.target, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+				}
 				currentTextureBindingPoint++;
 
 				let classificationTexture = this.textures.get(material.classificationTexture);
 				shader.setUniform1i("classificationLUT", currentTextureBindingPoint);
 				gl.activeTexture(gl.TEXTURE0 + currentTextureBindingPoint);
 				gl.bindTexture(classificationTexture.target, classificationTexture.id);
+				currentTextureBindingPoint++;
+
+				let matcapTexture = this.textures.get(material.matcapTexture);
+				shader.setUniform1i("matcapTextureUniform", currentTextureBindingPoint);
+				gl.activeTexture(gl.TEXTURE0 + currentTextureBindingPoint);
+				gl.bindTexture(matcapTexture.target, matcapTexture.id);
 				currentTextureBindingPoint++;
 
 
@@ -10966,7 +10695,7 @@ void main() {
 
 
 
-	}
+	};
 
 	class ProfileData {
 		constructor (profile) {
@@ -11012,7 +10741,7 @@ void main() {
 
 			return size;
 		}
-	}
+	};
 
 	class ProfileRequest {
 		constructor (pointcloud, profile, maxDepth, callback) {
@@ -11097,8 +10826,12 @@ void main() {
 					exports.lru.touch(node);
 					this.highestLevelServed = Math.max(node.getLevel(), this.highestLevelServed);
 
-					let doTraverse = (node.level % node.pcoGeometry.hierarchyStepSize) === 0 && node.hasChildren;
-					doTraverse = doTraverse || node.getLevel() === 0;
+					var geom = node.pcoGeometry;
+					var hierarchyStepSize = geom ? geom.hierarchyStepSize : 1;
+
+					var doTraverse = node.getLevel() === 0 ||
+						(node.level % hierarchyStepSize === 0 && node.hasChildren);
+
 					if (doTraverse) {
 						this.traverse(node);
 					}
@@ -11162,7 +10895,7 @@ void main() {
 					view[i * 3 + 0],
 					view[i * 3 + 1],
 					view[i * 3 + 2]);
-			
+
 				pos.applyMatrix4(matrix);
 				let distance = Math.abs(segment.cutPlane.distanceToPoint(pos));
 				let centerDistance = Math.abs(segment.halfPlane.distanceToPoint(pos));
@@ -11226,7 +10959,7 @@ void main() {
 
 						let start = new THREE.Vector3(segment.start.x, segment.start.y, bsWorld.center.z);
 						let end = new THREE.Vector3(segment.end.x, segment.end.y, bsWorld.center.z);
-							
+
 						let closest = new THREE.Line3(start, end).closestPointToPoint(bsWorld.center, true, new THREE.Vector3());
 						let distance = closest.distanceTo(bsWorld.center);
 
@@ -11300,7 +11033,7 @@ void main() {
 						for(let i = 0; i < accepted.length; i++){
 
 							let index = accepted[i];
-							
+
 							let start = index * numElements;
 							let end = start + numElements;
 							let sub = source.subarray(start, end);
@@ -11416,9 +11149,120 @@ void main() {
 		returnWorker(url, worker){
 			this.workers[url].push(worker);
 		}
-	}
+	};
 
 	//Potree.workerPool = new Potree.WorkerPool();
+
+	function createPointcloudData(pointcloud) {
+
+		const pcdata = {
+			name: pointcloud.name,
+			url: pointcloud.pcoGeometry.url,
+		};
+
+		return pcdata;
+	}
+
+	function createMeasurementData(measurement){
+		const data = {
+			name: measurement.name,
+			points: measurement.points.map(p => p.position.toArray()),
+			showDistances: measurement.showDistances,
+			showCoordinates: measurement.showCoordinates,
+			showArea: measurement.showArea,
+			closed: measurement.closed,
+			showAngles: measurement.showAngles,
+			showHeight: measurement.showHeight,
+			color: measurement.color.toArray(),
+
+		};
+
+		return data;
+	}
+
+	function createSettingsData(viewer){
+		return {
+			pointBudget: viewer.getPointBudget(),
+			fov: viewer.getFOV(),
+			edlEnabled: viewer.getEDLEnabled(),
+			edlRadius: viewer.getEDLRadius(),
+			edlStrength: viewer.getEDLStrength(),
+			background: viewer.getBackground(),
+			minNodeSize: viewer.getMinNodeSize(),
+			showBoundingBoxes: viewer.getShowBoundingBox(),
+		};
+	}
+
+	function createSaveData(viewer) {
+
+		const scene = viewer.scene;
+
+		const data = {
+			type: "Potree",
+			settings: createSettingsData(viewer),
+			pointclouds: scene.pointclouds.map(createPointcloudData),
+			measurements: scene.measurements.map(createMeasurementData),
+		};
+
+		return data;
+	}
+
+	function loadPointCloud(viewer, data){
+		Potree.loadPointCloud(data.url, data.name, () => {
+
+		});
+	}
+
+	function loadMeasurement(viewer, data){
+
+		const measure = new Potree.Measure();
+
+		measure.name = data.name;
+		measure.showDistances = data.showDistances;
+		measure.showCoordinates = data.showCoordinates;
+		measure.showArea = data.showArea;
+		measure.closed = data.closed;
+		measure.showAngles = data.showAngles;
+		measure.showHeight = data.showHeight;
+		// color
+
+		for(const point of data.points){
+			const pos = new THREE.Vector3(...point);
+			measure.addMarker(pos);
+		}
+
+		viewer.scene.addMeasurement(measure);
+
+	}
+
+	function loadSettings(viewer, data){
+
+		viewer.setPointBudget(data.pointBudget);
+		viewer.setFOV(data.fov);
+		viewer.setEDLEnabled(data.edlEnabled);
+		viewer.setEDLRadius(data.edlRadius);
+		viewer.setEDLStrength(data.edlStrength);
+		viewer.setBackground(data.background);
+		viewer.setMinNodeSize(data.minNodeSize);
+		viewer.setShowBoundingBox(data.showBoundingBoxes);
+
+	}
+
+
+	function loadSaveData(viewer, data){
+
+		if(data.type !== "Potree"){
+			console.error("not a valid Potree project");
+			return;
+		}
+
+		loadSettings(viewer, data.settings);
+
+		for(const measure of data.measurements){
+			loadMeasurement(viewer, measure);
+		}
+
+	}
 
 	//
 	// Algorithm by Christian Boucheny
@@ -11429,24 +11273,24 @@ void main() {
 	// http://www.kitware.com/source/home/post/9
 	// https://tel.archives-ouvertes.fr/tel-00438464/document p. 115+ (french)
 
-	class EyeDomeLightingMaterial extends THREE.ShaderMaterial{
+	class EyeDomeLightingMaterial extends THREE.RawShaderMaterial{
 
 		constructor(parameters = {}){
 			super();
 
 			let uniforms = {
-				screenWidth: 	{ type: 'f', 	value: 0 },
-				screenHeight: 	{ type: 'f', 	value: 0 },
-				edlStrength: 	{ type: 'f', 	value: 1.0 },
-				radius: 		{ type: 'f', 	value: 1.0 },
-				neighbours:		{ type: '2fv', 	value: [] },
-				depthMap: 		{ type: 't', 	value: null },
-				//colorMap: 		{ type: 't', 	value: null },
-				uRegularColor:	{ type: 't', 	value: null },
-				uRegularDepth:	{ type: 't', 	value: null },
-				uEDLColor:		{ type: 't', 	value: null },
-				uEDLDepth:		{ type: 't', 	value: null },
-				opacity:		{ type: 'f',	value: 1.0 }
+				screenWidth:    { type: 'f', 	value: 0 },
+				screenHeight:   { type: 'f', 	value: 0 },
+				edlStrength:    { type: 'f', 	value: 1.0 },
+				uNear:          { type: 'f', 	value: 1.0 },
+				uFar:           { type: 'f', 	value: 1.0 },
+				radius:         { type: 'f', 	value: 1.0 },
+				neighbours:     { type: '2fv', 	value: [] },
+				depthMap:       { type: 't', 	value: null },
+				uEDLColor:      { type: 't', 	value: null },
+				uEDLDepth:      { type: 't', 	value: null },
+				opacity:        { type: 'f',	value: 1.0 },
+				uProj:          { type: "Matrix4fv", value: [] },
 			};
 
 			this.setValues({
@@ -11508,14 +11352,14 @@ void main() {
 			super();
 
 			let uniforms = {
-				screenWidth: 	{ type: 'f', 	value: 0 },
-				screenHeight: 	{ type: 'f', 	value: 0 },
-				edlStrength: 	{ type: 'f', 	value: 1.0 },
-				radius: 		{ type: 'f', 	value: 1.0 },
-				neighbours:		{ type: '2fv', 	value: [] },
-				uEDLMap:		{ type: 't', value: null },
-				uDepthMap:		{ type: 't', value: null },
-				uWeightMap:		{ type: 't', value: null },
+				screenWidth:    { type: 'f',   value: 0 },
+				screenHeight:   { type: 'f',   value: 0 },
+				edlStrength:    { type: 'f',   value: 1.0 },
+				radius:         { type: 'f',   value: 1.0 },
+				neighbours:     { type: '2fv', value: [] },
+				uEDLMap:        { type: 't',   value: null },
+				uDepthMap:      { type: 't',   value: null },
+				uWeightMap:     { type: 't',   value: null },
 			};
 
 			this.setValues({
@@ -11649,7 +11493,7 @@ void main() {
 			xhr.overrideMimeType('text/plain; charset=x-user-defined');
 			xhr.onreadystatechange = () => {
 				if (xhr.readyState === 4) {
-					if (xhr.status === 200) {
+					if (xhr.status === 200 || xhr.status === 0) {
 						let buffer = xhr.response;
 						this.parse(node, buffer);
 					} else {
@@ -11771,7 +11615,7 @@ void main() {
 		handle (node, url) {
 
 		}
-	}
+	};
 
 	class LasLazBatcher{
 
@@ -11842,43 +11686,22 @@ void main() {
 		};
 	}
 
-	const PointAttributeNames = {
-		POSITION_CARTESIAN: 0, // float x, y, z;
-		COLOR_PACKED: 1, // byte r, g, b, a; 	I: [0,1]
-		COLOR_FLOATS_1: 2, // float r, g, b; 	I: [0,1]
-		COLOR_FLOATS_255: 3, // float r, g, b; 	I: [0,255]
-		NORMAL_FLOATS: 4, // float x, y, z;
-		FILLER: 5,
-		INTENSITY: 6,
-		CLASSIFICATION: 7,
-		NORMAL_SPHEREMAPPED: 8,
-		NORMAL_OCT16: 9,
-		NORMAL: 10,
-		RETURN_NUMBER: 11,
-		NUMBER_OF_RETURNS: 12,
-		SOURCE_ID: 13,
-		INDICES: 14,
-		SPACING: 15,
-		GPS_TIME: 16,
-	};
-
-
 	/**
 	 * Some types of possible point attribute data formats
 	 *
 	 * @class
 	 */
 	const PointAttributeTypes = {
-		DATA_TYPE_DOUBLE: {ordinal: 0, size: 8},
-		DATA_TYPE_FLOAT: {ordinal: 1, size: 4},
-		DATA_TYPE_INT8: {ordinal: 2, size: 1},
-		DATA_TYPE_UINT8: {ordinal: 3, size: 1},
-		DATA_TYPE_INT16: {ordinal: 4, size: 2},
-		DATA_TYPE_UINT16: {ordinal: 5, size: 2},
-		DATA_TYPE_INT32: {ordinal: 6, size: 4},
-		DATA_TYPE_UINT32: {ordinal: 7, size: 4},
-		DATA_TYPE_INT64: {ordinal: 8, size: 8},
-		DATA_TYPE_UINT64: {ordinal: 9, size: 8}
+		DATA_TYPE_DOUBLE: {ordinal: 0, name: "double", size: 8},
+		DATA_TYPE_FLOAT:  {ordinal: 1, name: "float",  size: 4},
+		DATA_TYPE_INT8:   {ordinal: 2, name: "int8",   size: 1},
+		DATA_TYPE_UINT8:  {ordinal: 3, name: "uint8",  size: 1},
+		DATA_TYPE_INT16:  {ordinal: 4, name: "int16",  size: 2},
+		DATA_TYPE_UINT16: {ordinal: 5, name: "uint16", size: 2},
+		DATA_TYPE_INT32:  {ordinal: 6, name: "int32",  size: 4},
+		DATA_TYPE_UINT32: {ordinal: 7, name: "uint32", size: 4},
+		DATA_TYPE_INT64:  {ordinal: 8, name: "int64",  size: 8},
+		DATA_TYPE_UINT64: {ordinal: 9, name: "uint64", size: 8}
 	};
 
 	let i = 0;
@@ -11895,75 +11718,58 @@ void main() {
 			this.type = type;
 			this.numElements = numElements;
 			this.byteSize = this.numElements * this.type.size;
+			this.description = "";
+			this.range = [Infinity, -Infinity];
 		}
 
-	}
+	};
 
 	PointAttribute.POSITION_CARTESIAN = new PointAttribute(
-		PointAttributeNames.POSITION_CARTESIAN,
-		PointAttributeTypes.DATA_TYPE_FLOAT, 3);
+		"POSITION_CARTESIAN", PointAttributeTypes.DATA_TYPE_FLOAT, 3);
 
 	PointAttribute.RGBA_PACKED = new PointAttribute(
-		PointAttributeNames.COLOR_PACKED,
-		PointAttributeTypes.DATA_TYPE_INT8, 4);
+		"COLOR_PACKED", PointAttributeTypes.DATA_TYPE_INT8, 4);
 
 	PointAttribute.COLOR_PACKED = PointAttribute.RGBA_PACKED;
 
 	PointAttribute.RGB_PACKED = new PointAttribute(
-		PointAttributeNames.COLOR_PACKED,
-		PointAttributeTypes.DATA_TYPE_INT8, 3);
+		"COLOR_PACKED", PointAttributeTypes.DATA_TYPE_INT8, 3);
 
 	PointAttribute.NORMAL_FLOATS = new PointAttribute(
-		PointAttributeNames.NORMAL_FLOATS,
-		PointAttributeTypes.DATA_TYPE_FLOAT, 3);
-
-	PointAttribute.FILLER_1B = new PointAttribute(
-		PointAttributeNames.FILLER,
-		PointAttributeTypes.DATA_TYPE_UINT8, 1);
+		"NORMAL_FLOATS", PointAttributeTypes.DATA_TYPE_FLOAT, 3);
 
 	PointAttribute.INTENSITY = new PointAttribute(
-		PointAttributeNames.INTENSITY,
-		PointAttributeTypes.DATA_TYPE_UINT16, 1);
+		"INTENSITY", PointAttributeTypes.DATA_TYPE_UINT16, 1);
 
 	PointAttribute.CLASSIFICATION = new PointAttribute(
-		PointAttributeNames.CLASSIFICATION,
-		PointAttributeTypes.DATA_TYPE_UINT8, 1);
+		"CLASSIFICATION", PointAttributeTypes.DATA_TYPE_UINT8, 1);
 
 	PointAttribute.NORMAL_SPHEREMAPPED = new PointAttribute(
-		PointAttributeNames.NORMAL_SPHEREMAPPED,
-		PointAttributeTypes.DATA_TYPE_UINT8, 2);
+		"NORMAL_SPHEREMAPPED", PointAttributeTypes.DATA_TYPE_UINT8, 2);
 
 	PointAttribute.NORMAL_OCT16 = new PointAttribute(
-		PointAttributeNames.NORMAL_OCT16,
-		PointAttributeTypes.DATA_TYPE_UINT8, 2);
+		"NORMAL_OCT16", PointAttributeTypes.DATA_TYPE_UINT8, 2);
 
 	PointAttribute.NORMAL = new PointAttribute(
-		PointAttributeNames.NORMAL,
-		PointAttributeTypes.DATA_TYPE_FLOAT, 3);
+		"NORMAL", PointAttributeTypes.DATA_TYPE_FLOAT, 3);
 		
 	PointAttribute.RETURN_NUMBER = new PointAttribute(
-		PointAttributeNames.RETURN_NUMBER,
-		PointAttributeTypes.DATA_TYPE_UINT8, 1);
+		"RETURN_NUMBER", PointAttributeTypes.DATA_TYPE_UINT8, 1);
 		
 	PointAttribute.NUMBER_OF_RETURNS = new PointAttribute(
-		PointAttributeNames.NUMBER_OF_RETURNS,
-		PointAttributeTypes.DATA_TYPE_UINT8, 1);
+		"NUMBER_OF_RETURNS", PointAttributeTypes.DATA_TYPE_UINT8, 1);
 		
 	PointAttribute.SOURCE_ID = new PointAttribute(
-		PointAttributeNames.SOURCE_ID,
-		PointAttributeTypes.DATA_TYPE_UINT16, 1);
+		"SOURCE_ID", PointAttributeTypes.DATA_TYPE_UINT16, 1);
 
 	PointAttribute.INDICES = new PointAttribute(
-		PointAttributeNames.INDICES,
-		PointAttributeTypes.DATA_TYPE_UINT32, 1);
+		"INDICES", PointAttributeTypes.DATA_TYPE_UINT32, 1);
 
 	PointAttribute.SPACING = new PointAttribute(
-		PointAttributeNames.SPACING,
-		PointAttributeTypes.DATA_TYPE_FLOAT, 1);
+		"SPACING", PointAttributeTypes.DATA_TYPE_FLOAT, 1);
 
 	PointAttribute.GPS_TIME = new PointAttribute(
-		PointAttributeNames.GPS_TIME,
-		PointAttributeTypes.DATA_TYPE_DOUBLE, 1);
+		"GPS_TIME", PointAttributeTypes.DATA_TYPE_DOUBLE, 1);
 
 	class PointAttributes{
 
@@ -12090,42 +11896,60 @@ void main() {
 
 				for(let property in buffers){
 					let buffer = buffers[property].buffer;
+					let range = buffers[property].range;
+					let batchAttribute = buffers[property].attribute;
 
-					if (parseInt(property) === PointAttributeNames.POSITION_CARTESIAN) {
+
+					if (property === "POSITION_CARTESIAN") {
 						geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(buffer), 3));
-					} else if (parseInt(property) === PointAttributeNames.COLOR_PACKED) {
+					} else if (property === "RGBA") {
 						geometry.addAttribute('color', new THREE.BufferAttribute(new Uint8Array(buffer), 4, true));
-					} else if (parseInt(property) === PointAttributeNames.INTENSITY) {
+					} else if (property === "INTENSITY") {
 						geometry.addAttribute('intensity', new THREE.BufferAttribute(new Float32Array(buffer), 1));
-					} else if (parseInt(property) === PointAttributeNames.CLASSIFICATION) {
+					} else if (property === "CLASSIFICATION") {
 						geometry.addAttribute('classification', new THREE.BufferAttribute(new Uint8Array(buffer), 1));
-					} else if (parseInt(property) === PointAttributeNames.RETURN_NUMBER) {
+					} else if (property === "RETURN_NUMBER") {
 						geometry.addAttribute('returnNumber', new THREE.BufferAttribute(new Uint8Array(buffer), 1));
-					} else if (parseInt(property) === PointAttributeNames.NUMBER_OF_RETURNS) {
+					} else if (property === "NUMBER_OF_RETURNS") {
 						geometry.addAttribute('numberOfReturns', new THREE.BufferAttribute(new Uint8Array(buffer), 1));
-					} else if (parseInt(property) === PointAttributeNames.SOURCE_ID) {
+					} else if (property === "SOURCE_ID") {
 						geometry.addAttribute('pointSourceID', new THREE.BufferAttribute(new Uint16Array(buffer), 1));
-					} else if (parseInt(property) === PointAttributeNames.NORMAL_SPHEREMAPPED) {
+					} else if (property === "NORMAL_SPHEREMAPPED") {
 						geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(buffer), 3));
-					} else if (parseInt(property) === PointAttributeNames.NORMAL_OCT16) {
+					} else if (property === "NORMAL_OCT16") {
 						geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(buffer), 3));
-					} else if (parseInt(property) === PointAttributeNames.NORMAL) {
+					} else if (property === "NORMAL") {
 						geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(buffer), 3));
-					} else if (parseInt(property) === PointAttributeNames.INDICES) {
+					} else if (property === "INDICES") {
 						let bufferAttribute = new THREE.BufferAttribute(new Uint8Array(buffer), 4);
 						bufferAttribute.normalized = true;
 						geometry.addAttribute('indices', bufferAttribute);
-					} else if (parseInt(property) === PointAttributeNames.SPACING) {
+					} else if (property === "SPACING") {
 						let bufferAttribute = new THREE.BufferAttribute(new Float32Array(buffer), 1);
 						geometry.addAttribute('spacing', bufferAttribute);
-					} else if (parseInt(property) === PointAttributeNames.GPS_TIME) {
-						let bufferAttribute = new THREE.BufferAttribute(new Float32Array(buffer), 1);
-						geometry.addAttribute('gpsTime', bufferAttribute);
+					} 
+					// else if (property === "GPS_TIME") {
+					// 	let bufferAttribute = new THREE.BufferAttribute(new Float32Array(buffer), 1);
+					// 	geometry.addAttribute('gpsTime', bufferAttribute);
 
-						node.gpsTime = {
+					// 	node.gpsTime = {
+					// 		offset: buffers[property].offset,
+					// 		range: buffers[property].range,
+					// 	};
+					// }
+					else{
+						const bufferAttribute = new THREE.BufferAttribute(new Float32Array(buffer), 1);
+						bufferAttribute.potree = {
 							offset: buffers[property].offset,
-							range: buffers[property].range,
+							scale: buffers[property].scale,
+							range: batchAttribute.range,
 						};
+
+						geometry.addAttribute(property, bufferAttribute);
+
+						const attribute = pointAttributes.attributes.find(a => a.name === batchAttribute.name);
+						attribute.range[0] = Math.min(attribute.range[0], batchAttribute.range[0]);
+						attribute.range[1] = Math.max(attribute.range[1], batchAttribute.range[1]);
 					}
 				}
 
@@ -12160,6 +11984,77 @@ void main() {
 		};
 
 		
+	}
+
+	function parseAttributes(cloudjs){
+
+		let version = new Version(cloudjs.version);
+
+		const replacements = {
+			"COLOR_PACKED": "RGBA",
+		};
+
+		const replaceOldNames = (old) => {
+			if(replacements[old]){
+				return replacements[old];
+			}else{
+				return old;
+			}
+		};
+
+		const pointAttributes = [];
+		if(version.upTo('1.7')){
+			
+			for(let attributeName of cloudjs.pointAttributes){
+				const oldAttribute = PointAttribute[attributeName];
+
+				const attribute = {
+					name: oldAttribute.name,
+					size: oldAttribute.byteSize,
+					elements: oldAttribute.numElements,
+					elementSize: oldAttribute.byteSize / oldAttribute.numElements,
+					type: oldAttribute.type.name,
+					description: "",
+				};
+
+				pointAttributes.push(attribute);
+			}
+
+		}else{
+			pointAttributes.push(...cloudjs.pointAttributes);
+		}
+
+
+		{
+			const attributes = new PointAttributes();
+
+			const typeConversion = {
+				int8:   PointAttributeTypes.DATA_TYPE_INT8,
+				int16:  PointAttributeTypes.DATA_TYPE_INT16,
+				int32:  PointAttributeTypes.DATA_TYPE_INT32,
+				int64:  PointAttributeTypes.DATA_TYPE_INT64,
+				uint8:  PointAttributeTypes.DATA_TYPE_UINT8,
+				uint16: PointAttributeTypes.DATA_TYPE_UINT16,
+				uint32: PointAttributeTypes.DATA_TYPE_UINT32,
+				uint64: PointAttributeTypes.DATA_TYPE_UINT64,
+				double: PointAttributeTypes.DATA_TYPE_DOUBLE,
+				float:  PointAttributeTypes.DATA_TYPE_FLOAT,
+			};
+
+			for(const jsAttribute of pointAttributes){
+				const name = replaceOldNames(jsAttribute.name);
+				const type = typeConversion[jsAttribute.type];
+				const numElements = jsAttribute.elements;
+				const description = jsAttribute.description;
+
+				const attribute = new PointAttribute(name, type, numElements);
+
+				attributes.add(attribute);
+			}
+
+			return attributes;
+		}
+
 	}
 
 	class POCLoader {
@@ -12219,7 +12114,8 @@ void main() {
 							pco.loader = new LasLazLoader(fMno.version);
 						} else {
 							pco.loader = new BinaryLoader(fMno.version, boundingBox, fMno.scale);
-							pco.pointAttributes = new PointAttributes(pco.pointAttributes);
+							//pco.pointAttributes = new PointAttributes(pco.pointAttributes);
+							pco.pointAttributes = parseAttributes(fMno);
 						}
 
 						let nodes = {};
@@ -12316,6 +12212,315 @@ void main() {
 		}
 	}
 
+	/**
+	 * @author Connor Manning
+	 */
+
+	class EptLoader {
+		static async load(file, callback) {
+
+			let response = await fetch(file);
+			let json = await response.json();
+
+			let url = file.substr(0, file.lastIndexOf('ept.json'));
+			let geometry = new Potree.PointCloudEptGeometry(url, json);
+			let root = new Potree.PointCloudEptGeometryNode(geometry);
+
+			geometry.root = root;
+			geometry.root.load();
+
+			callback(geometry);
+		}
+	};
+
+	class EptBinaryLoader {
+		extension() {
+			return '.bin';
+		}
+
+		workerPath() {
+			return Potree.scriptPath + '/workers/EptBinaryDecoderWorker.js';
+		}
+
+		load(node) {
+			if (node.loaded) return;
+
+			let url = node.url() + this.extension();
+
+			let xhr = XHRFactory.createXMLHttpRequest();
+			xhr.open('GET', url, true);
+			xhr.responseType = 'arraybuffer';
+			xhr.overrideMimeType('text/plain; charset=x-user-defined');
+			xhr.onreadystatechange = () => {
+				if (xhr.readyState === 4) {
+					if (xhr.status === 200) {
+						let buffer = xhr.response;
+						this.parse(node, buffer);
+					} else {
+						console.log('Failed ' + url + ': ' + xhr.status);
+					}
+				}
+			};
+
+			try {
+				xhr.send(null);
+			}
+			catch (e) {
+				console.log('Failed request: ' + e);
+			}
+		}
+
+		parse(node, buffer) {
+			let workerPath = this.workerPath();
+			let worker = Potree.workerPool.getWorker(workerPath);
+
+			worker.onmessage = function(e) {
+				let g = new THREE.BufferGeometry();
+				let numPoints = e.data.numPoints;
+
+				let position = new Float32Array(e.data.position);
+				g.addAttribute('position', new THREE.BufferAttribute(position, 3));
+
+				let indices = new Uint8Array(e.data.indices);
+				g.addAttribute('indices', new THREE.BufferAttribute(indices, 4));
+
+				if (e.data.color) {
+					let color = new Uint8Array(e.data.color);
+					g.addAttribute('color',
+							new THREE.BufferAttribute(color, 4, true));
+				}
+				if (e.data.intensity) {
+					let intensity = new Float32Array(e.data.intensity);
+					g.addAttribute('intensity',
+							new THREE.BufferAttribute(intensity, 1));
+				}
+				if (e.data.classification) {
+					let classification = new Uint8Array(e.data.classification);
+					g.addAttribute('classification',
+							new THREE.BufferAttribute(classification, 1));
+				}
+				if (e.data.returnNumber) {
+					let returnNumber = new Uint8Array(e.data.returnNumber);
+					g.addAttribute('returnNumber',
+							new THREE.BufferAttribute(returnNumber, 1));
+				}
+				if (e.data.numberOfReturns) {
+					let numberOfReturns = new Uint8Array(e.data.numberOfReturns);
+					g.addAttribute('numberOfReturns',
+							new THREE.BufferAttribute(numberOfReturns, 1));
+				}
+				if (e.data.pointSourceId) {
+					let pointSourceId = new Uint16Array(e.data.pointSourceId);
+					g.addAttribute('pointSourceID',
+							new THREE.BufferAttribute(pointSourceId, 1));
+				}
+
+				g.attributes.indices.normalized = true;
+
+				let tightBoundingBox = new THREE.Box3(
+					new THREE.Vector3().fromArray(e.data.tightBoundingBox.min),
+					new THREE.Vector3().fromArray(e.data.tightBoundingBox.max)
+				);
+
+				node.doneLoading(
+						g,
+						tightBoundingBox,
+						numPoints,
+						new THREE.Vector3(...e.data.mean));
+
+				Potree.workerPool.returnWorker(workerPath, worker);
+			};
+
+			let toArray = (v) => [v.x, v.y, v.z];
+			let message = {
+				buffer: buffer,
+				schema: node.ept.schema,
+				scale: node.ept.eptScale,
+				offset: node.ept.eptOffset,
+				mins: toArray(node.key.b.min)
+			};
+
+			worker.postMessage(message, [message.buffer]);
+		}
+	};
+
+	/**
+	 * laslaz code taken and adapted from plas.io js-laslaz
+	 *	  http://plas.io/
+	 *	https://github.com/verma/plasio
+	 *
+	 * Thanks to Uday Verma and Howard Butler
+	 *
+	 */
+
+	class EptLaszipLoader {
+		load(node) {
+			if (node.loaded) return;
+
+			let url = node.url() + '.laz';
+
+			let xhr = XHRFactory.createXMLHttpRequest();
+			xhr.open('GET', url, true);
+			xhr.responseType = 'arraybuffer';
+			xhr.overrideMimeType('text/plain; charset=x-user-defined');
+			xhr.onreadystatechange = () => {
+				if (xhr.readyState === 4) {
+					if (xhr.status === 200) {
+						let buffer = xhr.response;
+						this.parse(node, buffer);
+					} else {
+						console.log('Failed ' + url + ': ' + xhr.status);
+					}
+				}
+			};
+
+			xhr.send(null);
+		}
+
+		parse(node, buffer){
+			let lf = new LASFile(buffer);
+			let handler = new EptLazBatcher(node);
+
+			lf.open()
+			.then(() => {
+				lf.isOpen = true;
+				return lf.getHeader();
+			})
+			.then((header) => {
+				let i = 0;
+				let np = header.pointsCount;
+
+				let toArray = (v) => [v.x, v.y, v.z];
+				let mins = toArray(node.key.b.min);
+				let maxs = toArray(node.key.b.max);
+
+				let read = () => {
+					let p = lf.readData(1000000, 0, 1);
+					return p.then(function (data) {
+						let d = new LASDecoder(
+								data.buffer,
+								header.pointsFormatId,
+								header.pointsStructSize,
+								data.count,
+								header.scale,
+								header.offset,
+								mins,
+								maxs);
+						d.extraBytes = header.extraBytes;
+						d.pointsFormatId = header.pointsFormatId;
+						handler.push(d);
+
+						i += data.count;
+
+						if (data.hasMoreData) {
+							return read();
+						}
+						else {
+							header.totalRead = i;
+							header.versionAsString = lf.versionAsString;
+							header.isCompressed = lf.isCompressed;
+							return null;
+						}
+					});
+				};
+
+				return read();
+			})
+			.then(() => lf.close())
+			.then(() => lf.isOpen = false)
+			.catch((err) => {
+				console.log('Error reading LAZ:', err);
+				if (lf.isOpen) {
+					lf.close().then(() => {
+						lf.isOpen = false;
+						throw err;
+					});
+				}
+				else throw err;
+			});
+		}
+	};
+
+	class EptLazBatcher {
+		constructor(node) { this.node = node; }
+
+		push(las) {
+			let workerPath = Potree.scriptPath +
+				'/workers/EptLaszipDecoderWorker.js';
+			let worker = Potree.workerPool.getWorker(workerPath);
+
+			worker.onmessage = (e) => {
+				let g = new THREE.BufferGeometry();
+				let numPoints = las.pointsCount;
+
+				let positions = new Float32Array(e.data.position);
+				let colors = new Uint8Array(e.data.color);
+
+				let intensities = new Float32Array(e.data.intensity);
+				let classifications = new Uint8Array(e.data.classification);
+				let returnNumbers = new Uint8Array(e.data.returnNumber);
+				let numberOfReturns = new Uint8Array(e.data.numberOfReturns);
+				let pointSourceIDs = new Uint16Array(e.data.pointSourceID);
+				let indices = new Uint8Array(e.data.indices);
+
+				g.addAttribute('position',
+						new THREE.BufferAttribute(positions, 3));
+				g.addAttribute('color',
+						new THREE.BufferAttribute(colors, 4, true));
+				g.addAttribute('intensity',
+						new THREE.BufferAttribute(intensities, 1));
+				g.addAttribute('classification',
+						new THREE.BufferAttribute(classifications, 1));
+				g.addAttribute('returnNumber',
+						new THREE.BufferAttribute(returnNumbers, 1));
+				g.addAttribute('numberOfReturns',
+						new THREE.BufferAttribute(numberOfReturns, 1));
+				g.addAttribute('pointSourceID',
+						new THREE.BufferAttribute(pointSourceIDs, 1));
+				g.addAttribute('indices',
+						new THREE.BufferAttribute(indices, 4));
+
+				g.attributes.indices.normalized = true;
+
+				let tightBoundingBox = new THREE.Box3(
+					new THREE.Vector3().fromArray(e.data.tightBoundingBox.min),
+					new THREE.Vector3().fromArray(e.data.tightBoundingBox.max)
+				);
+
+				this.node.doneLoading(
+						g,
+						tightBoundingBox,
+						numPoints,
+						new THREE.Vector3(...e.data.mean));
+
+				Potree.workerPool.returnWorker(workerPath, worker);
+			};
+
+			let message = {
+				buffer: las.arrayb,
+				numPoints: las.pointsCount,
+				pointSize: las.pointSize,
+				pointFormatID: las.pointsFormatId,
+				scale: las.scale,
+				offset: las.offset,
+				mins: las.mins,
+				maxs: las.maxs
+			};
+
+			worker.postMessage(message, [message.buffer]);
+		};
+	};
+
+	class EptZstandardLoader extends EptBinaryLoader {
+	    extension() {
+	        return '.zst';
+	    }
+
+	    workerPath() {
+	        return Potree.scriptPath + '/workers/EptZstandardDecoderWorker.js';
+	    }
+	};
+
 	class GreyhoundBinaryLoader{
 
 		constructor(version, boundingBox, scale){
@@ -12386,32 +12591,33 @@ void main() {
 
 				let geometry = new THREE.BufferGeometry();
 
-				for(let property in buffers){
-					let buffer = buffers[property].buffer;
+				// TODO IMPORTANT!!!
+				// for(let property in buffers){
+				// 	let buffer = buffers[property].buffer;
 
-					if (parseInt(property) === PointAttributeNames.POSITION_CARTESIAN) {
-						geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(buffer), 3));
-					} else if (parseInt(property) === PointAttributeNames.COLOR_PACKED) {
-						geometry.addAttribute('color', new THREE.BufferAttribute(new Uint8Array(buffer), 4, true));
-					} else if (parseInt(property) === PointAttributeNames.INTENSITY) {
-						geometry.addAttribute('intensity', new THREE.BufferAttribute(new Float32Array(buffer), 1));
-					} else if (parseInt(property) === PointAttributeNames.CLASSIFICATION) {
-						geometry.addAttribute('classification', new THREE.BufferAttribute(new Uint8Array(buffer), 1));
-					} else if (parseInt(property) === PointAttributeNames.NORMAL_SPHEREMAPPED) {
-						geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(buffer), 3));
-					} else if (parseInt(property) === PointAttributeNames.NORMAL_OCT16) {
-						geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(buffer), 3));
-					} else if (parseInt(property) === PointAttributeNames.NORMAL) {
-						geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(buffer), 3));
-					} else if (parseInt(property) === PointAttributeNames.INDICES) {
-						let bufferAttribute = new THREE.BufferAttribute(new Uint8Array(buffer), 4);
-						bufferAttribute.normalized = true;
-						geometry.addAttribute('indices', bufferAttribute);
-					} else if (parseInt(property) === PointAttributeNames.SPACING) {
-						let bufferAttribute = new THREE.BufferAttribute(new Float32Array(buffer), 1);
-						geometry.addAttribute('spacing', bufferAttribute);
-					}
-				}
+				// 	if (parseInt(property) === PointAttributeNames.POSITION_CARTESIAN) {
+				// 		geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(buffer), 3));
+				// 	} else if (parseInt(property) === PointAttributeNames.COLOR_PACKED) {
+				// 		geometry.addAttribute('color', new THREE.BufferAttribute(new Uint8Array(buffer), 4, true));
+				// 	} else if (parseInt(property) === PointAttributeNames.INTENSITY) {
+				// 		geometry.addAttribute('intensity', new THREE.BufferAttribute(new Float32Array(buffer), 1));
+				// 	} else if (parseInt(property) === PointAttributeNames.CLASSIFICATION) {
+				// 		geometry.addAttribute('classification', new THREE.BufferAttribute(new Uint8Array(buffer), 1));
+				// 	} else if (parseInt(property) === PointAttributeNames.NORMAL_SPHEREMAPPED) {
+				// 		geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(buffer), 3));
+				// 	} else if (parseInt(property) === PointAttributeNames.NORMAL_OCT16) {
+				// 		geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(buffer), 3));
+				// 	} else if (parseInt(property) === PointAttributeNames.NORMAL) {
+				// 		geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(buffer), 3));
+				// 	} else if (parseInt(property) === PointAttributeNames.INDICES) {
+				// 		let bufferAttribute = new THREE.BufferAttribute(new Uint8Array(buffer), 4);
+				// 		bufferAttribute.normalized = true;
+				// 		geometry.addAttribute('indices', bufferAttribute);
+				// 	} else if (parseInt(property) === PointAttributeNames.SPACING) {
+				// 		let bufferAttribute = new THREE.BufferAttribute(new Float32Array(buffer), 1);
+				// 		geometry.addAttribute('spacing', bufferAttribute);
+				// 	}
+				// }
 
 				tightBoundingBox.max.sub(tightBoundingBox.min);
 				tightBoundingBox.min.set(0, 0, 0);
@@ -12572,7 +12778,7 @@ void main() {
 				cb(null, { color: colorNorm, intensity: intensityNorm });
 			});
 		};
-	}
+	};
 
 
 	class GreyhoundLoader{
@@ -12581,7 +12787,7 @@ void main() {
 
 		}
 
-		//loadInfoJSON(url, callback) { 
+		//loadInfoJSON(url, callback) {
 		//}
 
 		/**
@@ -12592,7 +12798,7 @@ void main() {
 		 * @param loadingFinishedListener executed after loading the binary has been
 		 * finished
 		 */
-		load(url, callback){
+		static load(url, callback){
 			let HIERARCHY_STEP_SIZE = 5;
 
 			try {
@@ -13093,7 +13299,7 @@ void main() {
 				});
 			}
 		};
-	}
+	};
 
 	class ClippingTool extends EventDispatcher{
 
@@ -13260,7 +13466,7 @@ void main() {
 		update() {
 
 		}
-	}
+	};
 
 	var GeoTIFF = (function (exports) {
 	'use strict';
@@ -13746,6 +13952,7 @@ void main() {
 			// make size independant of distance
 			for (let measure of measurements) {
 				measure.lengthUnit = this.viewer.lengthUnit;
+				measure.lengthUnitDisplay = this.viewer.lengthUnitDisplay;
 				measure.update();
 
 				// spheres
@@ -13855,7 +14062,7 @@ void main() {
 		render(){
 			this.viewer.renderer.render(this.scene, this.viewer.scene.getActiveCamera());
 		}
-	}
+	};
 
 	class Message{
 
@@ -14388,7 +14595,7 @@ void main() {
 		}
 		
 		return att;
-	}
+	};
 
 	class TransformationTool {
 		constructor(viewer) {
@@ -14829,7 +15036,7 @@ void main() {
 
 			if(!handle){
 				return
-			}
+			};
 
 			let localNormal = new THREE.Vector3(...handle.alignment);
 			let n = new THREE.Vector3();
@@ -15273,7 +15480,7 @@ void main() {
 			
 		}
 
-	}
+	};
 
 	class VolumeTool extends EventDispatcher{
 		constructor (viewer) {
@@ -15415,7 +15622,9 @@ void main() {
 					label.scale.set(scale, scale, scale);
 				}
 
-				let text = Utils.addCommas(volume.getVolume().toFixed(3)) + '\u00B3';
+				let calculatedVolume = volume.getVolume();
+				calculatedVolume = calculatedVolume / Math.pow(this.viewer.lengthUnit.unitspermeter, 3) * Math.pow(this.viewer.lengthUnitDisplay.unitspermeter, 3);  //convert to cubic meters then to the cubic display unit
+				let text = Utils.addCommas(calculatedVolume.toFixed(3)) + ' ' + this.viewer.lengthUnitDisplay.code + '\u00B3';
 				label.setText(text);
 			}
 		}
@@ -15431,69 +15640,100 @@ void main() {
 		constructor (viewer) {
 			this.viewer = viewer;
 		}
-	 
-		render(){
-			const viewer = this.viewer;
 
-			viewer.dispatchEvent({type: "render.pass.begin",viewer: viewer});
+		clearTargets(){
+
+		}
+
+		clear(){
+			const viewer = this.viewer;
+			const {renderer, skybox, background, scene} = viewer;
 
 			// render skybox
 			if(viewer.background === "skybox"){
-				viewer.renderer.clear(true, true, false);
+				renderer.setClearColor(0x000000, 0);
+				renderer.clear(true, true, false);
+			}else if(viewer.background === "gradient"){
+				renderer.setClearColor(0x000000, 0);
+				renderer.clear(true, true, false);
+			}else if(viewer.background === "black"){
+				renderer.setClearColor(0x000000, 1);
+				renderer.clear(true, true, false);
+			}else if(viewer.background === "white"){
+				renderer.setClearColor(0xFFFFFF, 1);
+				renderer.clear(true, true, false);
+			}else{
+				renderer.setClearColor(0x000000, 0);
+				renderer.clear(true, true, false);
+			}
+		}
+	 
+		render(params){
+			const viewer = this.viewer;
+			const camera = params.camera ? params.camera : viewer.scene.getActiveCamera();
+			const {renderer} = viewer;
+
+			viewer.dispatchEvent({type: "render.pass.begin",viewer: viewer});
+
+			//let {width, height} = renderer.getSize();
+			const width = params.viewport ? params.viewport[2] : renderer.getSize().width;
+			const height = params.viewport ? params.viewport[3] : renderer.getSize().height;
+
+			// render skybox
+			if(viewer.background === "skybox"){
 				viewer.skybox.camera.rotation.copy(viewer.scene.cameraP.rotation);
 				viewer.skybox.camera.fov = viewer.scene.cameraP.fov;
 				viewer.skybox.camera.aspect = viewer.scene.cameraP.aspect;
 				viewer.skybox.camera.updateProjectionMatrix();
-				viewer.renderer.render(viewer.skybox.scene, viewer.skybox.camera);
+				renderer.render(viewer.skybox.scene, viewer.skybox.camera);
 			}else if(viewer.background === "gradient"){
-				viewer.renderer.clear(true, true, false);
-				viewer.renderer.render(viewer.scene.sceneBG, viewer.scene.cameraBG);
-			}else if(viewer.background === "black"){
-				viewer.renderer.setClearColor(0x000000, 1);
-				viewer.renderer.clear(true, true, false);
-			}else if(viewer.background === "white"){
-				viewer.renderer.setClearColor(0xFFFFFF, 1);
-				viewer.renderer.clear(true, true, false);
-			}else{
-				viewer.renderer.setClearColor(0x000000, 0);
-				viewer.renderer.clear(true, true, false);
+				renderer.render(viewer.scene.sceneBG, viewer.scene.cameraBG);
 			}
 			
 			for(let pointcloud of this.viewer.scene.pointclouds){
-				pointcloud.material.useEDL = false;
+				const {material} = pointcloud;
+				material.useEDL = false;
+				//material.updateShaderSource();
 			}
 			
-			let activeCam = viewer.scene.getActiveCamera();
-			//viewer.renderer.render(viewer.scene.scenePointCloud, activeCam);
-			
-			viewer.pRenderer.render(viewer.scene.scenePointCloud, activeCam, null, {
+			viewer.pRenderer.render(viewer.scene.scenePointCloud, camera, null, {
 				clipSpheres: viewer.scene.volumes.filter(v => (v instanceof Potree.SphereVolume)),
 			});
 			
 			// render scene
-			viewer.renderer.render(viewer.scene.scene, activeCam);
+			renderer.render(viewer.scene.scene, camera);
 
 			viewer.dispatchEvent({type: "render.pass.scene",viewer: viewer});
 			
 			viewer.clippingTool.update();
-			viewer.renderer.render(viewer.clippingTool.sceneMarker, viewer.scene.cameraScreenSpace); //viewer.scene.cameraScreenSpace);
-			viewer.renderer.render(viewer.clippingTool.sceneVolume, activeCam);
+			renderer.render(viewer.clippingTool.sceneMarker, viewer.scene.cameraScreenSpace); //viewer.scene.cameraScreenSpace);
+			renderer.render(viewer.clippingTool.sceneVolume, camera);
 
-			viewer.renderer.render(viewer.controls.sceneControls, activeCam);
+			renderer.render(viewer.controls.sceneControls, camera);
 			
-			viewer.renderer.clearDepth();
+			renderer.clearDepth();
 			
 			viewer.transformationTool.update();
 			
 			viewer.dispatchEvent({type: "render.pass.perspective_overlay",viewer: viewer});
-			
-			viewer.renderer.render(viewer.transformationTool.scene, activeCam);
 
-			viewer.renderer.setViewport(viewer.renderer.domElement.clientWidth - viewer.navigationCube.width, 
-										viewer.renderer.domElement.clientHeight - viewer.navigationCube.width, 
+			renderer.render(viewer.controls.sceneControls, camera);
+			renderer.render(viewer.clippingTool.sceneVolume, camera);
+			renderer.render(viewer.transformationTool.scene, camera);
+			
+			renderer.setViewport(width - viewer.navigationCube.width, 
+										height - viewer.navigationCube.width, 
 										viewer.navigationCube.width, viewer.navigationCube.width);
-			viewer.renderer.render(viewer.navigationCube, viewer.navigationCube.camera);		
-			viewer.renderer.setViewport(0, 0, viewer.renderer.domElement.clientWidth, viewer.renderer.domElement.clientHeight);
+			renderer.render(viewer.navigationCube, viewer.navigationCube.camera);		
+			renderer.setViewport(0, 0, width, height);
+			
+			// renderer.render(viewer.transformationTool.scene, camera);
+
+			// renderer.setViewport(renderer.domElement.clientWidth - viewer.navigationCube.width, 
+			// 							renderer.domElement.clientHeight - viewer.navigationCube.width, 
+			// 							viewer.navigationCube.width, viewer.navigationCube.width);
+			// renderer.render(viewer.navigationCube, viewer.navigationCube.camera);		
+			// renderer.setViewport(0, 0, renderer.domElement.clientWidth, renderer.domElement.clientHeight);
 
 			viewer.dispatchEvent({type: "render.pass.end",viewer: viewer});
 		}
@@ -15549,19 +15789,19 @@ void main() {
 			//}
 		};
 
-		resize(){
+		resize(width, height){
 			const viewer = this.viewer;
 
-			let pixelRatio = viewer.renderer.getPixelRatio();
-			let {width, height} = viewer.renderer.getSize();
+			//let pixelRatio = viewer.renderer.getPixelRatio();
+			//let {width, height} = viewer.renderer.getSize();
 
 			if(this.screenshot){
 				width = this.screenshot.target.width;
 				height = this.screenshot.target.height;
 			}
 
-			this.rtEDL.setSize(width * pixelRatio , height * pixelRatio);
-			this.rtRegular.setSize(width * pixelRatio , height * pixelRatio);
+			this.rtEDL.setSize(width , height);
+			this.rtRegular.setSize(width , height);
 		}
 
 		makeScreenshot(camera, size, callback){
@@ -15619,25 +15859,63 @@ void main() {
 			};
 		}
 
-		render(){
+		clearTargets(){
+			const viewer = this.viewer;
+			const {renderer} = viewer;
+
+			renderer.clearTarget(this.rtEDL, true, true, true);
+			renderer.clearTarget(this.rtRegular, true, true, false);
+		}
+
+		clear(){
 			this.initEDL();
 			const viewer = this.viewer;
 
+			const {renderer, skybox, background, scene} = viewer;
+
+			if(background === "skybox"){
+				renderer.setClearColor(0x000000, 0);
+				renderer.clear();
+			} else if (background === 'gradient') {
+				renderer.setClearColor(0x000000, 0);
+				renderer.clear();
+			} else if (background === 'black') {
+				renderer.setClearColor(0x000000, 1);
+				renderer.clear();
+			} else if (background === 'white') {
+				renderer.setClearColor(0xFFFFFF, 1);
+				renderer.clear();
+			} else {
+				renderer.setClearColor(0x000000, 0);
+				renderer.clear();
+			}
+
+			this.clearTargets();
+		}
+
+		render(params){
+			this.initEDL();
+			const viewer = this.viewer;
+
+			const camera = params.camera ? params.camera : viewer.scene.getActiveCamera();
+
 			viewer.dispatchEvent({type: "render.pass.begin",viewer: viewer});
 
-			this.resize();
+			//let {width, height} = viewer.renderer.getSize();
+			const width = params.viewport ? params.viewport[2] : viewer.renderer.getSize().width;
+			const height = params.viewport ? params.viewport[3] : viewer.renderer.getSize().height;
+			
+			this.resize(width, height);
 
 			if(this.screenshot){
 				let oldBudget = Potree.pointBudget;
 				Potree.pointBudget = Math.max(10 * 1000 * 1000, 2 * oldBudget);
 				let result = Potree.updatePointClouds(
 					viewer.scene.pointclouds, 
-					viewer.scene.getActiveCamera(), 
+					camera, 
 					viewer.renderer);
 				Potree.pointBudget = oldBudget;
 			}
-
-			let camera = viewer.scene.getActiveCamera();
 
 			let lights = [];
 			viewer.scene.scene.traverse(node => {
@@ -15646,28 +15924,16 @@ void main() {
 				}
 			});
 
+
 			if(viewer.background === "skybox"){
-				viewer.renderer.setClearColor(0x000000, 0);
-				viewer.renderer.clear();
 				viewer.skybox.camera.rotation.copy(viewer.scene.cameraP.rotation);
 				viewer.skybox.camera.fov = viewer.scene.cameraP.fov;
 				viewer.skybox.camera.aspect = viewer.scene.cameraP.aspect;
 				viewer.skybox.camera.updateProjectionMatrix();
 				viewer.renderer.render(viewer.skybox.scene, viewer.skybox.camera);
 			} else if (viewer.background === 'gradient') {
-				viewer.renderer.setClearColor(0x000000, 0);
-				viewer.renderer.clear();
 				viewer.renderer.render(viewer.scene.sceneBG, viewer.scene.cameraBG);
-			} else if (viewer.background === 'black') {
-				viewer.renderer.setClearColor(0x000000, 1);
-				viewer.renderer.clear();
-			} else if (viewer.background === 'white') {
-				viewer.renderer.setClearColor(0xFFFFFF, 1);
-				viewer.renderer.clear();
-			} else {
-				viewer.renderer.setClearColor(0x000000, 0);
-				viewer.renderer.clear();
-			}
+			} 
 
 			// TODO adapt to multiple lights
 			if(lights.length > 0 && !(lights[0].disableShadowUpdates)){
@@ -15677,16 +15943,18 @@ void main() {
 
 				let originalAttributes = new Map();
 				for(let pointcloud of viewer.scene.pointclouds){
-					originalAttributes.set(pointcloud, pointcloud.material.pointColorType);
-					pointcloud.material.disableEvents();
-					pointcloud.material.pointColorType = PointColorType.DEPTH;
+					// TODO IMPORTANT !!! check
+					//originalAttributes.set(pointcloud, pointcloud.material.pointColorType);
+					//pointcloud.material.disableEvents();
+					//pointcloud.material.pointColorType = PointColorType.DEPTH;
 				}
 
 				this.shadowMap.render(viewer.scene.scenePointCloud, camera);
 
 				for(let pointcloud of viewer.scene.pointclouds){
 					let originalAttribute = originalAttributes.get(pointcloud);
-					pointcloud.material.pointColorType = originalAttribute;
+					// TODO IMPORTANT !!! check
+					//pointcloud.material.pointColorType = originalAttribute;
 					pointcloud.material.enableEvents();
 				}
 
@@ -15695,15 +15963,6 @@ void main() {
 				viewer.shadowTestCam.updateProjectionMatrix();
 
 			}
-
-			viewer.renderer.render(viewer.scene.scene, camera);
-			
-			//viewer.renderer.clearTarget( this.rtColor, true, true, true );
-			viewer.renderer.clearTarget(this.rtEDL, true, true, true);
-			viewer.renderer.clearTarget(this.rtRegular, true, true, false);
-
-			let width = viewer.renderer.getSize().width;
-			let height = viewer.renderer.getSize().height;
 
 			// COLOR & DEPTH PASS
 			for (let pointcloud of viewer.scene.pointclouds) {
@@ -15735,21 +15994,29 @@ void main() {
 				});
 			}
 
-			viewer.renderer.render(viewer.scene.scene, camera, this.rtRegular);
+			//viewer.renderer.render(viewer.scene.scene, camera, this.rtRegular);
+			viewer.renderer.render(viewer.scene.scene, camera);
 
 			//viewer.renderer.setRenderTarget(this.rtColor);
 			viewer.dispatchEvent({type: "render.pass.scene", viewer: viewer, renderTarget: this.rtRegular});
 
-			{ // EDL OCCLUSION PASS
+			{ // EDL PASS
 				this.edlMaterial.uniforms.screenWidth.value = width;
 				this.edlMaterial.uniforms.screenHeight.value = height;
 
 				//this.edlMaterial.uniforms.colorMap.value = this.rtColor.texture;
 
-				this.edlMaterial.uniforms.uRegularColor.value = this.rtRegular.texture;
+				let proj = camera.projectionMatrix;
+				let projArray = new Float32Array(16);
+				projArray.set(proj.elements);
+
+				this.edlMaterial.uniforms.uNear.value = camera.near;
+				this.edlMaterial.uniforms.uFar.value = camera.far;
+				//this.edlMaterial.uniforms.uRegularColor.value = this.rtRegular.texture;
 				this.edlMaterial.uniforms.uEDLColor.value = this.rtEDL.texture;
-				this.edlMaterial.uniforms.uRegularDepth.value = this.rtRegular.depthTexture;
+				//this.edlMaterial.uniforms.uRegularDepth.value = this.rtRegular.depthTexture;
 				this.edlMaterial.uniforms.uEDLDepth.value = this.rtEDL.depthTexture;
+				this.edlMaterial.uniforms.uProj.value = projArray;
 
 				this.edlMaterial.uniforms.edlStrength.value = viewer.edlStrength;
 				this.edlMaterial.uniforms.radius.value = viewer.edlRadius;
@@ -15763,6 +16030,9 @@ void main() {
 
 			}
 
+			//viewer.renderer.render(viewer.scene.scene, camera);
+			viewer.dispatchEvent({type: "render.pass.scene", viewer: viewer});
+
 			viewer.renderer.clearDepth();
 
 			viewer.transformationTool.update();
@@ -15773,11 +16043,11 @@ void main() {
 			viewer.renderer.render(viewer.clippingTool.sceneVolume, camera);
 			viewer.renderer.render(viewer.transformationTool.scene, camera);
 			
-			viewer.renderer.setViewport(width - viewer.navigationCube.width, 
-										height - viewer.navigationCube.width, 
-										viewer.navigationCube.width, viewer.navigationCube.width);
-			viewer.renderer.render(viewer.navigationCube, viewer.navigationCube.camera);		
-			viewer.renderer.setViewport(0, 0, width, height);
+			//viewer.renderer.setViewport(width - viewer.navigationCube.width, 
+			//							height - viewer.navigationCube.width, 
+			//							viewer.navigationCube.width, viewer.navigationCube.width);
+			//viewer.renderer.render(viewer.navigationCube, viewer.navigationCube.camera);		
+			//viewer.renderer.setViewport(0, 0, width, height);
 
 			viewer.dispatchEvent({type: "render.pass.end",viewer: viewer});
 
@@ -15854,25 +16124,29 @@ void main() {
 			this.rtAttribute.setSize(width * pixelRatio , height * pixelRatio);
 		}
 
+		clear(){
+
+		}
+
 		render () {
 			this.init();
 			const viewer = this.viewer;
+			const {renderer, scene} = viewer;
 
 			viewer.dispatchEvent({type: "render.pass.begin",viewer: viewer});
 
 			this.resize();
 
-			let camera = viewer.scene.getActiveCamera();
+			let camera = scene.getActiveCamera();
 			
-			viewer.renderer.setClearColor(0x000000, 0);
-			viewer.renderer.clearTarget( this.rtDepth, true, true, true );
-			viewer.renderer.clearTarget( this.rtAttribute, true, true, true );
+			renderer.setClearColor(0x000000, 0);
+			renderer.clearTarget( this.rtDepth, true, true, true );
+			renderer.clearTarget( this.rtAttribute, true, true, true );
 
-			let width = viewer.renderer.getSize().width;
-			let height = viewer.renderer.getSize().height;
+			const {width, height} = renderer.getSize();
 
-			let visiblePointClouds = viewer.scene.pointclouds.filter(pc => pc.visible);
-			let originalMaterials = new Map();
+			const visiblePointClouds = viewer.scene.pointclouds.filter(pc => pc.visible);
+			const originalMaterials = new Map();
 
 			for(let pointcloud of visiblePointClouds){
 				originalMaterials.set(pointcloud, pointcloud.material);
@@ -15931,7 +16205,6 @@ void main() {
 				
 				viewer.pRenderer.render(viewer.scene.scenePointCloud, camera, this.rtDepth, {
 					clipSpheres: viewer.scene.volumes.filter(v => (v instanceof SphereVolume)),
-					//material: this.depthMaterial
 				});
 			}
 
@@ -15947,7 +16220,7 @@ void main() {
 					attributeMaterial.maxSize = material.maxSize;
 
 					attributeMaterial.pointSizeType = material.pointSizeType;
-					attributeMaterial.pointColorType = material.pointColorType;
+					attributeMaterial.activeAttributeName = material.activeAttributeName;
 					attributeMaterial.visibleNodesTexture = material.visibleNodesTexture;
 					attributeMaterial.weighted = true;
 					attributeMaterial.screenWidth = width;
@@ -15962,8 +16235,10 @@ void main() {
 					attributeMaterial.uniforms.uFilterNumberOfReturnsRange.value = material.uniforms.uFilterNumberOfReturnsRange.value;
 					attributeMaterial.uniforms.uFilterGPSTimeClipRange.value = material.uniforms.uFilterGPSTimeClipRange.value;
 
+					attributeMaterial.elevationGradientRepeat = material.elevationGradientRepeat;
 					attributeMaterial.elevationRange = material.elevationRange;
 					attributeMaterial.gradient = material.gradient;
+					attributeMaterial.matcap = material.matcap;
 
 					attributeMaterial.intensityRange = material.intensityRange;
 					attributeMaterial.intensityGamma = material.intensityGamma;
@@ -16104,7 +16379,7 @@ void main() {
 
 			this.rotationSpeed = 5;
 
-			this.fadeFactor = 10;
+			this.fadeFactor = 20;
 			this.yawDelta = 0;
 			this.pitchDelta = 0;
 			this.panDelta = new THREE.Vector2(0, 0);
@@ -16359,7 +16634,7 @@ void main() {
 				this.radiusDelta -= progression * this.radiusDelta;
 			}
 		}
-	}
+	};
 
 	class View{
 		constructor () {
@@ -16485,7 +16760,58 @@ void main() {
 			this.position.y += y;
 			this.position.z += z;
 		}
-	}
+
+		setView(position, target, duration = 0){
+			
+			const startPosition = this.position.clone();
+			const startTarget = this.getPivot();
+
+			const endPosition = position.clone();
+			const endTarget = target.clone();
+
+			let easing = TWEEN.Easing.Quartic.Out;
+
+			if(duration === 0){
+				this.position.copy(endPosition);
+				this.lookAt(endTarget);
+			}else{
+				let value = {x: 0};
+				let tween = new TWEEN.Tween(value).to({x: 1}, duration);
+				tween.easing(easing);
+				//this.tweens.push(tween);
+
+				tween.onUpdate(() => {
+					let t = value.x;
+
+					//console.log(t);
+
+					const pos = new THREE.Vector3(
+						(1 - t) * startPosition.x + t * endPosition.x,
+						(1 - t) * startPosition.y + t * endPosition.y,
+						(1 - t) * startPosition.z + t * endPosition.z,
+					);
+
+					const target = new THREE.Vector3(
+						(1 - t) * startTarget.x + t * endTarget.x,
+						(1 - t) * startTarget.y + t * endTarget.y,
+						(1 - t) * startTarget.z + t * endTarget.z,
+					);
+
+					this.position.copy(pos);
+					this.lookAt(target);
+
+				});
+
+				tween.start();
+
+				//tween.onComplete(() => {
+				//	this.tweens = this.tweens.filter(e => e !== tween);
+				//});
+			}
+
+		}
+
+	};
 
 	class Scene extends EventDispatcher{
 
@@ -16500,6 +16826,7 @@ void main() {
 
 			this.cameraP = new THREE.PerspectiveCamera(this.fov, 1, 0.1, 1000*1000);
 			this.cameraO = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000*1000);
+			this.cameraVR = new THREE.PerspectiveCamera();
 			this.cameraBG = new THREE.Camera();
 			this.cameraScreenSpace = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
 			this.cameraMode = CameraMode.PERSPECTIVE;
@@ -16649,6 +16976,7 @@ void main() {
 		
 		addMeasurement(measurement){
 			measurement.lengthUnit = this.lengthUnit;
+			measurement.lengthUnitDisplay = this.lengthUnitDisplay;
 			this.measurements.push(measurement);
 			this.dispatchEvent({
 				'type': 'measurement_added',
@@ -16716,7 +17044,16 @@ void main() {
 		}
 
 		getActiveCamera() {
-			return this.cameraMode == CameraMode.PERSPECTIVE ? this.cameraP : this.cameraO;		
+
+			if(this.cameraMode === CameraMode.PERSPECTIVE){
+				return this.cameraP;
+			}else if(this.cameraMode === CameraMode.ORTHOGRAPHIC){
+				return this.cameraO;
+			}else if(this.cameraMode === CameraMode.VR){
+				return this.cameraVR;
+			}
+
+			return null;
 		}
 		
 		initialize(){
@@ -16757,28 +17094,28 @@ void main() {
 				this.sceneBG.add(bg);
 			}
 
-			{ // lights
-				{
-					let light = new THREE.DirectionalLight(0xffffff);
-					light.position.set(10, 10, 1);
-					light.target.position.set(0, 0, 0);
-					this.scene.add(light);
-				}
+			//{ // lights
+			//	{
+			//		let light = new THREE.DirectionalLight(0xffffff);
+			//		light.position.set(10, 10, 1);
+			//		light.target.position.set(0, 0, 0);
+			//		this.scene.add(light);
+			//	}
 
-				{
-					let light = new THREE.DirectionalLight(0xffffff);
-					light.position.set(-10, 10, 1);
-					light.target.position.set(0, 0, 0);
-					this.scene.add(light);
-				}
+			//	{
+			//		let light = new THREE.DirectionalLight(0xffffff);
+			//		light.position.set(-10, 10, 1);
+			//		light.target.position.set(0, 0, 0);
+			//		this.scene.add(light);
+			//	}
 
-				{
-					let light = new THREE.DirectionalLight(0xffffff);
-					light.position.set(0, -10, 20);
-					light.target.position.set(0, 0, 0);
-					this.scene.add(light);
-				}
-			}
+			//	{
+			//		let light = new THREE.DirectionalLight(0xffffff);
+			//		light.position.set(0, -10, 20);
+			//		light.target.position.set(0, 0, 0);
+			//		this.scene.add(light);
+			//	}
+			//}
 		}
 		
 		addAnnotation(position, args = {}){		
@@ -16800,13 +17137,13 @@ void main() {
 		removeAnnotation(annotationToRemove) {
 			this.annotations.remove(annotationToRemove);
 		}
-	}
+	};
 
 	// http://epsg.io/
 	proj4.defs('UTM10N', '+proj=utm +zone=10 +ellps=GRS80 +datum=NAD83 +units=m +no_defs');
 
 	class MapView{
-		
+
 		constructor (viewer) {
 			this.viewer = viewer;
 
@@ -16887,6 +17224,11 @@ void main() {
 		}
 
 		init () {
+
+			if(typeof ol === "undefined"){
+				return;
+			}
+
 			this.elMap = $('#potree_map');
 			this.elMap.draggable({ handle: $('#potree_map_header') });
 			this.elMap.resizable();
@@ -17125,7 +17467,7 @@ void main() {
 		setScene (scene) {
 			if (this.scene === scene) {
 				return;
-			}
+			};
 
 			if (this.scene) {
 				this.scene.removeEventListener('pointcloud_added', this.onPointcloudAdded);
@@ -17379,7 +17721,24 @@ void main() {
 			}
 
 			if (!this.sceneProjection) {
-				this.setSceneProjection(pointcloud.projection);
+				try {
+					this.setSceneProjection(pointcloud.projection);
+				}catch (e) {
+					console.log('Failed projection:', e);
+
+					if (pointcloud.fallbackProjection) {
+						try {
+							console.log('Trying fallback projection...');
+							this.setSceneProjection(pointcloud.fallbackProjection);
+							console.log('Set projection from fallback');
+						}catch (e) {
+							console.log('Failed fallback projection:', e);
+							return;
+						}
+					}else{
+						return;
+					};
+				}
 			}
 
 			let mapExtent = this.getMapExtent();
@@ -17400,6 +17759,7 @@ void main() {
 				constrainResolution: false
 			});
 
+			if (pointcloud.pcoGeometry.type == 'ept') return;
 			let url = pointcloud.pcoGeometry.url + '/../sources.json';
 			$.getJSON(url, (data) => {
 				let sources = data.sources;
@@ -17470,8 +17830,8 @@ void main() {
 			if (resized) {
 				this.map.updateSize();
 			}
-			
-			// 
+
+			//
 			let camera = this.viewer.scene.getActiveCamera();
 
 			let scale = this.map.getView().getResolution();
@@ -17552,7 +17912,7 @@ void main() {
 
 			return string;
 		}
-	}
+	};
 
 	class LASExporter {
 		static toLAS (points) {
@@ -17711,7 +18071,7 @@ void main() {
 			let material = ProfilePointCloudEntry.getMaterialInstance();
 			material.uniforms.minSize.value = 2;
 			material.uniforms.maxSize.value = 2;
-			material.pointColorType = PointColorType.RGB;
+			material.activeAttributeName = "RGBA";
 			material.opacity = 1.0;
 
 			this.material = material;
@@ -17879,7 +18239,7 @@ void main() {
 
 		}
 
-	}
+	};
 
 	ProfilePointCloudEntry.materialPool = new Set();
 
@@ -17900,6 +18260,16 @@ void main() {
 
 			this.mouse = new THREE.Vector2(0, 0);
 			this.scale = new THREE.Vector3(1, 1, 1);
+
+			this.autoFitEnabled = true; // completely disable/enable
+			this.autoFit = false; // internal
+
+			
+			let forwardIcon = `${exports.resourcePath}/icons/arrow_up.svg`;
+			$('#potree_profile_move_forward').attr('src', forwardIcon);
+
+			let backwardIcon = `${exports.resourcePath}/icons/arrow_down.svg`;
+			$('#potree_profile_move_backward').attr('src', backwardIcon);
 
 			let csvIcon = `${exports.resourcePath}/icons/file_csv_2d.svg`;
 			$('#potree_download_csv_icon').attr('src', csvIcon);
@@ -18053,6 +18423,7 @@ void main() {
 
 			let onWheel = e => {
 				this.autoFit = false;
+
 				let delta = 0;
 				if (e.wheelDelta !== undefined) { // WebKit / Opera / Explorer 9
 					delta = e.wheelDelta;
@@ -18144,19 +18515,6 @@ void main() {
 				new THREE.Vector2(mileage - radius, elevation - radius),
 				new THREE.Vector2(mileage + radius, elevation + radius));
 
-			//let debugNode = this.scene.getObjectByName("select_debug_node");
-			//if(!debugNode){
-			//	debugNode = new THREE.Object3D();
-			//	debugNode.name = "select_debug_node";
-			//	this.scene.add(debugNode);
-			//}
-			//debugNode.children = [];
-			//let debugPointBox = new THREE.Box3(
-			//	new THREE.Vector3(...pointBox.min.toArray(), -1),
-			//	new THREE.Vector3(...pointBox.max.toArray(), +1)
-			//);
-			//debugNode.add(new Box3Helper(debugPointBox, 0xff0000));
-
 			let numTested = 0;
 			let numSkipped = 0;
 			let numTestedPoints = 0;
@@ -18178,12 +18536,6 @@ void main() {
 						continue;
 					}
 
-					//let debugCollisionBox = new THREE.Box3(
-					//	new THREE.Vector3(...collisionBox.min.toArray(), -1),
-					//	new THREE.Vector3(...collisionBox.max.toArray(), +1)
-					//);
-					//debugNode.add(new Box3Helper(debugCollisionBox));
-
 					numTested++;
 					numTestedPoints += points.numPoints;
 
@@ -18191,10 +18543,23 @@ void main() {
 
 						let m = points.data.mileage[i] - mileage;
 						let e = points.data.position[3 * i + 2] - elevation;
-
 						let r = Math.sqrt(m * m + e * e);
 
-						if (r < radius && r < closest.distance) {
+						const withinDistance = r < radius && r < closest.distance;
+						let unfilteredClass = true;
+
+						if(points.data.classification){
+							const classification = pointcloud.material.classification;
+
+							const pointClassID = points.data.classification[i];
+							const pointClassValue = classification[pointClassID];
+
+							if(pointClassValue && pointClassValue.w === 0){
+								unfilteredClass = false;
+							}
+						}
+
+						if (withinDistance && unfilteredClass) {
 							closest = {
 								distance: r,
 								pointcloud: pointcloud,
@@ -18319,7 +18684,17 @@ void main() {
 				entry = new ProfilePointCloudEntry();
 				this.pointclouds.set(pointcloud, entry);
 
-				let materialChanged = () => this.render();
+				let materialChanged = () => {
+					const mSource = pointcloud.material;
+					const mTarget = entry.material;
+
+					mTarget.classification = mSource.classification;
+
+					this.render();
+				};
+
+				materialChanged();
+
 				pointcloud.material.addEventListener('material_property_changed', materialChanged);
 				this.addEventListener("on_reset_once", () => {
 					pointcloud.material.removeEventListener('material_property_changed', materialChanged);
@@ -18332,7 +18707,7 @@ void main() {
 			//console.log(this.projectedBox.min.toArray().map(v => v.toFixed(2)).join(", "));
 			//console.log(this.projectedBox.getSize().toArray().map(v => v.toFixed(2)).join(", "));
 
-			if (this.autoFit) { 
+			if (this.autoFit && this.autoFitEnabled) { 
 				let width = this.renderArea[0].clientWidth;
 				let height = this.renderArea[0].clientHeight;
 
@@ -18377,7 +18752,10 @@ void main() {
 			this.pointclouds.clear();
 			this.mouseIsDown = false;
 			this.mouse.set(0, 0);
-			this.scale.set(1, 1, 1);
+
+			if(this.autoFitEnabled){
+				this.scale.set(1, 1, 1);
+			}
 			this.pickSphere.visible = false;
 
 			this.pointCloudRoot.children = [];
@@ -18398,6 +18776,7 @@ void main() {
 		}
 
 		updateScales () {
+
 			let width = this.renderArea[0].clientWidth;
 			let height = this.renderArea[0].clientHeight;
 
@@ -18478,7 +18857,7 @@ void main() {
 				for (let [pointcloud, entry] of this.pointclouds) {
 					let material = entry.material;
 				
-					material.pointColorType = pointcloud.material.pointColorType;
+					material.activeAttributeName = pointcloud.material.activeAttributeName;
 					material.uniforms.uColor = pointcloud.material.uniforms.uColor;
 					material.uniforms.intensityRange.value = pointcloud.material.uniforms.intensityRange.value;
 					material.elevationRange = pointcloud.material.elevationRange;
@@ -18510,7 +18889,7 @@ void main() {
 
 			this.requestScaleUpdate();
 		}
-	}
+	};
 
 	class ProfileWindowController {
 		constructor (viewer) {
@@ -18532,6 +18911,40 @@ void main() {
 				e.scene.addEventListener("pointcloud_added", this._recompute);
 			});
 			this.viewer.scene.addEventListener("pointcloud_added", this._recompute);
+
+			$("#potree_profile_move_forward").click( () => {
+				const profile = this.profile;
+				const start = profile.points[0];
+				const end = profile.points[1];
+
+				const dir = end.clone().sub(start).normalize();
+				const up = new THREE.Vector3(0, 0, 1);
+
+				const forward = up.cross(dir);
+
+				const move = forward.clone().multiplyScalar(profile.width / 2);
+
+				this.profileWindow.autoFitEnabled = false;
+				profile.setPosition(0, start.clone().add(move));
+				profile.setPosition(1, end.clone().add(move));
+			});
+
+			$("#potree_profile_move_backward").click( () => {
+				const profile = this.profile;
+				const start = profile.points[0];
+				const end = profile.points[1];
+
+				const dir = end.clone().sub(start).normalize();
+				const up = new THREE.Vector3(0, 0, 1);
+
+				const backward = up.cross(dir).multiplyScalar(-1);
+
+				const move = backward.clone().multiplyScalar(profile.width / 2);
+
+				this.profileWindow.autoFitEnabled = false;
+				profile.setPosition(0, start.clone().add(move));
+				profile.setPosition(1, end.clone().add(move));
+			});
 		}
 
 		setProfile (profile) {
@@ -18632,7 +19045,7 @@ void main() {
 				this.requests.push(request);
 			}
 		}
-	}
+	};
 
 	/**
 	 *
@@ -19020,7 +19433,7 @@ ENDSEC
 		update(){
 
 		}
-	}
+	};
 
 	class DistancePanel extends MeasurePanel{
 		constructor(viewer, measurement, propertiesPanel){
@@ -19087,7 +19500,7 @@ ENDSEC
 			</tr>`);
 			elDistanceTable.append(elTotal);
 		}
-	}
+	};
 
 	class PointPanel extends MeasurePanel{
 		constructor(viewer, measurement, propertiesPanel){
@@ -19130,7 +19543,7 @@ ENDSEC
 			elAttributesContainer.empty();
 			elAttributesContainer.append(this.createAttributesTable());
 		}
-	}
+	};
 
 	class AreaPanel extends MeasurePanel{
 		constructor(viewer, measurement, propertiesPanel){
@@ -19173,7 +19586,7 @@ ENDSEC
 			let elArea = this.elContent.find(`#measurement_area`);
 			elArea.html(this.measurement.getArea().toFixed(3));
 		}
-	}
+	};
 
 	class AnglePanel extends MeasurePanel{
 		constructor(viewer, measurement, propertiesPanel){
@@ -19237,7 +19650,7 @@ ENDSEC
 			elBetta.html(angles[1]);
 			elGamma.html(angles[2]);
 		}
-	}
+	};
 
 	class HeightPanel extends MeasurePanel{
 		constructor(viewer, measurement, propertiesPanel){
@@ -19291,7 +19704,7 @@ ENDSEC
 				this.elHeightLabel.html(`<b>Height:</b> ${height}`);
 			}
 		}
-	}
+	};
 
 	class VolumePanel extends MeasurePanel{
 		constructor(viewer, measurement, propertiesPanel){
@@ -19673,7 +20086,7 @@ ENDSEC
 			this.elCheckShow.prop("checked", this.measurement.visible);
 
 		}
-	}
+	};
 
 	class ProfilePanel extends MeasurePanel{
 		constructor(viewer, measurement, propertiesPanel){
@@ -19957,7 +20370,7 @@ ENDSEC
 			}
 
 		}
-	}
+	};
 
 	class CameraPanel{
 		constructor(viewer, propertiesPanel){
@@ -20041,7 +20454,7 @@ ENDSEC
 			this.elContent.find("#camera_target_y").html(target[1]);
 			this.elContent.find("#camera_target_z").html(target[2]);
 		}
-	}
+	};
 
 	class PropertiesPanel{
 
@@ -20124,6 +20537,10 @@ ENDSEC
 					</select>
 				</li>
 
+				<li id="materials_backface_container">
+				<label><input id="set_backface_culling" type="checkbox" /><span data-i18n="appearance.backface_culling"></span></label>
+				</li>
+				
 				<!-- OPACITY -->
 				<li><span data-i18n="appearance.point_opacity"></span>:<span id="lblOpacity"></span><div id="sldOpacity"></div></li>
 
@@ -20132,9 +20549,7 @@ ENDSEC
 				</div>
 
 				<li>
-					<!--<label for="optMaterial" class="pv-select-label">Attributes:</label><br>-->
-					<select id="optMaterial" name="optMaterial">
-					</select>
+					<select id="optMaterial" name="optMaterial"></select>
 				</li>
 
 				<div id="materials.composite_weight_container">
@@ -20160,6 +20575,28 @@ ENDSEC
 					<li>Contrast: <span id="lblRGBContrast"></span> <div id="sldRGBContrast"></div>	</li>
 				</div>
 
+				<div id="materials.extra_container">
+					<div class="divider">
+						<span>Extra Attribute</span>
+					</div>
+
+					<li><span data-i18n="appearance.extra_range"></span>: <span id="lblExtraRange"></span> <div id="sldExtraRange"></div></li>
+
+					<li>Gamma: <span id="lblExtraGamma"></span> <div id="sldExtraGamma"></div></li>
+					<li>Brightness: <span id="lblExtraBrightness"></span> <div id="sldExtraBrightness"></div></li>
+					<li>Contrast: <span id="lblExtraContrast"></span> <div id="sldExtraContrast"></div></li>
+				</div>
+				
+				<div id="materials.matcap_container">
+					<div class="divider">
+						<span>MATCAP</span>
+					</div>
+
+					<li>
+						<div id="matcap_scheme_selection" style="display: flex; flex-wrap: wrap;"> </div>
+					</li>
+				</div>
+
 				<div id="materials.color_container">
 					<div class="divider">
 						<span>Color</span>
@@ -20175,26 +20612,18 @@ ENDSEC
 					</div>
 
 					<li><span data-i18n="appearance.elevation_range"></span>: <span id="lblHeightRange"></span> <div id="sldHeightRange"></div>	</li>
+
+					<li>
+						<selectgroup id="gradient_repeat_option">
+							<option id="gradient_repeat_clamp" value="CLAMP">Clamp</option>
+							<option id="gradient_repeat_repeat" value="REPEAT">Repeat</option>
+							<option id="gradient_repeat_mirrored_repeat" value="MIRRORED_REPEAT">Mirrored Repeat</option>
+						</selectgroup>
+					</li>
+
 					<li>
 						<span>Gradient Scheme:</span>
 						<div id="elevation_gradient_scheme_selection" style="display: flex">
-						<!--
-							<span style="flex-grow: 1;">
-								<img id="gradient_spectral" class="button-icon" style="max-width: 100%" src="${Potree.resourcePath}/icons/gradients_spectral.png" />
-							</span>
-							<span style="flex-grow: 1;">
-								<img id="gradient_yellow_green" class="button-icon" style="max-width: 100%" src="${Potree.resourcePath}/icons/gradients_yellow_green.png" />
-							</span>
-							<span style="flex-grow: 1;">
-								<img class="button-icon" style="max-width: 100%" src="${Potree.resourcePath}/icons/gradients_plasma.png" />
-							</span>
-							<span style="flex-grow: 1;">
-								<img class="button-icon" style="max-width: 100%" src="${Potree.resourcePath}/icons/gradients_grayscale.png" />
-							</span>
-							<span style="flex-grow: 1;">
-								<img class="button-icon" style="max-width: 100%" src="${Potree.resourcePath}/icons/gradients_rainbow.png" />
-							</span>
-							-->
 						</div>
 					</li>
 				</div>
@@ -20295,6 +20724,39 @@ ENDSEC
 				update();
 			}
 
+			{ // BACKFACE CULLING
+				
+				let opt = panel.find(`#set_backface_culling`);
+				opt.click(() => {
+					material.backfaceCulling = opt.prop("checked");
+				});
+				let update = () => {
+					let value = material.backfaceCulling;
+					opt.prop("checked", value);
+				};
+				this.addVolatileListener(material, "backface_changed", update);
+				update();
+
+				let blockBackface = $('#materials_backface_container');
+				blockBackface.css('display', 'none');
+
+				const pointAttributes = pointcloud.pcoGeometry.pointAttributes;
+				const hasNormals = pointAttributes.hasNormals ? pointAttributes.hasNormals() : false;
+				if(hasNormals) {
+					blockBackface.css('display', 'block');
+				}
+				/*
+				opt.checkboxradio({
+					clicked: (event, ui) => {
+						// let value = ui.item.value;
+						let value = ui.item.checked;
+						console.log(value);
+						material.backfaceCulling = value; // $('#set_freeze').prop("checked");
+					}
+				});
+				*/
+			}
+
 			{ // OPACITY
 				let sldOpacity = panel.find(`#sldOpacity`);
 				let lblOpacity = panel.find(`#lblOpacity`);
@@ -20319,21 +20781,27 @@ ENDSEC
 			}
 
 			{
-				let options = [
-					'RGB',
-					'RGB and Elevation',
-					'Color',
-					'Elevation',
-					'Intensity',
-					'Intensity Gradient',
-					'Classification',
-					'Return Number',
-					'Source',
-					'GPS Time',
-					'Index',
-					'Level of Detail',
-					'Composite'
+
+				const attributes = pointcloud.pcoGeometry.pointAttributes.attributes;
+
+				let options = [];
+
+				options.push(...attributes.map(a => a.name));
+
+				options.push(
+					"elevation",
+					"color",
+					'matcap',
+					'indices',
+					'level of detail',
+					'composite'
+				);
+
+				const blacklist = [
+					"POSITION_CARTESIAN",
 				];
+
+				options = options.filter(o => !blacklist.includes(o));
 
 				let attributeSelection = panel.find('#optMaterial');
 				for(let option of options){
@@ -20343,53 +20811,104 @@ ENDSEC
 
 				let updateMaterialPanel = (event, ui) => {
 					let selectedValue = attributeSelection.selectmenu().val();
-					material.pointColorType = Utils.toMaterialID(selectedValue);
+					material.activeAttributeName = selectedValue;
+
+					const attribute = pointcloud.pcoGeometry.pointAttributes.attributes.find(a => a.name === selectedValue);
+
+					if(attribute !== undefined && attribute.name === "intensity"){
+						if(pointcloud.material.intensityRange[0] === Infinity){
+							pointcloud.material.intensityRange = attribute.range;
+						}
+
+						const [min, max] = attribute.range;
+
+						panel.find('#sldIntensityRange').slider({
+							range: true,
+							min: min, max: max, step: 0.01,
+							values: [min, max],
+							slide: (event, ui) => {
+								let min = ui.values[0];
+								let max = ui.values[1];
+								material.intensityRange = [min, max];
+							}
+						});
+					} else if(attribute){
+						const [min, max] = attribute.range;
+
+						panel.find('#sldExtraRange').slider({
+							range: true,
+							min: min, max: max, step: 0.01,
+							values: [min, max],
+							slide: (event, ui) => {
+								let min = ui.values[0];
+								let max = ui.values[1];
+								material.extraRange = [min, max];
+							}
+						});
+
+						material.extraRange = [min, max];
+					}
 
 					let blockWeights = $('#materials\\.composite_weight_container');
 					let blockElevation = $('#materials\\.elevation_container');
 					let blockRGB = $('#materials\\.rgb_container');
+					let blockExtra = $('#materials\\.extra_container');
 					let blockColor = $('#materials\\.color_container');
 					let blockIntensity = $('#materials\\.intensity_container');
 					let blockIndex = $('#materials\\.index_container');
 					let blockTransition = $('#materials\\.transition_container');
+					let blockGps = $('#materials\\.gpstime_container');
+					let blockMatcap = $('#materials\\.matcap_container');
 
 					blockIndex.css('display', 'none');
 					blockIntensity.css('display', 'none');
 					blockElevation.css('display', 'none');
 					blockRGB.css('display', 'none');
+					blockExtra.css('display', 'none');
 					blockColor.css('display', 'none');
 					blockWeights.css('display', 'none');
 					blockTransition.css('display', 'none');
+					blockMatcap.css('display', 'none');
+					blockGps.css('display', 'none');
 
-					if (selectedValue === 'Composite') {
+					if (selectedValue === 'composite') {
 						blockWeights.css('display', 'block');
 						blockElevation.css('display', 'block');
 						blockRGB.css('display', 'block');
 						blockIntensity.css('display', 'block');
-					} else if (selectedValue === 'Elevation') {
+					} else if (selectedValue === 'elevation') {
 						blockElevation.css('display', 'block');
 					} else if (selectedValue === 'RGB and Elevation') {
 						blockRGB.css('display', 'block');
 						blockElevation.css('display', 'block');
-					} else if (selectedValue === 'RGB') {
+					} else if (selectedValue === 'RGBA') {
 						blockRGB.css('display', 'block');
 					} else if (selectedValue === 'Color') {
 						blockColor.css('display', 'block');
-					} else if (selectedValue === 'Intensity') {
+					} else if (selectedValue === 'intensity') {
 						blockIntensity.css('display', 'block');
 					} else if (selectedValue === 'Intensity Gradient') {
 						blockIntensity.css('display', 'block');
-					} else if (selectedValue === "Index" ){
+					} else if (selectedValue === "indices" ){
 						blockIndex.css('display', 'block');
+					} else if (selectedValue === "matcap" ){
+						blockMatcap.css('display', 'block');
+					} else if (selectedValue === "classification" ){
+						// add classification color selctor?
+					} else if (selectedValue === "gps-time" ){
+						blockGps.css('display', 'block');
+					} else{
+						blockExtra.css('display', 'block');
 					}
 				};
 
 				attributeSelection.selectmenu({change: updateMaterialPanel});
 
 				let update = () => {
-					attributeSelection.val(Utils.toMaterialName(material.pointColorType)).selectmenu('refresh');
+					attributeSelection.val(material.activeAttributeName).selectmenu('refresh');
 				};
 				this.addVolatileListener(material, "point_color_type_changed", update);
+				this.addVolatileListener(material, "active_attribute_changed", update);
 
 				update();
 				updateMaterialPanel();
@@ -20419,14 +20938,51 @@ ENDSEC
 
 					elSchemeContainer.append(elScheme);
 				}
+			}
 
-				//panel.find("#gradient_spectral").click( () => {
-				//	pointcloud.material.gradient = Potree.Gradients.SPECTRAL;
-				//});
+			{
+				let matcaps = [
+					{name: "Normals", icon: `${Potree.resourcePath}/icons/matcap/check_normal+y.jpg`}, 
+					{name: "Basic 1", icon: `${Potree.resourcePath}/icons/matcap/basic_1.jpg`}, 
+					{name: "Basic 2", icon: `${Potree.resourcePath}/icons/matcap/basic_2.jpg`}, 
+					{name: "Basic Dark", icon: `${Potree.resourcePath}/icons/matcap/basic_dark.jpg`}, 
+					{name: "Basic Side", icon: `${Potree.resourcePath}/icons/matcap/basic_side.jpg`}, 
+					{name: "Ceramic Dark", icon: `${Potree.resourcePath}/icons/matcap/ceramic_dark.jpg`}, 
+					{name: "Ceramic Lightbulb", icon: `${Potree.resourcePath}/icons/matcap/ceramic_lightbulb.jpg`}, 
+					{name: "Clay Brown", icon: `${Potree.resourcePath}/icons/matcap/clay_brown.jpg`}, 
+					{name: "Clay Muddy", icon: `${Potree.resourcePath}/icons/matcap/clay_muddy.jpg`}, 
+					{name: "Clay Studio", icon: `${Potree.resourcePath}/icons/matcap/clay_studio.jpg`}, 
+					{name: "Resin", icon: `${Potree.resourcePath}/icons/matcap/resin.jpg`}, 
+					{name: "Skin", icon: `${Potree.resourcePath}/icons/matcap/skin.jpg`}, 
+					{name: "Jade", icon: `${Potree.resourcePath}/icons/matcap/jade.jpg`}, 
+					{name: "Metal_ Anisotropic", icon: `${Potree.resourcePath}/icons/matcap/metal_anisotropic.jpg`}, 
+					{name: "Metal Carpaint", icon: `${Potree.resourcePath}/icons/matcap/metal_carpaint.jpg`}, 
+					{name: "Metal Lead", icon: `${Potree.resourcePath}/icons/matcap/metal_lead.jpg`}, 
+					{name: "Metal Shiny", icon: `${Potree.resourcePath}/icons/matcap/metal_shiny.jpg`}, 
+					{name: "Pearl", icon: `${Potree.resourcePath}/icons/matcap/pearl.jpg`}, 
+					{name: "Toon", icon: `${Potree.resourcePath}/icons/matcap/toon.jpg`},
+					{name: "Check Rim Light", icon: `${Potree.resourcePath}/icons/matcap/check_rim_light.jpg`}, 
+					{name: "Check Rim Dark", icon: `${Potree.resourcePath}/icons/matcap/check_rim_dark.jpg`}, 
+					{name: "Contours 1", icon: `${Potree.resourcePath}/icons/matcap/contours_1.jpg`}, 
+					{name: "Contours 2", icon: `${Potree.resourcePath}/icons/matcap/contours_2.jpg`}, 
+					{name: "Contours 3", icon: `${Potree.resourcePath}/icons/matcap/contours_3.jpg`}, 
+					{name: "Reflection Check Horizontal", icon: `${Potree.resourcePath}/icons/matcap/reflection_check_horizontal.jpg`}, 
+					{name: "Reflection Check Vertical", icon: `${Potree.resourcePath}/icons/matcap/reflection_check_vertical.jpg`}, 
+				];
 
-				//panel.find("#gradient_yellow_green").click( () => {
-				//	pointcloud.material.gradient = Potree.Gradients.YELLOW_GREEN;
-				//});
+				let elMatcapContainer = panel.find("#matcap_scheme_selection");
+
+				for(let matcap of matcaps){
+					let elMatcap = $(`
+						<img src="${matcap.icon}" class="button-icon" style="width: 25%;" />
+				`);
+
+					elMatcap.click( () => {
+						material.matcap = matcap.icon.substring(matcap.icon.lastIndexOf('/'));
+					});
+
+					elMatcapContainer.append(elMatcap);
+				}
 			}
 
 			{
@@ -20448,6 +21004,35 @@ ENDSEC
 					slide: (event, ui) => {material.rgbBrightness = ui.value;}
 				});
 
+				panel.find('#sldExtraGamma').slider({
+					value: material.extraGamma,
+					min: 0, max: 4, step: 0.01,
+					slide: (event, ui) => {material.extraGamma = ui.value;}
+				});
+
+				panel.find('#sldExtraBrightness').slider({
+					value: material.extraBrightness,
+					min: -1, max: 1, step: 0.01,
+					slide: (event, ui) => {material.extraBrightness = ui.value;}
+				});
+
+				panel.find('#sldExtraContrast').slider({
+					value: material.extraContrast,
+					min: -1, max: 1, step: 0.01,
+					slide: (event, ui) => {material.extraContrast = ui.value;}
+				});
+
+				panel.find('#sldExtraRange').slider({
+					range: true,
+					min: 0, max: 1000, step: 0.01,
+					values: [0, 1000],
+					slide: (event, ui) => {
+						let min = ui.values[0];
+						let max = ui.values[1];
+						material.extraRange = [min, max];
+					}
+				});
+
 				panel.find('#sldHeightRange').slider({
 					range: true,
 					min: 0, max: 1000, step: 0.01,
@@ -20458,16 +21043,16 @@ ENDSEC
 					}
 				});
 
-				panel.find('#sldIntensityRange').slider({
-					range: true,
-					min: 0, max: 1, step: 0.01,
-					values: [0, 1],
-					slide: (event, ui) => {
-						let min = (Number(ui.values[0]) === 0) ? 0 : parseInt(Math.pow(2, 16 * ui.values[0]));
-						let max = parseInt(Math.pow(2, 16 * ui.values[1]));
-						material.intensityRange = [min, max];
-					}
-				});
+				// panel.find('#sldIntensityRange').slider({
+				// 	range: true,
+				// 	//min: 0, max: 1, step: 0.01,
+				// 	values: [0, 1],
+				// 	slide: (event, ui) => {
+				// 		let min = (Number(ui.values[0]) === 0) ? 0 : parseInt(Math.pow(2, 16 * ui.values[0]));
+				// 		let max = parseInt(Math.pow(2, 16 * ui.values[1]));
+				// 		material.intensityRange = [min, max];
+				// 	}
+				// });
 
 				panel.find('#sldIntensityGamma').slider({
 					value: material.intensityGamma,
@@ -20561,7 +21146,14 @@ ENDSEC
 					let range = material.elevationRange;
 
 					panel.find('#lblHeightRange').html(`${range[0].toFixed(2)} to ${range[1].toFixed(2)}`);
-					panel.find('#sldHeightRang').slider({min: bMin, max: bMax, values: range});
+					panel.find('#sldHeightRange').slider({min: bMin, max: bMax, values: range});
+				};
+
+				let updateExtraRange = function () {
+					let range = material.extraRange;
+
+					panel.find('#lblExtraRange').html(`${range[0].toFixed(2)} to ${range[1].toFixed(2)}`);
+					//panel.find('#sldHeightRange').slider({min: bMin, max: bMax, values: range});
 				};
 
 				let updateIntensityRange = function () {
@@ -20569,13 +21161,26 @@ ENDSEC
 					let [min, max] = range.map(v => Math.log2(v) / 16);
 
 					panel.find('#lblIntensityRange').html(`${parseInt(range[0])} to ${parseInt(range[1])}`);
-					panel.find('#sldIntensityRange').slider({values: [min, max]});
+					//panel.find('#sldIntensityRange').slider({values: [min, max]});
 				};
 
 				{
 					updateHeightRange();
 					panel.find(`#sldHeightRange`).slider('option', 'min');
 					panel.find(`#sldHeightRange`).slider('option', 'max');
+				}
+
+				{
+					let elGradientRepeat = panel.find("#gradient_repeat_option");
+					elGradientRepeat.selectgroup({title: "Gradient"});
+
+					elGradientRepeat.find("input").click( (e) => {
+						this.viewer.setElevationGradientRepeat(ElevationGradientRepeat[e.target.value]);
+					});
+
+					let current = Object.keys(ElevationGradientRepeat)
+						.filter(key => ElevationGradientRepeat[key] === this.viewer.elevationGradientRepeat);
+					elGradientRepeat.find(`input[value=${current}]`).trigger("click");
 				}
 
 				let onIntensityChange = () => {
@@ -20608,10 +21213,12 @@ ENDSEC
 					panel.find('#sldRGBBrightness').slider({value: brightness});
 				};
 
+				this.addVolatileListener(material, "material_property_changed", updateExtraRange);
 				this.addVolatileListener(material, "material_property_changed", updateHeightRange);
 				this.addVolatileListener(material, "material_property_changed", onIntensityChange);
 				this.addVolatileListener(material, "material_property_changed", onRGBChange);
 
+				updateExtraRange();
 				updateHeightRange();
 				onIntensityChange();
 				onRGBChange();
@@ -20951,7 +21558,7 @@ ENDSEC
 				this.wheelDelta = 0;
 			}
 		}
-	}
+	};
 
 	/**
 	 * @author mschuetz / http://mschuetz.at
@@ -21229,7 +21836,7 @@ ENDSEC
 				this.translationWorldDelta.multiplyScalar(attenuation);
 			}
 		}
-	}
+	};
 
 	class ZoomableSlider{
 
@@ -21456,7 +22063,7 @@ ENDSEC
 			this.changeCallbacks.push(callback);
 		}
 		
-	}
+	};
 
 	class Sidebar{
 
@@ -21494,7 +22101,6 @@ ENDSEC
 			this.initSettings();
 			
 			$('#potree_version_number').html(Potree.version.major + "." + Potree.version.minor + Potree.version.suffix);
-			$('.perfect_scrollbar').perfectScrollbar();
 		}
 
 			
@@ -21637,7 +22243,7 @@ ENDSEC
 				Potree.resourcePath + '/icons/profile.svg',
 				'[title]tt.height_profile',
 				() => {
-					$('#menu_measurements').next().slideDown(); 
+					$('#menu_measurements').next().slideDown(); ;
 					let profile = this.profileTool.startInsertion();
 
 					let measurementsRoot = $("#jstree_scene").jstree().get_json("measurements");
@@ -21677,25 +22283,35 @@ ENDSEC
 			`);
 
 				let elDownloadJSON = elExport.find("img[name=geojson_export_button]").parent();
-				elDownloadJSON.click( () => {
+				elDownloadJSON.click( (event) => {
 					let scene = this.viewer.scene;
 					let measurements = [...scene.measurements, ...scene.profiles, ...scene.volumes];
 
-					let geoJson = GeoJSONExporter.toString(measurements);
+					if(measurements.length > 0){
+						let geoJson = GeoJSONExporter.toString(measurements);
 
-					let url = window.URL.createObjectURL(new Blob([geoJson], {type: 'data:application/octet-stream'}));
-					elDownloadJSON.attr('href', url);
+						let url = window.URL.createObjectURL(new Blob([geoJson], {type: 'data:application/octet-stream'}));
+						elDownloadJSON.attr('href', url);
+					}else{
+						this.viewer.postError("no measurements to export");
+						event.preventDefault();
+					}
 				});
 
 				let elDownloadDXF = elExport.find("img[name=dxf_export_button]").parent();
-				elDownloadDXF.click( () => {
+				elDownloadDXF.click( (event) => {
 					let scene = this.viewer.scene;
 					let measurements = [...scene.measurements, ...scene.profiles, ...scene.volumes];
 
-					let dxf = DXFExporter.toString(measurements);
+					if(measurements.length > 0){
+						let dxf = DXFExporter.toString(measurements);
 
-					let url = window.URL.createObjectURL(new Blob([dxf], {type: 'data:application/octet-stream'}));
-					elDownloadDXF.attr('href', url);
+						let url = window.URL.createObjectURL(new Blob([dxf], {type: 'data:application/octet-stream'}));
+						elDownloadDXF.attr('href', url);
+					}else{
+						this.viewer.postError("no measurements to export");
+						event.preventDefault();
+					}
 				});
 			}
 
@@ -22128,7 +22744,7 @@ ENDSEC
 
 				sldReturnNumber.slider({
 					range: true,
-					min: 1, max: 7, step: 1,
+					min: 0, max: 7, step: 1,
 					values: [0, 7],
 					slide: (event, ui) => {
 						this.viewer.setFilterReturnNumberRange(ui.values[0], ui.values[1]);
@@ -22153,7 +22769,7 @@ ENDSEC
 
 				sldNumberOfReturns.slider({
 					range: true,
-					min: 1, max: 7, step: 1,
+					min: 0, max: 7, step: 1,
 					values: [0, 7],
 					slide: (event, ui) => {
 						this.viewer.setFilterNumberOfReturnsRange(ui.values[0], ui.values[1]);
@@ -22213,13 +22829,59 @@ ENDSEC
 			let elClassificationList = $('#classificationList');
 
 			let addClassificationItem = (code, name) => {
-				let inputID = 'chkClassification_' + code;
+				const classification = this.viewer.classifications[code];
+				const inputID = 'chkClassification_' + code;
+				const colorPickerID = 'colorPickerClassification_' + code;
 
 				let element = $(`
 				<li>
-					<label style="whitespace: nowrap">
+					<label style="whitespace: nowrap; display: flex">
 						<input id="${inputID}" type="checkbox" checked/>
-						<span>${name}</span>
+						<span style="flex-grow: 1">${name}</span>
+						<input id="${colorPickerID}" style="zoom: 0.5" />
+					</label>
+				</li>
+			`);
+
+				const elInput = element.find('input');
+				const elColorPicker = element.find(`#${colorPickerID}`);
+
+				elInput.click(event => {
+					this.viewer.setClassificationVisibility(code, event.target.checked);
+				});
+
+				let defaultColor = classification.color.map(c => c *  255).join(", ");
+				defaultColor = `rgb(${defaultColor})`;
+
+
+				elColorPicker.spectrum({
+					// flat: true,
+					color: defaultColor,
+					showInput: true,
+					preferredFormat: 'rgb',
+					cancelText: '',
+					chooseText: 'Apply',
+					move: color => {
+						let rgb = color.toRgb();
+						const c = [rgb.r / 255, rgb.g / 255, rgb.b / 255];
+						classification.color = c;
+					},
+					change: color => {
+						let rgb = color.toRgb();
+						const c = [rgb.r / 255, rgb.g / 255, rgb.b / 255];
+						classification.color = c;
+					}
+				});
+
+				elClassificationList.append(element);
+			};
+
+			{ // toggle all button
+				const element = $(`
+				<li>
+					<label style="whitespace: nowrap">
+						<input id="toggleClassificationFilters" type="checkbox" checked/>
+						<span>show/hide all</span>
 					</label>
 				</li>
 			`);
@@ -22227,23 +22889,42 @@ ENDSEC
 				let elInput = element.find('input');
 
 				elInput.click(event => {
-					this.viewer.setClassificationVisibility(code, event.target.checked);
+					this.viewer.toggleAllClassificationsVisibility();
 				});
 
 				elClassificationList.append(element);
-			};
+			}
 
-			addClassificationItem(0, 'never classified');
-			addClassificationItem(1, 'unclassified');
-			addClassificationItem(2, 'ground');
-			addClassificationItem(3, 'low vegetation');
-			addClassificationItem(4, 'medium vegetation');
-			addClassificationItem(5, 'high vegetation');
-			addClassificationItem(6, 'building');
-			addClassificationItem(7, 'low point(noise)');
-			addClassificationItem(8, 'key-point');
-			addClassificationItem(9, 'water');
-			addClassificationItem(12, 'overlap');
+			for (let classID in this.viewer.classifications) {
+				addClassificationItem(classID, this.viewer.classifications[classID].name);
+			}
+
+			this.viewer.addEventListener("classification_visibility_changed", () => {
+
+				{ // set checked state of classification buttons
+					for(const classID of Object.keys(this.viewer.classifications)){
+						const classValue = this.viewer.classifications[classID];
+
+						let elItem = elClassificationList.find(`#chkClassification_${classID}`);
+						elItem.prop("checked", classValue.visible);
+					}
+				}
+
+				{ // set checked state of toggle button based on state of all other buttons
+					let numVisible = 0;
+					let numItems = 0;
+					for(const key of Object.keys(this.viewer.classifications)){
+						if(this.viewer.classifications[key].visible){
+							numVisible++;
+						}
+						numItems++;
+					}
+					const allVisible = numVisible === numItems;
+
+					let elToggle = elClassificationList.find("#toggleClassificationFilters");
+					elToggle.prop("checked", allVisible);
+				}
+			});
 		}
 
 		initAccordion(){
@@ -22265,7 +22946,8 @@ ENDSEC
 				["EN", "en"],
 				["FR", "fr"],
 				["DE", "de"],
-				["JP", "jp"]
+				["JP", "jp"],
+				["SE", "se"]
 			];
 
 			let elLanguages = $('#potree_languages');
@@ -23455,7 +24137,7 @@ ENDSEC
 				viewer.scene.cameraP.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
 			}
 		}
-	}
+	};
 
 	class Viewer extends EventDispatcher{
 		
@@ -23465,6 +24147,8 @@ ENDSEC
 			this.renderArea = domElement;
 			this.guiLoaded = false;	
 			this.guiLoadTasks = [];
+
+			this.vr = null;
 
 			this.messages = [];
 			this.elMessages = $(`
@@ -23516,28 +24200,25 @@ ENDSEC
 			this.edlStrength = 1.0;
 			this.edlRadius = 1.4;
 			this.useEDL = false;
+
 			this.classifications = {
-				0: { visible: true, name: 'never classified' },
-				1: { visible: true, name: 'unclassified' },
-				2: { visible: true, name: 'ground' },
-				3: { visible: true, name: 'low vegetation' },
-				4: { visible: true, name: 'medium vegetation' },
-				5: { visible: true, name: 'high vegetation' },
-				6: { visible: true, name: 'building' },
-				7: { visible: true, name: 'low point(noise)' },
-				8: { visible: true, name: 'key-point' },
-				9: { visible: true, name: 'water' },
-				12: { visible: true, name: 'overlap' }
+				0:  { visible: true, name: 'never classified'  , color: [0.5,  0.5,  0.5,  1.0] },
+				1:  { visible: true, name: 'unclassified'      , color: [0.5,  0.5,  0.5,  1.0] },
+				2:  { visible: true, name: 'ground'            , color: [0.63, 0.32, 0.18, 1.0] },
+				3:  { visible: true, name: 'low vegetation'    , color: [0.0,  1.0,  0.0,  1.0] },
+				4:  { visible: true, name: 'medium vegetation' , color: [0.0,  0.8,  0.0,  1.0] },
+				5:  { visible: true, name: 'high vegetation'   , color: [0.0,  0.6,  0.0,  1.0] },
+				6:  { visible: true, name: 'building'          , color: [1.0,  0.66, 0.0,  1.0] },
+				7:  { visible: true, name: 'low point(noise)'  , color: [1.0,  0.0,  1.0,  1.0] },
+				8:  { visible: true, name: 'key-point'         , color: [1.0,  0.0,  0.0,  1.0] },
+				9:  { visible: true, name: 'water'             , color: [0.0,  0.0,  1.0,  1.0] },
+				12: { visible: true, name: 'overlap'           , color: [1.0,  1.0,  0.0,  1.0] },
 			};
 
 			this.moveSpeed = 10;
 
-			this.LENGTH_UNITS = {
-				METER: {code: 'm'},
-				FEET: {code: 'ft'},
-				INCH: {code: '\u2033'}
-			};
-			this.lengthUnit = this.LENGTH_UNITS.METER;
+			this.lengthUnit = LengthUnits.METER;
+			this.lengthUnitDisplay = LengthUnits.METER;
 
 			this.showBoundingBox = false;
 			this.showAnnotations = true;
@@ -23545,8 +24226,10 @@ ENDSEC
 			this.clipTask = ClipTask.HIGHLIGHT;
 			this.clipMethod = ClipMethod.INSIDE_ANY;
 
-			this.filterReturnNumberRange = [1, 7];
-			this.filterNumberOfReturnsRange = [1, 7];
+			this.elevationGradientRepeat = ElevationGradientRepeat.CLAMP;
+
+			this.filterReturnNumberRange = [0, 7];
+			this.filterNumberOfReturnsRange = [0, 7];
 			this.filterGPSTimeRange = [0, Infinity];
 			this.filterGPSTimeExtent = [0, 1];
 
@@ -23571,6 +24254,9 @@ ENDSEC
 			this.defaultGPSTimeChanged = false;
 
 			this.initThree();
+			this.prepareVR();
+
+			//this.prepareVR();
 
 			{
 				let canvas = this.renderer.domElement;
@@ -23891,8 +24577,19 @@ ENDSEC
 				this.clipMethod = value;
 				
 				this.dispatchEvent({
-					type: "clipmethod_changed", 
-					viewer: this});		
+					type: "clipmethod_changed",
+					viewer: this});
+			}
+		}
+
+		setElevationGradientRepeat(value){
+			if(this.elevationGradientRepeat !== value){
+
+				this.elevationGradientRepeat = value;
+
+				this.dispatchEvent({
+					type: "elevation_gradient_repeat_changed", 
+					viewer: this});
 			}
 		}
 
@@ -23922,7 +24619,7 @@ ENDSEC
 			if(this.useDEMCollisions !== value){
 				this.useDEMCollisions = value;
 				this.dispatchEvent({'type': 'use_demcollisions_changed', 'viewer': this});
-			}
+			};
 		};
 
 		getDEMCollisionsEnabled () {
@@ -23988,7 +24685,7 @@ ENDSEC
 
 				// return annotation.visible;
 			});
-		};
+		}
 
 		setClassificationVisibility (key, value) {
 			if (!this.classifications[key]) {
@@ -23998,7 +24695,37 @@ ENDSEC
 				this.classifications[key].visible = value;
 				this.dispatchEvent({'type': 'classification_visibility_changed', 'viewer': this});
 			}
-		};
+		}
+
+		toggleAllClassificationsVisibility(){
+
+			let numVisible = 0;
+			let numItems = 0;
+			for(const key of Object.keys(this.classifications)){
+				if(this.classifications[key].visible){
+					numVisible++;
+				}
+				numItems++;
+			}
+
+			let visible = true;
+			if(numVisible === numItems){
+				visible = false;
+			}
+
+			let somethingChanged = false;
+
+			for(const key of Object.keys(this.classifications)){
+				if(this.classifications[key].visible !== visible){
+					this.classifications[key].visible = visible;
+					somethingChanged = true;
+				}
+			}
+
+			if(somethingChanged){
+				this.dispatchEvent({'type': 'classification_visibility_changed', 'viewer': this});
+			}
+		}
 
 		setFilterReturnNumberRange(from, to){
 			this.filterReturnNumberRange = [from, to];
@@ -24023,18 +24750,49 @@ ENDSEC
 		setLengthUnit (value) {
 			switch (value) {
 				case 'm':
-					this.lengthUnit = this.LENGTH_UNITS.METER;
+					this.lengthUnit = LengthUnits.METER;
+					this.lengthUnitDisplay = LengthUnits.METER;
 					break;
 				case 'ft':
-					this.lengthUnit = this.LENGTH_UNITS.FEET;
+					this.lengthUnit = LengthUnits.FEET;
+					this.lengthUnitDisplay = LengthUnits.FEET;
 					break;
 				case 'in':
-					this.lengthUnit = this.LENGTH_UNITS.INCH;
+					this.lengthUnit = LengthUnits.INCH;
+					this.lengthUnitDisplay = LengthUnits.INCH;
 					break;
 			}
 
-			this.dispatchEvent({'type': 'length_unit_changed', 'viewer': this, value: value});
-		}
+			this.dispatchEvent({ 'type': 'length_unit_changed', 'viewer': this, value: value});
+		};
+
+		setLengthUnitAndDisplayUnit(lengthUnitValue, lengthUnitDisplayValue) {
+			switch (lengthUnitValue) {
+				case 'm':
+					this.lengthUnit = LengthUnits.METER;
+					break;
+				case 'ft':
+					this.lengthUnit = LengthUnits.FEET;
+					break;
+				case 'in':
+					this.lengthUnit = LengthUnits.INCH;
+					break;
+			}
+
+			switch (lengthUnitDisplayValue) {
+				case 'm':
+					this.lengthUnitDisplay = LengthUnits.METER;
+					break;
+				case 'ft':
+					this.lengthUnitDisplay = LengthUnits.FEET;
+					break;
+				case 'in':
+					this.lengthUnitDisplay = LengthUnits.INCH;
+					break;
+			}
+
+			this.dispatchEvent({ 'type': 'length_unit_changed', 'viewer': this, value: lengthUnitValue });
+		};
 
 		zoomTo(node, factor, animationDuration = 0){
 			let view = this.scene.view;
@@ -24404,7 +25162,7 @@ ENDSEC
 				i18n.init({
 					lng: 'en',
 					resGetPath: Potree.resourcePath + '/lang/__lng__/__ns__.json',
-					preload: ['en', 'fr', 'de', 'jp'],
+					preload: ['en', 'fr', 'de', 'jp', 'se'],
 					getAsync: true,
 					debug: false
 				}, function (t) {
@@ -24465,26 +25223,29 @@ ENDSEC
 			let width = this.renderArea.clientWidth;
 			let height = this.renderArea.clientHeight;
 
+			// let contextAttributes = {
+			// 	alpha: true,
+			// 	depth: true,
+			// 	stencil: false,
+			// 	antialias: false,
+			// 	//premultipliedAlpha: _premultipliedAlpha,
+			// 	preserveDrawingBuffer: true,
+			// 	powerPreference: "high-performance",
+			// };
+
 			let contextAttributes = {
-				alpha: true,
-				depth: true,
-				stencil: false,
-				antialias: false,
-				//premultipliedAlpha: _premultipliedAlpha,
+				alpha: false,
 				preserveDrawingBuffer: true,
-				powerPreference: "high-performance",
 			};
+
+			// let contextAttributes = {
+			// 	alpha: false,
+			// 	preserveDrawingBuffer: true,
+			// };
 
 			let canvas = document.createElement("canvas");
 
-			//let context = canvas.getContext('webgl2', contextAttributes );
-			//if(!context){
-				let context = canvas.getContext('webgl', contextAttributes );
-				Potree.Features.WEBGL2.isSupported = () => {
-					return false;
-				};
-			//}
-
+			let context = canvas.getContext('webgl', contextAttributes );
 
 			this.renderer = new THREE.WebGLRenderer({
 				alpha: true, 
@@ -24507,7 +25268,7 @@ ENDSEC
 			gl.getExtension('EXT_frag_depth');
 			gl.getExtension('WEBGL_depth_texture');
 			
-			if(gl instanceof WebGLRenderingContext){
+			//if(gl instanceof WebGLRenderingContext){
 				let extVAO = gl.getExtension('OES_vertex_array_object');
 
 				if(!extVAO){
@@ -24516,9 +25277,77 @@ ENDSEC
 
 				gl.createVertexArray = extVAO.createVertexArrayOES.bind(extVAO);
 				gl.bindVertexArray = extVAO.bindVertexArrayOES.bind(extVAO);
-			}else if(gl instanceof WebGL2RenderingContext){
-				gl.getExtension("EXT_color_buffer_float");
+			//}else if(gl instanceof WebGL2RenderingContext){
+			//	gl.getExtension("EXT_color_buffer_float");
+			//}
+			
+		}
+
+		// async prepareVR(){
+
+		// 	if(!navigator.getVRDisplays){
+		// 		console.info("browser does not support WebVR");
+
+		// 		return false;
+		// 	}
+
+		// 	let frameData = new VRFrameData();
+		// 	let displays = await navigator.getVRDisplays();
+
+		// 	if(displays.length == 0){
+		// 		console.info("no VR display found");
+		// 		return false;
+		// 	}
+
+		// 	let display = displays[displays.length - 1];
+		// 	display.depthNear = 0.1;
+		// 	display.depthFar = 10000.0;
+
+		// 	if(!display.capabilities.canPresent){
+		// 		// Not sure why canPresent would ever be false?
+		// 		console.error("VR display canPresent === false");
+		// 		return false;
+		// 	}
+
+		// 	this.vr = {
+		// 		frameData: frameData,
+		// 		display: display,
+		// 		node: new THREE.Object3D(),
+		// 	};
+			
+		// }
+
+		async prepareVR(){
+
+			if(!navigator.getVRDisplays){
+				console.info("browser does not support WebVR");
+
+				return false;
 			}
+
+			let frameData = new VRFrameData();
+			let displays = await navigator.getVRDisplays();
+
+			if(displays.length == 0){
+				console.info("no VR display found");
+				return false;
+			}
+
+			let display = displays[displays.length - 1];
+			display.depthNear = 0.1;
+			display.depthFar = 10000.0;
+
+			if(!display.capabilities.canPresent){
+				// Not sure why canPresent would ever be false?
+				console.error("VR display canPresent === false");
+				return false;
+			}
+
+			this.vr = {
+				frameData: frameData,
+				display: display,
+				node: new THREE.Object3D(),
+			};
 			
 		}
 
@@ -24634,56 +25463,21 @@ ENDSEC
 		update(delta, timestamp){
 
 			if(Potree.measureTimings) performance.mark("update-start");
-
-			// if(window.urlToggle === undefined){
-			//	window.urlToggle = 0;
-			// }else{
-			//
-			//	if(window.urlToggle > 1){
-			//		{
-			//
-			//			let currentValue = Utils.getParameterByName("position");
-			//			let strPosition = "["
-			//				+ this.scene.view.position.x.toFixed(3) + ";"
-			//				+ this.scene.view.position.y.toFixed(3) + ";"
-			//				+ this.scene.view.position.z.toFixed(3) + "]";
-			//			if(currentValue !== strPosition){
-			//				Utils.setParameter("position", strPosition);
-			//			}
-			//
-			//		}
-			//
-			//		{
-			//			let currentValue = Utils.getParameterByName("target");
-			//			let pivot = this.scene.view.getPivot();
-			//			let strTarget = "["
-			//				+ pivot.x.toFixed(3) + ";"
-			//				+ pivot.y.toFixed(3) + ";"
-			//				+ pivot.z.toFixed(3) + "]";
-			//			if(currentValue !== strTarget){
-			//				Utils.setParameter("target", strTarget);
-			//			}
-			//		}
-			//
-			//		window.urlToggle = 0;
-			//	}
-			//
-			//	window.urlToggle += delta;
-			//}
 			
-			{
-				let u = Math.sin(0.0005 * timestamp) * 0.5 - 0.4;
+			// {
+			// 	let u = Math.sin(0.0005 * timestamp) * 0.5 - 0.4;
 				
-				let x = Math.cos(u);
-				let y = Math.sin(u);
+			// 	let x = Math.cos(u);
+			// 	let y = Math.sin(u);
 				
-				this.shadowTestCam.position.set(7 * x, 7 * y, 8.561);
-				this.shadowTestCam.lookAt(new THREE.Vector3(0, 0, 0));
-			}
+			// 	this.shadowTestCam.position.set(7 * x, 7 * y, 8.561);
+			// 	this.shadowTestCam.lookAt(new THREE.Vector3(0, 0, 0));
+			// }
 			
 			
-			let scene = this.scene;
-			let camera = scene.getActiveCamera();
+			const scene = this.scene;
+			const camera = scene.getActiveCamera();
+			const visiblePointClouds = this.scene.pointclouds.filter(pc => pc.visible);
 			
 			Potree.pointLoadLimit = Potree.pointBudget * 2;
 
@@ -24691,78 +25485,87 @@ ENDSEC
 			this.scene.directionalLight.lookAt(new THREE.Vector3().addVectors(camera.position, camera.getWorldDirection(new THREE.Vector3())));
 
 			for (let pointcloud of this.scene.pointclouds) {
-				if (!pointcloud.material._defaultIntensityRangeChanged) {
-					let root = pointcloud.pcoGeometry.root;
-					if (root != null && root.loaded) {
-						let attributes = pointcloud.pcoGeometry.root.geometry.attributes;
-						if (attributes.intensity) {
-							let array = attributes.intensity.array;
+				// if (!pointcloud.material._defaultIntensityRangeChanged) {
+				// 	let root = pointcloud.pcoGeometry.root;
+				// 	if (root != null && root.loaded) {
+				// 		let attributes = pointcloud.pcoGeometry.root.geometry.attributes;
+				// 		if (attributes.intensity) {
+				// 			let array = attributes.intensity.array;
 
-							// chose max value from the 0.75 percentile
-							let ordered = [];
-							for (let j = 0; j < array.length; j++) {
-								ordered.push(array[j]);
-							}
-							ordered.sort();
-							let capIndex = parseInt((ordered.length - 1) * 0.75);
-							let cap = ordered[capIndex];
+				// 			// chose max value from the 0.75 percentile
+				// 			let ordered = [];
+				// 			for (let j = 0; j < array.length; j++) {
+				// 				ordered.push(array[j]);
+				// 			}
+				// 			ordered.sort();
+				// 			let capIndex = parseInt((ordered.length - 1) * 0.75);
+				// 			let cap = ordered[capIndex];
 
-							if (cap <= 1) {
-								pointcloud.material.intensityRange = [0, 1];
-							} else if (cap <= 256) {
-								pointcloud.material.intensityRange = [0, 255];
-							} else {
-								pointcloud.material.intensityRange = [0, cap];
-							}
+				// 			if (cap <= 1) {
+				// 				pointcloud.material.intensityRange = [0, 1];
+				// 			} else if (cap <= 256) {
+				// 				pointcloud.material.intensityRange = [0, 255];
+				// 			} else {
+				// 				pointcloud.material.intensityRange = [0, cap];
+				// 			}
 
-						}
-						// pointcloud._intensityMaxEvaluated = true;
-					}
-				}
+				// 		}
+				// 		// pointcloud._intensityMaxEvaluated = true;
+				// 	}
+				// }
 
-				if(this.defaultGPSTimeChanged === false){
+				// if(this.defaultGPSTimeChanged === false){
 
-					let root = pointcloud.pcoGeometry.root;
-					if (root != null && root.loaded) {
-						if(root.gpsTime){
+				// 	let root = pointcloud.pcoGeometry.root;
+				// 	if (root != null && root.loaded) {
+				// 		if(root.gpsTime){
 
-							let gpsTime = root.gpsTime;
-							let min = gpsTime.offset;
-							let max = gpsTime.offset + gpsTime.range;
-							let border = (max - min) * 0.1;
+				// 			let gpsTime = root.gpsTime;
+				// 			let min = gpsTime.offset;
+				// 			let max = gpsTime.offset + gpsTime.range;
+				// 			let border = (max - min) * 0.1;
 
-							this.setFilterGPSTimeExtent(min - border, max + border);
-							//this.setFilterGPSTimeRange(0, 1000 * 1000 * 1000);
-							this.setFilterGPSTimeRange(min, max);
+				// 			this.setFilterGPSTimeExtent(min - border, max + border);
+				// 			//this.setFilterGPSTimeRange(0, 1000 * 1000 * 1000);
+				// 			this.setFilterGPSTimeRange(min, max);
 
-							this.defaultGPSTimeChanged = true;
-						}
-					}
+				// 			this.defaultGPSTimeChanged = true;
+				// 		}
+				// 	}
 
-				}
+				// }
 				
 				pointcloud.showBoundingBox = this.showBoundingBox;
 				pointcloud.generateDEM = this.generateDEM;
 				pointcloud.minimumNodePixelSize = this.minNodeSize;
 			}
 
-			// update classification visibility
-			for (let pointcloud of this.scene.pointclouds) {
-				let classification = pointcloud.material.classification;
+			// update classification 
+			for (const pointcloud of visiblePointClouds) {
+				const pcClassifications = pointcloud.material.classification;
 				let somethingChanged = false;
-				for (let key of Object.keys(this.classifications)) {
-					let w = this.classifications[key].visible ? 1 : 0;
 
-					if (classification[key]) {
-						if (classification[key].w !== w) {
-							classification[key].w = w;
-							somethingChanged = true;
-						}
+				for (let classID of Object.keys(this.classifications)) {
+					const pcClass = pcClassifications[classID];
+		
+					let w = this.classifications[classID].visible ? 1 : 0;
+					let [r, g, b, a] = this.classifications[classID].color;
+
+					if(pcClass){
+						somethingChanged |= pcClass.x !== r;
+						somethingChanged |= pcClass.y !== g;
+						somethingChanged |= pcClass.z !== b;
+						somethingChanged |= pcClass.w !== w;
+
+						pcClass.x = r;
+						pcClass.y = g;
+						pcClass.z = b;
+						pcClass.w = w;
 					} else if (classification.DEFAULT) {
-						classification[key] = classification.DEFAULT;
+						pcClass = classification.DEFAULT;
 						somethingChanged = true;
 					} else {
-						classification[key] = new THREE.Vector4(0.3, 0.6, 0.6, 0.5);
+						pcClass = new THREE.Vector4(0.3, 0.6, 0.6, 0.5);
 						somethingChanged = true;
 					}
 				}
@@ -24772,11 +25575,7 @@ ENDSEC
 				}
 			}
 
-			for (let pointcloud of this.scene.pointclouds) {
-				if(!pointcloud.visible){
-					continue;
-				}
-
+			for (let pointcloud of visiblePointClouds) {
 				let material = pointcloud.material;
 
 				material.uniforms.uFilterReturnNumberRange.value = this.filterReturnNumberRange;
@@ -24950,11 +25749,17 @@ ENDSEC
 				let clipPolygons = this.scene.polygonClipVolumes.filter(vol => vol.initialized);
 				
 				// set clip volumes in material
-				for(let pointcloud of this.scene.pointclouds.filter(pc => pc.visible)){
+				for(let pointcloud of visiblePointClouds){
 					pointcloud.material.setClipBoxes(clipBoxes);
 					pointcloud.material.setClipPolygons(clipPolygons, this.clippingTool.maxPolygonVertices);
 					pointcloud.material.clipTask = this.clipTask;
 					pointcloud.material.clipMethod = this.clipMethod;
+				}
+			}
+
+			{
+				for(let pointcloud of visiblePointClouds){
+					pointcloud.material.elevationGradientRepeat = this.elevationGradientRepeat;
 				}
 			}
 			
@@ -24988,82 +25793,189 @@ ENDSEC
 		render(){
 			if(Potree.measureTimings) performance.mark("render-start");
 
-			{ // resize
-				let width = this.scaleFactor * this.renderArea.clientWidth;
-				let height = this.scaleFactor * this.renderArea.clientHeight;
-				let pixelRatio = this.renderer.getPixelRatio();
-				let aspect = width / height;
-
-				this.scene.cameraP.aspect = aspect;
-				this.scene.cameraP.updateProjectionMatrix();
-
-				//let frustumScale = viewer.moveSpeed * 2.0;
-				let frustumScale = this.scene.view.radius;
-				this.scene.cameraO.left = -frustumScale;
-				this.scene.cameraO.right = frustumScale;		
-				this.scene.cameraO.top = frustumScale * 1 / aspect;
-				this.scene.cameraO.bottom = -frustumScale * 1 / aspect;		
-				this.scene.cameraO.updateProjectionMatrix();
-
-				this.scene.cameraScreenSpace.top = 1/aspect;
-				this.scene.cameraScreenSpace.bottom = -1/aspect;
-				this.scene.cameraScreenSpace.updateProjectionMatrix();
-				
-				this.renderer.setSize(width, height);
-			}
-
 			try{
 
+				let pRenderer = null;
 
-			if(this.useRep){
-				if (!this.repRenderer) {
-					this.repRenderer = new RepRenderer(this);
-				}
-				this.repRenderer.render(this.renderer);
-			}else if(this.useHQ){
-				if (!this.hqRenderer) {
-					this.hqRenderer = new HQSplatRenderer(this);
-				}
-				this.hqRenderer.useEDL = this.useEDL;
-				this.hqRenderer.render(this.renderer);
-			}else{
-				if (this.useEDL && Features.SHADER_EDL.isSupported()) {
-					if (!this.edlRenderer) {
-						this.edlRenderer = new EDLRenderer(this);
+				if(this.useHQ){
+					if (!this.hqRenderer) {
+						this.hqRenderer = new HQSplatRenderer(this);
 					}
-					this.edlRenderer.render(this.renderer);
-				} else {
-					if (!this.potreeRenderer) {
-						this.potreeRenderer = new PotreeRenderer(this);
+					this.hqRenderer.useEDL = this.useEDL;
+					//this.hqRenderer.render(this.renderer);
+
+					pRenderer = this.hqRenderer;
+				}else{
+					if (this.useEDL && Features.SHADER_EDL.isSupported()) {
+						if (!this.edlRenderer) {
+							this.edlRenderer = new EDLRenderer(this);
+						}
+						//this.edlRenderer.render(this.renderer);
+						pRenderer = this.edlRenderer;
+					} else {
+						if (!this.potreeRenderer) {
+							this.potreeRenderer = new PotreeRenderer(this);
+						}
+						//this.potreeRenderer.render();
+						pRenderer = this.potreeRenderer;
 					}
-					this.potreeRenderer.render();
 				}
-			}
+				
+				const vr = this.vr;
+				const vrActive = (vr && vr.display.isPresenting);
 
-			//if(this.useRep){
-			//	if (!this.repRenderer) {
-			//		this.repRenderer = new RepRenderer(this);
-			//	}
-			//	this.repRenderer.render(this.renderer);
-			//} else if (this.useHQ && Features.SHADER_SPLATS.isSupported()) {
-			//	if (!this.hqRenderer) {
-			//		this.hqRenderer = new HQSplatRenderer(this);
-			//	}
-			//	this.hqRenderer.render(this.renderer);
-			//} else if (this.useEDL && Features.SHADER_EDL.isSupported()) {
-			//	if (!this.edlRenderer) {
-			//		this.edlRenderer = new EDLRenderer(this);
-			//	}
-			//	this.edlRenderer.render(this.renderer);
-			//} else {
-			//	if (!this.potreeRenderer) {
-			//		this.potreeRenderer = new PotreeRenderer(this);
-			//	}
+				if(vrActive){
 
-			//	this.potreeRenderer.render();
-			//}
+					const {display, frameData} = vr;
 
-			this.renderer.render(this.overlay, this.overlayCamera);
+					const leftEye = display.getEyeParameters("left");
+					const rightEye = display.getEyeParameters("right");
+
+					let width = Math.max(leftEye.renderWidth, rightEye.renderWidth) * 2;
+					let height = Math.max(leftEye.renderHeight, rightEye.renderHeight);
+
+					// width *= 0.5;
+					// height *= 0.5;
+
+					this.renderer.setSize(width, height);
+
+					pRenderer.clear();
+
+					//const camera = new THREE.Camera();
+					viewer.scene.cameraMode = CameraMode.VR;
+					const camera = viewer.scene.getActiveCamera();
+					{
+						camera.near = display.depthNear;
+						camera.far = display.depthFar;
+						camera.projectionMatrix = new THREE.Matrix4();
+						camera.matrixWorldInverse = new THREE.Matrix4();
+						camera.matrixWorld = new THREE.Matrix4();
+						camera.updateProjectionMatrix =  () => {};
+						camera.updateMatrixWorld = () => {};
+						camera.fov = 60;
+					};
+
+					const flipWorld = new THREE.Matrix4().fromArray([
+						1, 0, 0, 0, 
+						0, 0, 1, 0, 
+						0, -1, 0, 0,
+						0, 0, 0, 1
+					]);
+					const flipView = new THREE.Matrix4().getInverse(flipWorld);
+
+					vr.node.updateMatrixWorld();
+
+					{// LEFT
+						camera.projectionMatrix.fromArray(frameData.leftProjectionMatrix);
+
+						const leftView = new THREE.Matrix4().fromArray(frameData.leftViewMatrix);
+						const view = new THREE.Matrix4().multiplyMatrices(leftView, flipView);
+						const world = new THREE.Matrix4().getInverse(view);
+
+						{
+							const tmp = new THREE.Matrix4().multiplyMatrices(vr.node.matrixWorld, world);
+							world.copy(tmp);
+							view.getInverse(world);
+						}
+
+						camera.matrixWorldInverse.copy(view);
+						camera.matrixWorld.copy(world);
+
+						const viewport = [0, 0, width / 2, height];
+
+						this.renderer.setViewport(...viewport);
+						pRenderer.render({camera: camera, viewport: viewport});
+						//this.renderer.render(this.overlay, this.overlayCamera);
+					}
+
+					{// RIGHT
+					
+						camera.projectionMatrix.fromArray(frameData.rightProjectionMatrix);
+
+						const rightView = new THREE.Matrix4().fromArray(frameData.rightViewMatrix);
+						const view = new THREE.Matrix4().multiplyMatrices(rightView, flipView);
+						const world = new THREE.Matrix4().getInverse(view);
+
+						{
+							const tmp = new THREE.Matrix4().multiplyMatrices(vr.node.matrixWorld, world);
+							world.copy(tmp);
+							view.getInverse(world);
+						}
+
+						camera.matrixWorldInverse.copy(view);
+						camera.matrixWorld.copy(world);
+
+						const viewport = [width / 2, 0, width / 2, height];
+
+						this.renderer.setViewport(...viewport);
+						pRenderer.clearTargets();
+						pRenderer.render({camera: camera, viewport: viewport, debug: 2});
+						//this.renderer.render(this.overlay, this.overlayCamera);
+					}
+
+					{ // CENTER
+
+						{ // central view matrix
+							// TODO this can't be right...can it?
+
+							const left = frameData.leftViewMatrix;
+							const right = frameData.rightViewMatrix;
+
+							const centerView = new THREE.Matrix4();
+
+							for(let i = 0; i < centerView.elements.length; i++){
+								centerView.elements[i] = (left[i] + right[i]) / 2;
+							}
+
+							const view = new THREE.Matrix4().multiplyMatrices(centerView, flipView);
+							const world = new THREE.Matrix4().getInverse(view);
+
+							{
+								const tmp = new THREE.Matrix4().multiplyMatrices(vr.node.matrixWorld, world);
+								world.copy(tmp);
+								view.getInverse(world);
+							}
+
+							camera.matrixWorldInverse.copy(view);
+							camera.matrixWorld.copy(world);
+						}
+
+
+						camera.fov = leftEye.fieldOfView.upDegrees;
+					}
+
+				}else{
+
+					{ // resize
+						const width = this.scaleFactor * this.renderArea.clientWidth;
+						const height = this.scaleFactor * this.renderArea.clientHeight;
+
+						this.renderer.setSize(width, height);
+						const pixelRatio = this.renderer.getPixelRatio();
+						const aspect = width / height;
+
+						const scene = this.scene;
+
+						scene.cameraP.aspect = aspect;
+						scene.cameraP.updateProjectionMatrix();
+
+						let frustumScale = this.scene.view.radius;
+						scene.cameraO.left = -frustumScale;
+						scene.cameraO.right = frustumScale;
+						scene.cameraO.top = frustumScale * 1 / aspect;
+						scene.cameraO.bottom = -frustumScale * 1 / aspect;
+						scene.cameraO.updateProjectionMatrix();
+
+						scene.cameraScreenSpace.top = 1/aspect;
+						scene.cameraScreenSpace.bottom = -1/aspect;
+						scene.cameraScreenSpace.updateProjectionMatrix();
+					}
+
+					pRenderer.clear();
+
+					pRenderer.render(this.renderer);
+					this.renderer.render(this.overlay, this.overlayCamera);
+				}
 
 			}catch(e){
 				this.onCrash(e);
@@ -25175,17 +26087,73 @@ ENDSEC
 			}
 		}
 
+		async toggleVR(){
+			const vrActive = (this.vr && this.vr.display.isPresenting);
+
+			if(vrActive){
+				this.stopVR();
+			}else{
+				this.startVR();
+			}
+		}
+
+		async startVR(){
+
+			if(this.vr === null){
+				return;
+			}
+
+			let canvas = this.renderer.domElement;
+			let display = this.vr.display;
+
+			try{
+				await display.requestPresent([{ source: canvas }]);
+			}catch(e){
+				console.error(e);
+				this.postError("requestPresent failed");
+				return;
+			}
+
+			//window.addEventListener('vrdisplaypresentchange', onVRPresentChange, false);
+			//window.addEventListener('vrdisplayactivate', onVRRequestPresent, false);
+			//window.addEventListener('vrdisplaydeactivate', onVRExitPresent, false);
+
+		}
+
+		async stopVR(){
+			// TODO shutdown VR
+		}
+
 		loop(timestamp){
-			requestAnimationFrame(this.loop.bind(this));
 
 			let queryAll;
 			if(Potree.measureTimings){
 				performance.mark("loop-start");
 			}
 
-			this.update(this.clock.getDelta(), timestamp);
 
-			this.render();
+			const vrActive = (this.vr && this.vr.display.isPresenting);
+
+			if(vrActive){
+				const {display, frameData} = this.vr;
+
+				display.requestAnimationFrame(this.loop.bind(this));
+
+				display.getFrameData(frameData);
+
+				this.update(this.clock.getDelta(), timestamp);
+
+				this.render();
+
+				this.vr.display.submitFrame();
+			}else{
+				requestAnimationFrame(this.loop.bind(this));
+
+				this.update(this.clock.getDelta(), timestamp);
+
+				this.render();
+			}
+
 
 			if(Potree.measureTimings){
 				performance.mark("loop-end");
@@ -25239,7 +26207,544 @@ ENDSEC
 
 			return message;
 		}
-	}
+	};
+
+	class VRControlls{
+
+		constructor(viewer){
+
+			this.viewer = viewer;
+
+			this.previousPads = [];
+
+			this.selection = [];
+
+			this.triggerStarts = [];
+
+			this.scaleState = null;
+
+			this.selectionBox = this.createBox();
+			this.viewer.scene.scene.add(this.selectionBox);
+
+			this.snLeft = this.createControllerModel();
+			this.snRight = this.createControllerModel();
+			
+			this.viewer.scene.scene.add(this.snLeft.node);
+			this.viewer.scene.scene.add(this.snRight.node);
+			//this.viewer.scene.scene.add(this.snLeft.debug);
+			//this.viewer.scene.scene.add(this.snRight.debug);
+
+		}
+
+		createControllerModel(){
+			const geometry = new THREE.SphereGeometry(1, 32, 32);
+			const material = new THREE.MeshLambertMaterial( { color: 0xff0000, side: THREE.DoubleSide, flatShading: true } );
+			const node = new THREE.Mesh(geometry, material);
+
+			node.position.set(0, 0, 0.5);
+			node.scale.set(0.02, 0.02, 0.02);
+			node.visible = false;
+
+			viewer.scene.scene.add(node);
+
+			const debug = new THREE.Mesh(geometry, new THREE.MeshNormalMaterial());
+			debug.position.set(0, 0, 0.5);
+			debug.scale.set(0.01, 0.01, 0.01);
+			debug.visible = false;
+
+
+			const controller = {
+				node: node,
+				debug: debug,
+			};
+			//viewer.scene.scene.add(node);
+
+			return controller;
+		}
+
+		createBox(){
+			const color = 0xffff00;
+
+			const indices = new Uint16Array( [ 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 ] );
+			const positions = [ 
+				1, 1, 1,
+				0, 1, 1,
+				0, 0, 1,
+				1, 0, 1,
+				1, 1, 0,
+				0, 1, 0,
+				0, 0, 0,
+				1, 0, 0
+			];
+			const geometry = new THREE.BufferGeometry();
+
+			geometry.setIndex( new THREE.BufferAttribute( indices, 1 ) );
+			geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+
+			geometry.computeBoundingSphere();
+
+			const mesh = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial( { color: color } ) );
+			mesh.visible = false;
+
+			return mesh;
+		}
+
+		debugLine(start, end, index, color){
+
+			if(typeof this.debugLines === "undefined"){
+
+				const geometry = new THREE.SphereGeometry(1, 8, 8);
+
+				this.debugLines = {
+					geometry: geometry,
+				};
+			}
+
+			const n = 100;
+
+			if(!this.debugLines[index]){
+				const geometry = this.debugLines.geometry;
+				const material = new THREE.MeshBasicMaterial({color: color});
+				const nodes = [];
+
+				for(let i = 0; i <= n; i++){
+					const u = i / n;
+
+					const node = new THREE.Mesh(geometry, material);
+
+					const position = new THREE.Vector3().addVectors(
+						start.clone().multiplyScalar(1-u),
+						end.clone().multiplyScalar(u)
+					);
+
+					node.position.copy(position);
+					node.scale.set(0.002, 0.002, 0.002);
+					this.viewer.scene.scene.add(node);
+					nodes.push(node);
+				}
+
+				const debugLine = {
+					material: material,
+					nodes: nodes,
+				};
+
+				this.debugLines[index] = debugLine;
+			}else{
+				const debugLine = this.debugLines[index];
+
+				for(let i = 0; i <= n; i++){
+					const node = debugLine.nodes[i];
+					const u = i / n;
+
+					const position = new THREE.Vector3().addVectors(
+						start.clone().multiplyScalar(1-u),
+						end.clone().multiplyScalar(u)
+					);
+
+					node.position.copy(position);
+				}
+			}
+
+
+		}
+
+		getPointcloudsAt(pointclouds, position){
+
+			const I = [];
+			for(const pointcloud of pointclouds){
+
+				const world = pointcloud.matrixWorld;
+				const worldToObject = new THREE.Matrix4().getInverse(world);
+
+				const center = position.clone();
+				const radius = 0.01;
+				//const radius = node.scale.x;
+				const sphere = new THREE.Sphere(center, radius);
+				sphere.applyMatrix4(worldToObject);
+
+				const box = pointcloud.boundingBox;
+				const intersects = box.intersectsSphere(sphere);
+
+				if(intersects){
+					I.push(pointcloud);
+				}
+			}
+
+			return I;
+		}
+
+		copyPad(pad){
+			const axes = pad.axes.map(a => a);
+			const buttons = pad.buttons.map(b => {return {pressed: b.pressed}});
+
+			const pose = {
+				position: new Float32Array(pad.pose.position),
+				orientation: new Float32Array(pad.pose.orientation),
+			};
+
+			const copy = {
+				axes: axes,
+				buttons: buttons,
+				pose: pose, 
+				hand: pad.hand,
+				index: pad.index,
+			};
+
+			return copy;
+		}
+
+		previousPad(gamepad){
+			return this.previousPads.find(c => c.index === gamepad.index);
+		}
+
+		toScene(position){
+
+			const vr = viewer.vr;
+
+			vr.node.updateMatrixWorld();
+			const world = vr.node.matrixWorld;
+
+			const scenePos = new THREE.Vector3(position.x, -position.z, position.y);
+			scenePos.applyMatrix4(world);
+
+			return scenePos;
+		}
+
+		update(delta){
+
+			const {selection, viewer, snLeft, snRight} = this;
+			const toScene = this.toScene.bind(this);
+			const vr = viewer.vr;
+
+			const vrActive = vr && vr.display.isPresenting;
+
+			snLeft.node.visible = vrActive;
+			snRight.node.visible = vrActive;
+
+			if(!vrActive){
+
+				return;
+			}
+
+			const pointclouds = viewer.scene.pointclouds;
+
+			const gamepads = Array.from(navigator.getGamepads()).filter(p => p !== null).map(this.copyPad);
+
+			const getPad = (list, pattern) => list.find(pad => pad.index === pattern.index);
+			
+			if(this.previousPads.length !== gamepads.length){
+				this.previousPads = gamepads;
+			}
+
+			const left = gamepads.find(gp => gp.hand && gp.hand === "left");
+			const right = gamepads.find(gp => gp.hand && gp.hand === "right");
+
+			const triggered = gamepads.filter(gamepad => {
+				return gamepad.buttons[1].pressed;
+			});
+
+			const justTriggered = triggered.filter(gamepad => {
+				const prev = this.previousPad(gamepad);
+				const previouslyTriggered = prev.buttons[1].pressed;
+				const currentlyTriggered = gamepad.buttons[1].pressed;
+
+				return !previouslyTriggered && currentlyTriggered;
+			});
+
+			const justUntriggered = gamepads.filter(gamepad => {
+				const prev = this.previousPad(gamepad);
+				const previouslyTriggered = prev.buttons[1].pressed;
+				const currentlyTriggered = gamepad.buttons[1].pressed;
+
+				return previouslyTriggered && !currentlyTriggered;
+			});
+
+			if(triggered.length === 0){
+				const positions = gamepads.map(pad => toScene(new THREE.Vector3(...pad.pose.position)));
+
+				const hovered = new Set();
+				for(const position of positions){
+					const I = this.getPointcloudsAt(pointclouds, position);
+					for(let pc of I){
+						hovered.add(pc);
+					}
+				}
+
+				if(hovered.size > 0){
+					const pointcloud = Array.from(hovered)[0];
+					this.selectionBox.visible = true;
+					this.selectionBox.scale.copy(pointcloud.boundingBox.max).multiply(pointcloud.scale);
+					this.selectionBox.position.copy(pointcloud.position);
+					this.selectionBox.rotation.copy(pointcloud.rotation);
+					//this.selectionBox.scale.copy(pointcloud.scale);
+				}else{
+					this.selectionBox.visible = false;
+				}
+			}else{
+				if(selection.length > 0){
+					const pointcloud = selection[0];
+					this.selectionBox.scale.copy(pointcloud.boundingBox.max).multiply(pointcloud.scale);
+					this.selectionBox.position.copy(pointcloud.position);
+					this.selectionBox.rotation.copy(pointcloud.rotation);
+				}
+			}
+
+			if(justTriggered.length > 0){
+
+				const pad = justTriggered[0];
+				const position = toScene(new THREE.Vector3(...pad.pose.position));
+				const I = this.getPointcloudsAt(pointclouds, position);
+
+				const pcs = I.map(p => {
+					return {
+						node: p,
+						position: p.position.clone(),
+						rotation: p.rotation.clone(),
+						scale: p.scale.clone(),
+					};
+				});
+
+				const event = {
+					pad: pad,
+					pointclouds: pcs,
+				};
+
+				this.triggerStarts.push(event);
+			}
+
+			if(justUntriggered.length > 0){
+				for(let untriggeredPad of justUntriggered){
+					const p = getPad(this.triggerStarts.map(t => t.pad), untriggeredPad);
+					this.triggerStarts = this.triggerStarts.filter(e => e.pad !== p);
+				}
+			}
+
+			if(triggered.length === 0){
+				selection.length = 0;
+				this.triggerStarts = [];
+			}
+
+			if(justTriggered.length === 1 && triggered.length === 1){
+				// one controller was triggered this frame
+				const pad = justTriggered[0];
+				const position = toScene(new THREE.Vector3(...pad.pose.position));
+				const I = this.getPointcloudsAt(pointclouds, position);
+				
+				if(I.length > 0){
+					selection.length = 0;
+					selection.push(I[0]);
+				}
+			}else if(justTriggered.length === 2 && triggered.length === 2){
+				// two controllers were triggered this frame
+				const pad = justTriggered[0];
+				const position = toScene(new THREE.Vector3(...pad.pose.position));
+				const I = this.getPointcloudsAt(pointclouds, position);
+				
+				if(I.length > 0){
+					selection.length = 0;
+					selection.push(I[0]);
+				}
+			}
+
+			if(justTriggered.length > 0 && triggered.length === 2){
+				// START SCALE/ROTATE
+
+				const pcs = selection.map(p => ({
+					node: p,
+					position: p.position.clone(),
+					rotation: p.rotation.clone(),
+					scale: p.scale.clone(),
+				}));
+
+				this.scaleState = {
+					first: triggered[0],
+					second: triggered[1],
+					pointclouds: pcs,
+				};
+			}else if(triggered.length < 2){
+				// STOP SCALE/ROTATE
+				this.scaleState = null;
+			}
+			
+			if(this.scaleState){
+				// SCALE/ROTATE
+
+				const {first, second, pointclouds} = this.scaleState;
+
+				if(pointclouds.length > 0){
+					
+					const pointcloud = pointclouds[0];
+					
+					const p1Start = toScene(new THREE.Vector3(...first.pose.position));
+					const p2Start = toScene(new THREE.Vector3(...second.pose.position));
+
+					const p1End = toScene(new THREE.Vector3(...getPad(gamepads, first).pose.position));
+					const p2End = toScene(new THREE.Vector3(...getPad(gamepads, second).pose.position));
+
+					const diffStart = new THREE.Vector3().subVectors(p2Start, p1Start);
+					const diffEnd = new THREE.Vector3().subVectors(p2End, p1End);
+
+					// this.debugLine(p1Start, p2Start, 0, 0xFF0000);
+					// this.debugLine(p1End, p2End, 1, 0x00FF00);
+
+					// ROTATION
+					const diffStartG = new THREE.Vector3(diffStart.x, diffStart.y, 0);
+					const diffEndG = new THREE.Vector3(diffEnd.x, diffEnd.y, 0);
+					let sign = Math.sign(diffStartG.clone().cross(diffEndG).z);
+					sign = sign === 0 ? 1 : sign;
+					const angle = sign * diffStartG.angleTo(diffEndG);
+					const newAngle = pointcloud.rotation.z + angle;
+					
+					// SCALE
+					const scale = diffEnd.length() / diffStart.length();
+					const newScale = pointcloud.scale.clone().multiplyScalar(scale);
+
+					// POSITION
+					const p1ToP = new THREE.Vector3().subVectors(pointcloud.position, p1Start);
+					p1ToP.multiplyScalar(scale);
+					p1ToP.applyAxisAngle(new THREE.Vector3(0, 0, 1), angle);
+					const newPosition = p1End.clone().add(p1ToP);
+					
+					//this.debugLine(pointcloud.position, newPosition, 0, 0xFF0000);
+
+					//console.log(newScale, p1ToP, angle);
+
+					pointcloud.node.rotation.z = newAngle;
+					pointcloud.node.scale.copy(newScale);
+					pointcloud.node.position.copy(newPosition);
+
+					pointcloud.node.updateMatrix();
+					pointcloud.node.updateMatrixWorld();
+
+
+
+				}
+
+			}
+			
+			if(triggered.length === 1){
+				// TRANSLATE POINT CLOUDS
+				const pad = triggered[0];
+				const prev = this.previousPad(pad);
+
+				const flipWorld = new THREE.Matrix4().fromArray([
+						1, 0, 0, 0, 
+						0, 0, 1, 0, 
+						0, -1, 0, 0,
+						0, 0, 0, 1
+					]);
+				const flipView = new THREE.Matrix4().getInverse(flipWorld);
+
+				const p1 = new THREE.Vector3(...pad.pose.position).applyMatrix4(flipWorld);
+				const p2 = new THREE.Vector3(...prev.pose.position).applyMatrix4(flipWorld);
+
+				p1.applyMatrix4(vr.node.matrixWorld);
+				p2.applyMatrix4(vr.node.matrixWorld);
+
+				const diff = new THREE.Vector3().subVectors(p1, p2);
+
+				//const diff = toScene(new THREE.Vector3(
+				//	pad.pose.position[0] - prev.pose.position[0],
+				//	pad.pose.position[1] - prev.pose.position[1],
+				//	pad.pose.position[2] - prev.pose.position[2],
+				//));
+
+				for(const pc of selection){
+					pc.position.add(diff);
+				}
+			}
+		
+			{ // MOVE WITH JOYSTICK
+
+				let pad = [right, left].find(pad => pad !== undefined);
+
+				if(pad){
+
+					const flipWorld = new THREE.Matrix4().fromArray([
+						1, 0, 0, 0, 
+						0, 0, 1, 0, 
+						0, -1, 0, 0,
+						0, 0, 0, 1
+					]);
+					const flipView = new THREE.Matrix4().getInverse(flipWorld);
+
+					const axes = pad.axes;
+
+					const {frameData} = vr;
+
+					const leftView = new THREE.Matrix4().fromArray(frameData.leftViewMatrix);
+					const view = new THREE.Matrix4().multiplyMatrices(leftView, flipView);
+					const world = new THREE.Matrix4().getInverse(view);
+
+					{ // move to where the controller points
+						const opos = new THREE.Vector3(...right.pose.position);
+						const rotation = new THREE.Quaternion(...pad.pose.orientation);
+						const d = new THREE.Vector3(0, 0, -1);
+						d.applyQuaternion(rotation);
+						
+						const worldPos = toScene(opos);
+						const worldTarget = toScene(new THREE.Vector3().addVectors(opos, d));
+						const dir = new THREE.Vector3().subVectors(worldTarget, worldPos).normalize();
+
+						const amount = axes[1];
+
+						const move = dir.clone().multiplyScalar(delta * amount);
+
+						//const d = dir.clone().multiplyScalar(delta);
+						vr.node.position.add(move);
+					}
+
+					{ // move to trigger direction
+						// const pos = new THREE.Vector3(0, 0, 0).applyMatrix4(world);
+						// const pForward = new THREE.Vector3(0, 0, -1).applyMatrix4(world);
+						// const pRight = new THREE.Vector3(1, 0, 0).applyMatrix4(world);
+						// const pUp = new THREE.Vector3(0, 1, 0).applyMatrix4(world);
+
+						// const dForward = new THREE.Vector3().subVectors(pForward, pos).normalize();
+						// const dRight = new THREE.Vector3().subVectors(pRight, pos).normalize();
+						// const dUp = new THREE.Vector3().subVectors(pUp, pos).normalize();
+
+						// const dir = new THREE.Vector3().addVectors(
+						// 	dRight.clone().multiplyScalar(axes[0]),
+						// 	dForward.clone().multiplyScalar(axes[1])
+						// );
+
+						// const d = dir.clone().multiplyScalar(delta);
+						// vr.node.position.add(d);
+					}
+
+				}
+
+			}
+
+			{ // MOVE CONTROLLER SCENE NODE
+				if(right){
+					const {node, debug} = snLeft;
+					const opos = new THREE.Vector3(...right.pose.position);
+					const position = toScene(opos);
+					
+					const rotation = new THREE.Quaternion(...right.pose.orientation);
+					const d = new THREE.Vector3(0, 0, -1);
+					d.applyQuaternion(rotation);
+					const target = toScene(new THREE.Vector3().addVectors(opos, d));
+
+					//snLeft.debug.position.copy(target);
+					//snLeft.debug.visible = true;
+
+					node.position.copy(position);
+				}
+				
+				if(left){
+					const {node, debug} = snRight;
+					
+					const position = toScene(new THREE.Vector3(...left.pose.position));
+					node.position.copy(position);
+				}
+			}
+
+			this.previousPads = gamepads;
+		}
+	};
 
 	THREE.OrthographicCamera.prototype.zoomTo = function( node, factor = 1){
 
@@ -25344,7 +26849,7 @@ ENDSEC
 	let resourcePath = exports.scriptPath + '/resources';
 
 
-	function loadPointCloud(path, name, callback){
+	function loadPointCloud$1(path, name, callback){
 		let loaded = function(pointcloud){
 			pointcloud.name = name;
 			callback({type: 'pointcloud_loaded', pointcloud: pointcloud});
@@ -25353,6 +26858,16 @@ ENDSEC
 		// load pointcloud
 		if (!path){
 			// TODO: callback? comment? Hello? Bueller? Anyone?
+		} else if (path.indexOf('ept.json') > 0) {
+			Potree.EptLoader.load(path, function(geometry) {
+				if (!geometry) {
+					console.error(new Error(`failed to load point cloud from URL: ${path}`));
+				}
+				else {
+					let pointcloud = new PointCloudOctree(geometry);
+					loaded(pointcloud);
+				}
+			});
 		} else if (path.indexOf('greyhound://') === 0){
 			// We check if the path string starts with 'greyhound:', if so we assume it's a greyhound server URL.
 			GreyhoundLoader.load(path, function (geometry) {
@@ -25388,7 +26903,7 @@ ENDSEC
 			//callback({'type': 'loading_failed'});
 			console.error(new Error(`failed to load point cloud from URL: ${path}`));
 		}
-	}
+	};
 
 
 	// add selectgroup
@@ -25451,7 +26966,7 @@ ENDSEC
 				});
 				elButtonContainer.find("label:first").each( (index, value) => {
 					$(value).css("border-radius", "4px 0px 0px 4px");
-					
+
 				});
 				elButtonContainer.find("label:last").each( (index, value) => {
 					$(value).css("border-radius", "0px 4px 4px 0px");
@@ -25467,90 +26982,105 @@ ENDSEC
 		});
 	})(jQuery);
 
-	exports.workerPool = workerPool;
-	exports.version = version;
-	exports.lru = lru;
-	exports.pointBudget = pointBudget;
-	exports.framenumber = framenumber;
-	exports.numNodesLoading = numNodesLoading;
-	exports.maxNodesLoading = maxNodesLoading;
-	exports.debug = debug;
-	exports.resourcePath = resourcePath;
-	exports.loadPointCloud = loadPointCloud;
 	exports.Action = Action;
-	exports.PathAnimation = PathAnimation;
 	exports.AnimationPath = AnimationPath;
 	exports.Annotation = Annotation;
+	exports.Box3Helper = Box3Helper;
+	exports.BoxVolume = BoxVolume;
 	exports.CameraMode = CameraMode;
-	exports.ClipTask = ClipTask;
+	exports.ClassificationScheme = ClassificationScheme;
 	exports.ClipMethod = ClipMethod;
-	exports.MOUSE = MOUSE;
-	exports.PointSizeType = PointSizeType;
-	exports.PointShape = PointShape;
-	exports.PointColorType = PointColorType;
-	exports.TreeType = TreeType;
+	exports.ClipTask = ClipTask;
+	exports.ClipVolume = ClipVolume;
+	exports.ClippingTool = ClippingTool;
+	exports.DeviceOrientationControls = DeviceOrientationControls;
+	exports.EarthControls = EarthControls;
+	exports.ElevationGradientRepeat = ElevationGradientRepeat;
 	exports.Enum = Enum;
 	exports.EnumItem = EnumItem;
+	exports.EptBinaryLoader = EptBinaryLoader;
+	exports.EptKey = EptKey;
+	exports.EptLaszipLoader = EptLaszipLoader;
+	exports.EptLazBatcher = EptLazBatcher;
+	exports.EptLoader = EptLoader;
+	exports.EptZstandardLoader = EptZstandardLoader;
 	exports.EventDispatcher = EventDispatcher;
+	exports.EyeDomeLightingMaterial = EyeDomeLightingMaterial;
 	exports.Features = Features;
+	exports.FirstPersonControls = FirstPersonControls;
+	exports.Gradients = Gradients;
+	exports.GreyhoundBinaryLoader = GreyhoundBinaryLoader;
+	exports.GreyhoundLoader = GreyhoundLoader;
 	exports.KeyCodes = KeyCodes;
 	exports.LRU = LRU;
 	exports.LRUItem = LRUItem;
-	exports.PointCloudGreyhoundGeometry = PointCloudGreyhoundGeometry;
-	exports.PointCloudGreyhoundGeometryNode = PointCloudGreyhoundGeometryNode;
-	exports.PointCloudOctreeNode = PointCloudOctreeNode;
-	exports.PointCloudOctree = PointCloudOctree;
-	exports.PointCloudOctreeGeometry = PointCloudOctreeGeometry;
-	exports.PointCloudOctreeGeometryNode = PointCloudOctreeGeometryNode;
-	exports.PointCloudTreeNode = PointCloudTreeNode;
-	exports.PointCloudTree = PointCloudTree;
-	exports.Points = Points;
-	exports.updatePointClouds = updatePointClouds;
-	exports.updateVisibilityStructures = updateVisibilityStructures;
-	exports.updateVisibility = updateVisibility;
-	exports.Renderer = Renderer;
-	exports.ProfileData = ProfileData;
-	exports.ProfileRequest = ProfileRequest;
-	exports.TextSprite = TextSprite;
-	exports.Utils = Utils;
-	exports.Version = Version;
-	exports.WorkerPool = WorkerPool;
-	exports.XHRFactory = XHRFactory;
-	exports.ClassificationScheme = ClassificationScheme;
-	exports.EyeDomeLightingMaterial = EyeDomeLightingMaterial;
-	exports.Gradients = Gradients;
-	exports.NormalizationEDLMaterial = NormalizationEDLMaterial;
-	exports.NormalizationMaterial = NormalizationMaterial;
-	exports.PointCloudMaterial = PointCloudMaterial;
-	exports.POCLoader = POCLoader;
-	exports.GreyhoundBinaryLoader = GreyhoundBinaryLoader;
-	exports.GreyhoundLoader = GreyhoundLoader;
-	exports.PointAttributeNames = PointAttributeNames;
-	exports.PointAttributeTypes = PointAttributeTypes;
-	exports.PointAttribute = PointAttribute;
-	exports.PointAttributes = PointAttributes;
-	exports.Box3Helper = Box3Helper;
-	exports.ClippingTool = ClippingTool;
-	exports.ClipVolume = ClipVolume;
+	exports.LengthUnits = LengthUnits;
+	exports.MOUSE = MOUSE;
 	exports.Measure = Measure;
 	exports.MeasuringTool = MeasuringTool;
 	exports.Message = Message;
+	exports.NormalizationEDLMaterial = NormalizationEDLMaterial;
+	exports.NormalizationMaterial = NormalizationMaterial;
+	exports.OrbitControls = OrbitControls;
+	exports.POCLoader = POCLoader;
+	exports.PathAnimation = PathAnimation;
+	exports.PointAttribute = PointAttribute;
+	exports.PointAttributeTypes = PointAttributeTypes;
+	exports.PointAttributes = PointAttributes;
+	exports.PointCloudEptGeometry = PointCloudEptGeometry;
+	exports.PointCloudEptGeometryNode = PointCloudEptGeometryNode;
+	exports.PointCloudGreyhoundGeometry = PointCloudGreyhoundGeometry;
+	exports.PointCloudGreyhoundGeometryNode = PointCloudGreyhoundGeometryNode$1;
+	exports.PointCloudMaterial = PointCloudMaterial;
+	exports.PointCloudOctree = PointCloudOctree;
+	exports.PointCloudOctreeGeometry = PointCloudOctreeGeometry;
+	exports.PointCloudOctreeGeometryNode = PointCloudOctreeGeometryNode;
+	exports.PointCloudOctreeNode = PointCloudOctreeNode;
 	exports.PointCloudSM = PointCloudSM;
+	exports.PointCloudTree = PointCloudTree;
+	exports.PointCloudTreeNode = PointCloudTreeNode;
+	exports.PointShape = PointShape;
+	exports.PointSizeType = PointSizeType;
+	exports.Points = Points;
 	exports.PolygonClipVolume = PolygonClipVolume;
 	exports.Profile = Profile;
+	exports.ProfileData = ProfileData;
+	exports.ProfileRequest = ProfileRequest;
 	exports.ProfileTool = ProfileTool;
-	exports.ScreenBoxSelectTool = ScreenBoxSelectTool;
-	exports.SpotLightHelper = SpotLightHelper;
-	exports.toInterleavedBufferAttribute = toInterleavedBufferAttribute;
-	exports.TransformationTool = TransformationTool;
-	exports.Volume = Volume;
-	exports.BoxVolume = BoxVolume;
-	exports.SphereVolume = SphereVolume;
-	exports.VolumeTool = VolumeTool;
-	exports.Viewer = Viewer;
+	exports.Renderer = Renderer;
 	exports.Scene = Scene;
+	exports.ScreenBoxSelectTool = ScreenBoxSelectTool;
+	exports.SphereVolume = SphereVolume;
+	exports.SpotLightHelper = SpotLightHelper;
+	exports.TextSprite = TextSprite;
+	exports.TransformationTool = TransformationTool;
+	exports.TreeType = TreeType;
+	exports.Utils = Utils;
+	exports.VRControlls = VRControlls;
+	exports.Version = Version;
+	exports.Viewer = Viewer;
+	exports.Volume = Volume;
+	exports.VolumeTool = VolumeTool;
+	exports.WorkerPool = WorkerPool;
+	exports.XHRFactory = XHRFactory;
+	exports.createSaveData = createSaveData;
+	exports.debug = debug;
+	exports.framenumber = framenumber;
+	exports.loadPointCloud = loadPointCloud$1;
+	exports.loadSaveData = loadSaveData;
+	exports.lru = lru;
+	exports.maxNodesLoading = maxNodesLoading;
+	exports.numNodesLoading = numNodesLoading;
+	exports.pointBudget = pointBudget;
+	exports.resourcePath = resourcePath;
+	exports.toInterleavedBufferAttribute = toInterleavedBufferAttribute;
+	exports.updatePointClouds = updatePointClouds;
+	exports.updateVisibility = updateVisibility;
+	exports.updateVisibilityStructures = updateVisibilityStructures;
+	exports.version = version;
+	exports.workerPool = workerPool;
 
 	Object.defineProperty(exports, '__esModule', { value: true });
 
-})));
+}));
 //# sourceMappingURL=potree.js.map

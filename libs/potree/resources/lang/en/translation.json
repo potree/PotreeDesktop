@@ -52,6 +52,7 @@
 		"point_size_type": "Point sizing",
 		"point_material": "Materials",
 		"elevation_range": "Elevation range",
+		"extra_range": "Scalar range",
 		"point_quality": "Quality",
 		"point_shape": "Shape",
 		"edl_radius": "Radius",
@@ -65,7 +66,8 @@
 		"box": "Box",
 		"length_unit": "Length unit",
 		"freeze": "Lock view",
-		"language": "Language"
+		"language": "Language",
+		"backface_culling": "Backface Culling"
 	},
 	"measurements": {
 		"clip": "clip",

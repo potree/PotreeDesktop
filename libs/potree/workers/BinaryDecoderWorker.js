@@ -40,43 +40,22 @@ class Version{
 
 }
 
-const PointAttributeNames = {
-	POSITION_CARTESIAN: 0, // float x, y, z;
-	COLOR_PACKED: 1, // byte r, g, b, a; 	I: [0,1]
-	COLOR_FLOATS_1: 2, // float r, g, b; 	I: [0,1]
-	COLOR_FLOATS_255: 3, // float r, g, b; 	I: [0,255]
-	NORMAL_FLOATS: 4, // float x, y, z;
-	FILLER: 5,
-	INTENSITY: 6,
-	CLASSIFICATION: 7,
-	NORMAL_SPHEREMAPPED: 8,
-	NORMAL_OCT16: 9,
-	NORMAL: 10,
-	RETURN_NUMBER: 11,
-	NUMBER_OF_RETURNS: 12,
-	SOURCE_ID: 13,
-	INDICES: 14,
-	SPACING: 15,
-	GPS_TIME: 16,
-};
-
-
 /**
  * Some types of possible point attribute data formats
  *
  * @class
  */
 const PointAttributeTypes = {
-	DATA_TYPE_DOUBLE: {ordinal: 0, size: 8},
-	DATA_TYPE_FLOAT: {ordinal: 1, size: 4},
-	DATA_TYPE_INT8: {ordinal: 2, size: 1},
-	DATA_TYPE_UINT8: {ordinal: 3, size: 1},
-	DATA_TYPE_INT16: {ordinal: 4, size: 2},
-	DATA_TYPE_UINT16: {ordinal: 5, size: 2},
-	DATA_TYPE_INT32: {ordinal: 6, size: 4},
-	DATA_TYPE_UINT32: {ordinal: 7, size: 4},
-	DATA_TYPE_INT64: {ordinal: 8, size: 8},
-	DATA_TYPE_UINT64: {ordinal: 9, size: 8}
+	DATA_TYPE_DOUBLE: {ordinal: 0, name: "double", size: 8},
+	DATA_TYPE_FLOAT:  {ordinal: 1, name: "float",  size: 4},
+	DATA_TYPE_INT8:   {ordinal: 2, name: "int8",   size: 1},
+	DATA_TYPE_UINT8:  {ordinal: 3, name: "uint8",  size: 1},
+	DATA_TYPE_INT16:  {ordinal: 4, name: "int16",  size: 2},
+	DATA_TYPE_UINT16: {ordinal: 5, name: "uint16", size: 2},
+	DATA_TYPE_INT32:  {ordinal: 6, name: "int32",  size: 4},
+	DATA_TYPE_UINT32: {ordinal: 7, name: "uint32", size: 4},
+	DATA_TYPE_INT64:  {ordinal: 8, name: "int64",  size: 8},
+	DATA_TYPE_UINT64: {ordinal: 9, name: "uint64", size: 8}
 };
 
 let i = 0;
@@ -93,74 +72,57 @@ class PointAttribute{
 		this.type = type;
 		this.numElements = numElements;
 		this.byteSize = this.numElements * this.type.size;
+		this.description = "";
+		this.range = [Infinity, -Infinity];
 	}
 
 }
 PointAttribute.POSITION_CARTESIAN = new PointAttribute(
-	PointAttributeNames.POSITION_CARTESIAN,
-	PointAttributeTypes.DATA_TYPE_FLOAT, 3);
+	"POSITION_CARTESIAN", PointAttributeTypes.DATA_TYPE_FLOAT, 3);
 
 PointAttribute.RGBA_PACKED = new PointAttribute(
-	PointAttributeNames.COLOR_PACKED,
-	PointAttributeTypes.DATA_TYPE_INT8, 4);
+	"COLOR_PACKED", PointAttributeTypes.DATA_TYPE_INT8, 4);
 
 PointAttribute.COLOR_PACKED = PointAttribute.RGBA_PACKED;
 
 PointAttribute.RGB_PACKED = new PointAttribute(
-	PointAttributeNames.COLOR_PACKED,
-	PointAttributeTypes.DATA_TYPE_INT8, 3);
+	"COLOR_PACKED", PointAttributeTypes.DATA_TYPE_INT8, 3);
 
 PointAttribute.NORMAL_FLOATS = new PointAttribute(
-	PointAttributeNames.NORMAL_FLOATS,
-	PointAttributeTypes.DATA_TYPE_FLOAT, 3);
-
-PointAttribute.FILLER_1B = new PointAttribute(
-	PointAttributeNames.FILLER,
-	PointAttributeTypes.DATA_TYPE_UINT8, 1);
+	"NORMAL_FLOATS", PointAttributeTypes.DATA_TYPE_FLOAT, 3);
 
 PointAttribute.INTENSITY = new PointAttribute(
-	PointAttributeNames.INTENSITY,
-	PointAttributeTypes.DATA_TYPE_UINT16, 1);
+	"INTENSITY", PointAttributeTypes.DATA_TYPE_UINT16, 1);
 
 PointAttribute.CLASSIFICATION = new PointAttribute(
-	PointAttributeNames.CLASSIFICATION,
-	PointAttributeTypes.DATA_TYPE_UINT8, 1);
+	"CLASSIFICATION", PointAttributeTypes.DATA_TYPE_UINT8, 1);
 
 PointAttribute.NORMAL_SPHEREMAPPED = new PointAttribute(
-	PointAttributeNames.NORMAL_SPHEREMAPPED,
-	PointAttributeTypes.DATA_TYPE_UINT8, 2);
+	"NORMAL_SPHEREMAPPED", PointAttributeTypes.DATA_TYPE_UINT8, 2);
 
 PointAttribute.NORMAL_OCT16 = new PointAttribute(
-	PointAttributeNames.NORMAL_OCT16,
-	PointAttributeTypes.DATA_TYPE_UINT8, 2);
+	"NORMAL_OCT16", PointAttributeTypes.DATA_TYPE_UINT8, 2);
 
 PointAttribute.NORMAL = new PointAttribute(
-	PointAttributeNames.NORMAL,
-	PointAttributeTypes.DATA_TYPE_FLOAT, 3);
+	"NORMAL", PointAttributeTypes.DATA_TYPE_FLOAT, 3);
 	
 PointAttribute.RETURN_NUMBER = new PointAttribute(
-	PointAttributeNames.RETURN_NUMBER,
-	PointAttributeTypes.DATA_TYPE_UINT8, 1);
+	"RETURN_NUMBER", PointAttributeTypes.DATA_TYPE_UINT8, 1);
 	
 PointAttribute.NUMBER_OF_RETURNS = new PointAttribute(
-	PointAttributeNames.NUMBER_OF_RETURNS,
-	PointAttributeTypes.DATA_TYPE_UINT8, 1);
+	"NUMBER_OF_RETURNS", PointAttributeTypes.DATA_TYPE_UINT8, 1);
 	
 PointAttribute.SOURCE_ID = new PointAttribute(
-	PointAttributeNames.SOURCE_ID,
-	PointAttributeTypes.DATA_TYPE_UINT16, 1);
+	"SOURCE_ID", PointAttributeTypes.DATA_TYPE_UINT16, 1);
 
 PointAttribute.INDICES = new PointAttribute(
-	PointAttributeNames.INDICES,
-	PointAttributeTypes.DATA_TYPE_UINT32, 1);
+	"INDICES", PointAttributeTypes.DATA_TYPE_UINT32, 1);
 
 PointAttribute.SPACING = new PointAttribute(
-	PointAttributeNames.SPACING,
-	PointAttributeTypes.DATA_TYPE_FLOAT, 1);
+	"SPACING", PointAttributeTypes.DATA_TYPE_FLOAT, 1);
 
 PointAttribute.GPS_TIME = new PointAttribute(
-	PointAttributeNames.GPS_TIME,
-	PointAttributeTypes.DATA_TYPE_DOUBLE, 1);
+	"GPS_TIME", PointAttributeTypes.DATA_TYPE_DOUBLE, 1);
 
 /* global onmessage:true postMessage:false */
 /* exported onmessage */
@@ -235,7 +197,7 @@ onmessage = function (event) {
 	let inOffset = 0;
 	for (let pointAttribute of pointAttributes.attributes) {
 		
-		if (pointAttribute.name === PointAttribute.POSITION_CARTESIAN.name) {
+		if (pointAttribute.name === "POSITION_CARTESIAN") {
 			let buff = new ArrayBuffer(numPoints * 4 * 3);
 			let positions = new Float32Array(buff);
 		
@@ -270,7 +232,7 @@ onmessage = function (event) {
 			}
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
-		} else if (pointAttribute.name === PointAttribute.COLOR_PACKED.name) {
+		} else if (pointAttribute.name === "RGBA") {
 			let buff = new ArrayBuffer(numPoints * 4);
 			let colors = new Uint8Array(buff);
 
@@ -281,17 +243,8 @@ onmessage = function (event) {
 			}
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
-		} else if (pointAttribute.name === PointAttribute.INTENSITY.name) {
-			let buff = new ArrayBuffer(numPoints * 4);
-			let intensities = new Float32Array(buff);
-
-			for (let j = 0; j < numPoints; j++) {
-				let intensity = cv.getUint16(inOffset + j * pointAttributes.byteSize, true);
-				intensities[j] = intensity;
-			}
-
-			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
-		} else if (pointAttribute.name === PointAttribute.CLASSIFICATION.name) {
+		}
+		else if (pointAttribute.name === "CLASSIFICATION") {
 			let buff = new ArrayBuffer(numPoints);
 			let classifications = new Uint8Array(buff);
 
@@ -301,7 +254,7 @@ onmessage = function (event) {
 			}
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
-		} else if (pointAttribute.name === PointAttribute.RETURN_NUMBER.name) {
+		} else if (pointAttribute.name === "RETURN_NUMBER") {
 			let buff = new ArrayBuffer(numPoints);
 			let returnNumbers = new Uint8Array(buff);
 
@@ -311,7 +264,7 @@ onmessage = function (event) {
 			}
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
-		} else if (pointAttribute.name === PointAttribute.NUMBER_OF_RETURNS.name) {
+		} else if (pointAttribute.name === "NUMBER_OF_RETURNS") {
 			let buff = new ArrayBuffer(numPoints);
 			let numberOfReturns = new Uint8Array(buff);
 
@@ -321,7 +274,7 @@ onmessage = function (event) {
 			}
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
-		} else if (pointAttribute.name === PointAttribute.SOURCE_ID.name) {
+		} else if (pointAttribute.name === "SOURCE_ID") {
 			let buff = new ArrayBuffer(numPoints * 2);
 			let sourceIDs = new Uint16Array(buff);
 
@@ -331,7 +284,7 @@ onmessage = function (event) {
 			}
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
-		} else if (pointAttribute.name === PointAttribute.NORMAL_SPHEREMAPPED.name) {
+		} else if (pointAttribute.name === "NORMAL_SPHEREMAPPED") {
 			let buff = new ArrayBuffer(numPoints * 4 * 3);
 			let normals = new Float32Array(buff);
 
@@ -362,7 +315,7 @@ onmessage = function (event) {
 			}
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
-		} else if (pointAttribute.name === PointAttribute.NORMAL_OCT16.name) {
+		} else if (pointAttribute.name === "NORMAL_OCT16") {
 			let buff = new ArrayBuffer(numPoints * 4 * 3);
 			let normals = new Float32Array(buff);
 
@@ -396,7 +349,7 @@ onmessage = function (event) {
 			}
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
-		} else if (pointAttribute.name === PointAttribute.NORMAL.name) {
+		} else if (pointAttribute.name === "NORMAL") {
 			let buff = new ArrayBuffer(numPoints * 4 * 3);
 			let normals = new Float32Array(buff);
 
@@ -411,47 +364,105 @@ onmessage = function (event) {
 			}
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
-		} else if (pointAttribute.name === PointAttribute.GPS_TIME.name) {
-			let buff = new ArrayBuffer(numPoints * 8);
-			let gpstimes = new Float64Array(buff);
+		} 
+		// else if (pointAttribute.name === "GPS_TIME") {
+		// 	let buff = new ArrayBuffer(numPoints * 8);
+		// 	let gpstimes = new Float64Array(buff);
+
+		// 	for(let j = 0; j < numPoints; j++){
+		// 		let gpstime = cv.getFloat64(inOffset + j * pointAttributes.byteSize, true);
+		// 		gpstimes[j] = gpstime;
+		// 	}
+
+		// 	attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
+		// }
+		else{
+			let buff = new ArrayBuffer(numPoints * 4);
+			let f32 = new Float32Array(buff);
+
+			let [min, max] = [Infinity, -Infinity];
+			let [offset, scale] = [0, 1];
+
+			const getterMap = {
+				"int8":   cv.getInt8,
+				"int16":  cv.getInt16,
+				"int32":  cv.getInt32,
+				"int64":  cv.getInt64,
+				"uint8":  cv.getUint8,
+				"uint16": cv.getUint16,
+				"uint32": cv.getUint32,
+				"uint64": cv.getUint64,
+				"float":  cv.getFloat32,
+				"double": cv.getFloat64,
+			};
+			const getter = getterMap[pointAttribute.type.name].bind(cv);
+
+			// compute offset and scale to pack larger types into 32 bit floats
+			if(pointAttribute.type.size > 4){
+				for(let j = 0; j < numPoints; j++){
+					let value = getter(inOffset + j * pointAttributes.byteSize);
+
+					if(!Number.isNaN(value)){
+						min = Math.min(min, value);
+						max = Math.max(max, value);
+					}
+				}
+
+				offset = min;
+				scale = 1 / (max - min);
+			}
 
 			for(let j = 0; j < numPoints; j++){
-				let gpstime = cv.getFloat64(inOffset + j * pointAttributes.byteSize, true);
-				gpstimes[j] = gpstime;
+				let value = getter(inOffset + j * pointAttributes.byteSize);
+
+				if(!Number.isNaN(value)){
+					min = Math.min(min, value);
+					max = Math.max(max, value);
+				}
+
+				f32[j] = (value - offset) * scale;
 			}
-			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
+
+			pointAttribute.range = [min, max];
+
+			attributeBuffers[pointAttribute.name] = { 
+				buffer: buff, 
+				attribute: pointAttribute,
+				offset: offset,
+				scale: scale,
+			};
 		}
 
 		inOffset += pointAttribute.byteSize;
 	}
 
 	// Convert GPS time from double (unsupported by WebGL) to origin-aligned floats
-	if(attributeBuffers[PointAttribute.GPS_TIME.name]){ 
-		let attribute = attributeBuffers[PointAttribute.GPS_TIME.name];
-		let sourceF64 = new Float64Array(attribute.buffer);
-		let target = new ArrayBuffer(numPoints * 4);
-		let targetF32 = new Float32Array(target);
+	// if(attributeBuffers["GPS_TIME"]){ 
+	// 	let attribute = attributeBuffers["GPS_TIME"];
+	// 	let sourceF64 = new Float64Array(attribute.buffer);
+	// 	let target = new ArrayBuffer(numPoints * 4);
+	// 	let targetF32 = new Float32Array(target);
 
-		let min = Infinity;
-		let max = -Infinity;
-		for(let i = 0; i < numPoints; i++){
-			let gpstime = sourceF64[i];
+	// 	let min = Infinity;
+	// 	let max = -Infinity;
+	// 	for(let i = 0; i < numPoints; i++){
+	// 		let gpstime = sourceF64[i];
 
-			min = Math.min(min, gpstime);
-			max = Math.max(max, gpstime);
-		}
+	// 		min = Math.min(min, gpstime);
+	// 		max = Math.max(max, gpstime);
+	// 	}
 
-		for(let i = 0; i < numPoints; i++){
-			let gpstime = sourceF64[i];
-			targetF32[i] = gpstime - min;
-		}
+	// 	for(let i = 0; i < numPoints; i++){
+	// 		let gpstime = sourceF64[i];
+	// 		targetF32[i] = gpstime - min;
+	// 	}
 
-		attributeBuffers[PointAttribute.GPS_TIME.name] = { 
-			buffer: target, 
-			attribute: PointAttribute.GPS_TIME,
-			offset: min,
-			range: max - min};
-	}
+	// 	attributeBuffers["GPS_TIME"] = { 
+	// 		buffer: target, 
+	// 		attribute: PointAttribute.GPS_TIME,
+	// 		offset: min,
+	// 		range: max - min};
+	// }
 
 
 	{ // add indices
@@ -462,19 +473,20 @@ onmessage = function (event) {
 			indices[i] = i;
 		}
 		
-		attributeBuffers[PointAttribute.INDICES.name] = { buffer: buff, attribute: PointAttribute.INDICES };
+		attributeBuffers["INDICES"] = { buffer: buff, attribute: PointAttribute.INDICES };
 	}
 
 	performance.mark("binary-decoder-end");
 
-	//{ // print timings
-	//	//performance.measure("spacing", "spacing-start", "spacing-end");
-	//	performance.measure("binary-decoder", "binary-decoder-start", "binary-decoder-end");
-	//	let measure = performance.getEntriesByType("measure")[0];
-	//	let dpp = 1000 * measure.duration / numPoints;
-	//	let debugMessage = `${measure.duration.toFixed(3)} ms, ${numPoints} points, ${dpp.toFixed(3)} µs / point`;
-	//	console.log(debugMessage);
-	//}
+	// { // print timings
+	// 	//performance.measure("spacing", "spacing-start", "spacing-end");
+	// 	performance.measure("binary-decoder", "binary-decoder-start", "binary-decoder-end");
+	// 	let measure = performance.getEntriesByType("measure")[0];
+	// 	let dpp = 1000 * measure.duration / numPoints;
+	// 	let pps = parseInt(numPoints / (measure.duration / 1000));
+	// 	let debugMessage = `${measure.duration.toFixed(3)} ms, ${numPoints} points, ${pps.toLocaleString()} points/sec`;
+	// 	console.log(debugMessage);
+	// }
 
 	performance.clearMarks();
 	performance.clearMeasures();
@@ -484,7 +496,6 @@ onmessage = function (event) {
 		mean: mean,
 		attributeBuffers: attributeBuffers,
 		tightBoundingBox: { min: tightBoxMin, max: tightBoxMax },
-		//estimatedSpacing: estimatedSpacing,
 	};
 
 	let transferables = [];

@@ -59,6 +59,81 @@
 			e.preventDefault();
 		}
 
+		function loadDroppedPointcloud(path){
+			const folderName = path.replace(/\\/g, "/").split("/").reverse()[1];
+
+			Potree.loadPointCloud(cloudjsPath, folderName, function(e){
+				viewer.scene.addPointCloud(e.pointcloud);
+
+				let material = e.pointcloud.material;
+				material.size = 1;
+				material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+
+				viewer.zoomTo(e.pointcloud);
+			});
+		}
+
+		function doConversion(inputPath){
+			console.log("PotreeConverter should run this file: " + inputPath)
+
+			let outputPath = "D:/temp/test";
+
+			let message = `Starting conversion.<br>
+			input: ${inputPath}<br>
+			output: ${outputPath}`;
+			viewer.postMessage(message, {duration: 15000});
+
+			const { spawn } = require('child_process');
+			const converter = spawn('./libs/PotreeConverter/PotreeConverter.exe', [
+				inputPath,
+				"-o", outputPath,
+				"--overwrite"
+			]);
+
+			converter.stdout.on('data', (data) => {
+				console.log("==");
+				console.log(`stdout: ${data}`);
+
+				const string = new TextDecoder("utf-8").decode(data);
+				const regexp = /.*AABB: {[.\s\S]*?}/g;
+				const matches = string.matchAll(regexp);
+					
+				for (const match of matches) {
+					try{
+						const aabb = JSON.parse(match[0]);
+						console.log(aabb);
+					}catch(e){
+
+					}
+				}
+
+			});
+
+			converter.stderr.on('data', (data) => {
+				console.log("==");
+				console.error(`stderr: ${data}`);
+			});
+
+			converter.on('close', (code) => {
+				console.log(`child process exited with code ${code}`);
+
+				const cloudJS = `${outputPath}/cloud.js`;
+				console.log("now loading point cloud: " + cloudJS);
+
+				let message = `conversion finished, now loading ${cloudJS}`;
+				viewer.postMessage(message, {duration: 15000});
+
+				Potree.loadPointCloud(cloudJS, "abc", function(e){
+					viewer.scene.addPointCloud(e.pointcloud);
+
+					let material = e.pointcloud.material;
+					material.size = 1;
+					material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+
+					viewer.zoomTo(e.pointcloud);
+				});
+			});
+		}
 
 		function dropHandler(event){
 			console.log(event);
@@ -76,33 +151,35 @@
 				//let folderName = path.replace(/\\/g, "/").split("/").reverse()[1];
 
 				const fs = require("fs");
+				const np = require('path')
 
 				let cloudjsPath = null;
 				let folderName = null;
 
 				if(fs.lstatSync(path).isDirectory()){
-
 					if(fs.lstatSync(`${path}/cloud.js`).isFile()){
 						cloudjsPath = `${path}/cloud.js`;
-						folderName = path.replace(/\\/g, "/").split("/").reverse()[0];
+						//folderName = path.replace(/\\/g, "/").split("/").reverse()[0];
+						loadDroppedPointcloud(cloudjsPath);
 					}
 
 				}else if(fs.lstatSync(path).isFile() && path.indexOf("cloud.js") >= 0){
 					cloudjsPath = path;
-					folderName = path.replace(/\\/g, "/").split("/").reverse()[1];
+					//folderName = path.replace(/\\/g, "/").split("/").reverse()[1];
+					loadDroppedPointcloud(cloudjsPath);
+				}else if(fs.lstatSync(path).isFile()){
+
+					const extension = np.extname(path).toLowerCase();
+					const whitelist = [".las", ".laz"];
+
+					const isOkay = whitelist.includes(extension);
+
+					if(isOkay){
+						doConversion(path);
+					}
+
 				}
 
-				if(cloudjsPath !== null){
-					Potree.loadPointCloud(cloudjsPath, folderName, function(e){
-						viewer.scene.addPointCloud(e.pointcloud);
-
-						let material = e.pointcloud.material;
-						material.size = 1;
-						material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
-
-						viewer.zoomTo(e.pointcloud);
-					});
-				}
 			}
 		}
 		$("body")[0].addEventListener("dragenter", allowDrag);
