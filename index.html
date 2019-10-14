@@ -73,6 +73,52 @@
 			});
 		}
 
+		function createPlaceholder(aabb){
+			console.log("create palceholder");
+			console.log(aabb);
+
+			const placeholder = {};
+
+			const node = new THREE.Object3D();
+			
+			const min = new THREE.Vector3(...aabb.min);
+			const max = new THREE.Vector3(...aabb.max);
+			const center = new THREE.Vector3(
+				(min.x + max.x) / 2,
+				(min.y + max.y) / 2,
+				(min.z + max.z) / 2,
+			);
+			const radius = center.distanceTo(max);
+			node.boundingSphere = new THREE.Sphere(center, radius);
+
+			const text = new Potree.TextSprite("");
+			text.position.copy(center);
+			const textScale = radius / 5;
+			text.material.depthTest = false;
+			text.material.depthWrite = false;
+			text.material.transparent = true;
+			text.material.opacity = 0.7;
+			text.scale.set(textScale, textScale, textScale);
+			viewer.scene.scene.add(text);
+
+			const box = new THREE.Box3(min, max);
+			const box3 = new Potree.Box3Helper(box, 0xff0000);
+			viewer.scene.scene.add(box3);
+
+			const camera = viewer.scene.getActiveCamera();
+			viewer.zoomTo(node);
+
+			placeholder.text = text;
+			placeholder.box = box3;
+			placeholder.remove = () => {
+				viewer.scene.scene.remove(box3);
+				viewer.scene.scene.remove(text);
+			};
+
+
+			return placeholder;
+		}
+
 		function doConversion(inputPath){
 			console.log("PotreeConverter should run this file: " + inputPath)
 
@@ -90,20 +136,48 @@
 				"--overwrite"
 			]);
 
+			let placeholder = null;
 			converter.stdout.on('data', (data) => {
 				console.log("==");
 				console.log(`stdout: ${data}`);
 
 				const string = new TextDecoder("utf-8").decode(data);
-				const regexp = /.*AABB: {[.\s\S]*?}/g;
-				const matches = string.matchAll(regexp);
-					
-				for (const match of matches) {
-					try{
-						const aabb = JSON.parse(match[0]);
-						console.log(aabb);
-					}catch(e){
 
+				if(!placeholder){ // match for AABB
+					const regexp = /(.*AABB): ({[.\s\S]*?})/g;
+					const matches = string.matchAll(regexp);
+						
+					for (const match of matches) {
+						try{
+							const name = match[1];
+							const value = match[2];
+							const aabb = JSON.parse(match[2]);
+							console.log(aabb);
+
+							if(name === "cubicAABB"){
+								placeholder = createPlaceholder(aabb);
+							}
+						}catch(e){
+							console.error(match[0]);
+							console.error(e);
+						}
+					}
+				}
+
+				window.placeholder = placeholder;
+
+				if(placeholder){ // match for progress
+					const regexp = /INDEXING: ([\w\.]*) of ([\w\.]*) processed/g;
+					const matches = string.matchAll(regexp);
+
+					for(const match of matches){
+
+						const processed = parseInt(match[1].replace(/\D/g,''));
+						const total = parseInt(match[2].replace(/\D/g,''));
+						const percent = parseInt(100 * (processed / total));
+						
+						const text = `${percent}%`;
+						placeholder.text.setText(text);
 					}
 				}
 
@@ -120,6 +194,10 @@
 				const cloudJS = `${outputPath}/cloud.js`;
 				console.log("now loading point cloud: " + cloudJS);
 
+				if(placeholder){
+					placeholder.remove();
+				}
+
 				let message = `conversion finished, now loading ${cloudJS}`;
 				viewer.postMessage(message, {duration: 15000});
 
@@ -130,7 +208,7 @@
 					material.size = 1;
 					material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
 
-					viewer.zoomTo(e.pointcloud);
+					//viewer.zoomTo(e.pointcloud);
 				});
 			});
 		}
@@ -188,7 +266,7 @@
 	
 		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
 		
-		viewer.setEDLEnabled(true);
+		viewer.setEDLEnabled(false);
 		viewer.setFOV(60);
 		viewer.setPointBudget(3*1000*1000);
 		viewer.setMinNodeSize(0);
@@ -239,22 +317,22 @@
 		//});
 
 		
-		viewer.onGUILoaded(() => {
-			let message = `
-			Welcome to Potree Desktop.<br>
-			<p>
-			This portable version can be used to load <a href="https://github.com/potree/PotreeConverter", target="_blank"> converted point clouds</a>
-			directly from disk. Just drag & drop a cloud.js file, or it's parent folder, into this window.
-			</p>
+		// viewer.onGUILoaded(() => {
+		// 	let message = `
+		// 	Welcome to Potree Desktop.<br>
+		// 	<p>
+		// 	This portable version can be used to load <a href="https://github.com/potree/PotreeConverter", target="_blank"> converted point clouds</a>
+		// 	directly from disk. Just drag & drop a cloud.js file, or it's parent folder, into this window.
+		// 	</p>
 
-			<p>
-			You can set up a default scene by modifying the index.html file in the potree desktop folder. 
-			</p>
-			`;
+		// 	<p>
+		// 	You can set up a default scene by modifying the index.html file in the potree desktop folder. 
+		// 	</p>
+		// 	`;
 
-			//viewer.postMessage(message);
-			viewer.postMessage(message, {duration: 15000});
-		});
+		// 	//viewer.postMessage(message);
+		// 	viewer.postMessage(message, {duration: 15000});
+		// });
 
 		window.addEventListener('error', (e) => {
 			//console.log(e);
