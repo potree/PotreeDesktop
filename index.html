@@ -119,21 +119,34 @@
 			return placeholder;
 		}
 
-		function doConversion(inputPath){
-			console.log("PotreeConverter should run this file: " + inputPath)
+		async function doConversion(inputPaths){
 
-			//const folderName = inputPath.replace(/\\/g, "/").split("/").reverse()[1];
+			const fs = require("fs");
+			const npath = require("path");
+			
+			const first = inputPaths[0];
+			const stat = await fs.promises.lstat(first);
 
-			let outputPath = "D:/temp/test";
+			let convName = "converted";
+			
+			if(stat.isFile()){
+				convName = npath.basename(first, npath.extname(first));
+			}else if(stat.isDirectory()){
+				convName = npath.basename(first);
+			}
+
+			let outputPath = `D:/temp/${convName}`;
+
+			//fs.exists()
 
 			let message = `Starting conversion.<br>
-			input: ${inputPath}<br>
+			input: ${inputPaths}<br>
 			output: ${outputPath}`;
 			viewer.postMessage(message, {duration: 15000});
 
 			const { spawn } = require('child_process');
 			const converter = spawn('./libs/PotreeConverter/PotreeConverter.exe', [
-				inputPath,
+				inputPaths.join(" "),
 				"-o", outputPath,
 				"--overwrite"
 			]);
@@ -255,7 +268,7 @@
 					const isOkay = whitelist.includes(extension);
 
 					if(isOkay){
-						doConversion(path);
+						doConversion([path]);
 					}
 
 				}
