@@ -20,9 +20,9 @@
 
 	<script src="./libs/jquery/jquery-3.1.1.min.js"></script>
 	<script src="./libs/spectrum/spectrum.js"></script>
-	<script src="./libs/perfect-scrollbar/js/perfect-scrollbar.jquery.js"></script>
 	<script src="./libs/jquery-ui/jquery-ui.min.js"></script>
 	<script src="./libs/three.js/build/three.min.js"></script>
+	<script src="./libs/three.js/extra/lines.js"></script>
 	<script src="./libs/other/BinaryHeap.js"></script>
 	<script src="./libs/tween/tween.min.js"></script>
 	<script src="./libs/d3/d3.js"></script>
@@ -32,9 +32,7 @@
 	<script src="./libs/jstree/jstree.js"></script>
 	<script src="./libs/potree/potree.js"></script>
 	<script src="./libs/plasio/js/laslaz.js"></script>
-	
-	<!-- INCLUDE ADDITIONAL DEPENDENCIES HERE -->
-	<!-- INCLUDE SETTINGS HERE -->
+
 	
 	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0px; top: 0px; ">
 		<div id="potree_render_area"></div>
@@ -59,8 +57,8 @@
 			e.preventDefault();
 		}
 
-		function loadDroppedPointcloud(path){
-			const folderName = path.replace(/\\/g, "/").split("/").reverse()[1];
+		function loadDroppedPointcloud(cloudjsPath){
+			const folderName = cloudjsPath.replace(/\\/g, "/").split("/").reverse()[1];
 
 			Potree.loadPointCloud(cloudjsPath, folderName, function(e){
 				viewer.scene.addPointCloud(e.pointcloud);
@@ -135,7 +133,18 @@
 				convName = npath.basename(first);
 			}
 
-			let outputPath = `D:/temp/${convName}`;
+			let outputPath = npath.normalize(`D:/temp/${convName}`);
+
+			//dialog.showSaveDialogSync([browserWindow, ]options)
+			//const { dialog } = require('electron');
+			const dialog = require('electron').remote.dialog;
+			const result = dialog.showSaveDialogSync(null, {
+				title: "Chose Conversion Directory",
+				defaultPath: outputPath,
+				buttonLabel: "start conversion",
+			});
+
+			return;
 
 			//fs.exists()
 
@@ -146,7 +155,7 @@
 
 			const { spawn } = require('child_process');
 			const converter = spawn('./libs/PotreeConverter/PotreeConverter.exe', [
-				inputPaths.join(" "),
+				...inputPaths,
 				"-o", outputPath,
 				"--overwrite"
 			]);
@@ -216,7 +225,7 @@
 				let message = `conversion finished, now loading ${cloudJS}`;
 				viewer.postMessage(message, {duration: 15000});
 
-				Potree.loadPointCloud(cloudJS, "abc", function(e){
+				Potree.loadPointCloud(cloudJS, convName, function(e){
 					viewer.scene.addPointCloud(e.pointcloud);
 
 					let material = e.pointcloud.material;
@@ -228,9 +237,12 @@
 			});
 		}
 
-		function dropHandler(event){
+		async function dropHandler(event){
 			console.log(event);
 			event.preventDefault();
+
+			const cloudJsFiles = [];
+			const lasLazFiles = [];
 
 			for(let i = 0; i < event.dataTransfer.items.length; i++){
 				let item = event.dataTransfer.items[i];
@@ -241,25 +253,13 @@
 
 				let file = item.getAsFile();
 				let path = file.path;
-				//let folderName = path.replace(/\\/g, "/").split("/").reverse()[1];
 
 				const fs = require("fs");
-				const np = require('path')
+				const fsp = fs.promises;
+				const np = require('path');
 
-				let cloudjsPath = null;
-				let folderName = null;
-
-				if(fs.lstatSync(path).isDirectory()){
-					if(fs.lstatSync(`${path}/cloud.js`).isFile()){
-						cloudjsPath = `${path}/cloud.js`;
-						//folderName = path.replace(/\\/g, "/").split("/").reverse()[0];
-						loadDroppedPointcloud(cloudjsPath);
-					}
-
-				}else if(fs.lstatSync(path).isFile() && path.indexOf("cloud.js") >= 0){
-					cloudjsPath = path;
-					//folderName = path.replace(/\\/g, "/").split("/").reverse()[1];
-					loadDroppedPointcloud(cloudjsPath);
+				if(fs.lstatSync(path).isFile() && path.indexOf("cloud.js") >= 0){
+					cloudJsFiles.push(file.path);
 				}else if(fs.lstatSync(path).isFile()){
 
 					const extension = np.extname(path).toLowerCase();
@@ -268,12 +268,79 @@
 					const isOkay = whitelist.includes(extension);
 
 					if(isOkay){
-						doConversion([path]);
+						lasLazFiles.push(file.path);
 					}
+				}else if(fs.lstatSync(path).isDirectory()){
+					// handle directory
+
+					const files = await fsp.readdir(path);
+					for(const file of files){
+						
+						const extension = np.extname(file).toLowerCase();
+						const whitelist = [".las", ".laz"];
+
+						if(file === "cloud.js"){
+							cloudJsFiles.push(`${path}/${file}`);
+						}else if(whitelist.includes(extension)){
+							lasLazFiles.push(`${path}/${file}`);
+						}
+					
+					};
+
+					// console.log(files);
 
 				}
-
 			}
+
+			console.log(cloudJsFiles);
+			console.log(lasLazFiles);
+
+			if(lasLazFiles.length > 0){
+				doConversion(lasLazFiles);
+			}
+
+			for(const cloudjs of cloudJsFiles){
+				loadDroppedPointcloud(cloudjs);
+			}
+
+			// for(let i = 0; i < event.dataTransfer.items.length; i++){
+			// 	let item = event.dataTransfer.items[i];
+
+			// 	if(item.kind !== "file"){
+			// 		continue;
+			// 	}
+
+			// 	let file = item.getAsFile();
+			// 	let path = file.path;
+
+			// 	const fs = require("fs");
+			// 	const np = require('path');
+
+			// 	let cloudjsPath = null;
+			// 	let folderName = null;
+
+			// 	if(fs.lstatSync(path).isDirectory()){
+			// 		if(fs.lstatSync(`${path}/cloud.js`).isFile()){
+			// 			cloudjsPath = `${path}/cloud.js`;
+			// 			loadDroppedPointcloud(cloudjsPath);
+			// 		}
+			// 	}else if(fs.lstatSync(path).isFile() && path.indexOf("cloud.js") >= 0){
+			// 		cloudjsPath = path;
+			// 		loadDroppedPointcloud(cloudjsPath);
+			// 	}else if(fs.lstatSync(path).isFile()){
+
+			// 		const extension = np.extname(path).toLowerCase();
+			// 		const whitelist = [".las", ".laz"];
+
+			// 		const isOkay = whitelist.includes(extension);
+
+			// 		if(isOkay){
+			// 			doConversion([path]);
+			// 		}
+
+			// 	}
+
+			// }
 		}
 		$("body")[0].addEventListener("dragenter", allowDrag);
 		$("body")[0].addEventListener("dragover", allowDrag);

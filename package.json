@@ -1,6 +1,6 @@
 {
 	"name": "potree_desktop",
-	"version": "0.1.0",
+	"version": "1.7.0",
 	"description": "A WebGL Point Cloud Viewer",
 	"main": "main.js",
 	"scripts": {
@@ -14,7 +14,7 @@
 	],
 	"author": "Markus Schuetz",
 	"license": "no license available at this time",
-	"devDependencies": {
-		"electron": "6.0.12"
+	"dependencies": {
+		"electron": "~7.0.0"
 	}
 }
