@@ -1,8 +1,8 @@
 (function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('constants')) :
-	typeof define === 'function' && define.amd ? define(['exports', 'constants'], factory) :
-	(global = global || self, factory(global.Potree = {}, global.constants));
-}(this, function (exports, constants) { 'use strict';
+	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+	typeof define === 'function' && define.amd ? define(['exports'], factory) :
+	(global = global || self, factory(global.Potree = {}));
+}(this, function (exports) { 'use strict';
 
 	/**
 	 * @author mrdoob / http://mrdoob.com/ https://github.com/mrdoob/eventdispatcher.js
@@ -2874,7 +2874,7 @@
 				const llP1 = transform.forward(p1.toArray());
 				const llP2 = transform.forward(p2.toArray());
 				const dir = [llP2[0] - llP1[0], llP2[1] - llP1[1]];
-				const azimuth = -Math.atan2(dir[1], dir[0]) - Math.PI / 2;
+				const azimuth = Math.atan2(dir[1], dir[0]) - Math.PI / 2;
 
 				return azimuth;
 			}else{
@@ -2909,6 +2909,65 @@
 					document.body.appendChild(script);
 				}
 			});
+		}
+
+		static createSvgGradient(scheme){
+
+			// this is what we are creating:
+			//
+			//<svg width="1em" height="3em"  xmlns="http://www.w3.org/2000/svg">
+			//	<defs>
+			//		<linearGradient id="gradientID" gradientTransform="rotate(90)">
+			//		<stop offset="0%"  stop-color="rgb(93, 78, 162)" />
+			//		...
+			//		<stop offset="100%"  stop-color="rgb(157, 0, 65)" />
+			//		</linearGradient>
+			//	</defs>
+			//	
+			//	<rect width="100%" height="100%" fill="url('#myGradient')" stroke="black" stroke-width="0.1em"/>
+			//</svg>
+
+
+			const gradientId = `${Math.random()}_${Date.now()}`;
+			
+			const svgn = "http://www.w3.org/2000/svg";
+			const svg = document.createElementNS(svgn, "svg");
+			svg.setAttributeNS(null, "width", "2em");
+			svg.setAttributeNS(null, "height", "3em");
+			
+			{ // <defs>
+				const defs = document.createElementNS(svgn, "defs");
+				
+				const linearGradient = document.createElementNS(svgn, "linearGradient");
+				linearGradient.setAttributeNS(null, "id", gradientId);
+				linearGradient.setAttributeNS(null, "gradientTransform", "rotate(90)");
+
+				for(let i = scheme.length - 1; i >= 0; i--){
+					const stopVal = scheme[i];
+					const percent = parseInt(100 - stopVal[0] * 100);
+					const [r, g, b] = stopVal[1].toArray().map(v => parseInt(v * 255));
+
+					const stop = document.createElementNS(svgn, "stop");
+					stop.setAttributeNS(null, "offset", `${percent}%`);
+					stop.setAttributeNS(null, "stop-color", `rgb(${r}, ${g}, ${b})`);
+
+					linearGradient.appendChild(stop);
+				}
+
+				defs.appendChild(linearGradient);
+				svg.appendChild(defs);
+			}
+
+			const rect = document.createElementNS(svgn, "rect");
+			rect.setAttributeNS(null, "width", `100%`);
+			rect.setAttributeNS(null, "height", `100%`);
+			rect.setAttributeNS(null, "fill", `url("#${gradientId}")`);
+			rect.setAttributeNS(null, "stroke", `black`);
+			rect.setAttributeNS(null, "stroke-width", `0.1em`);
+
+			svg.appendChild(rect);
+			
+			return svg;
 		}
 
 	}
@@ -4661,15 +4720,6 @@
 	//	print(rgb)
 
 	let Gradients = {
-		RAINBOW: [
-			[0, new THREE.Color(0.278, 0, 0.714)],
-			[1 / 6, new THREE.Color(0, 0, 1)],
-			[2 / 6, new THREE.Color(0, 1, 1)],
-			[3 / 6, new THREE.Color(0, 1, 0)],
-			[4 / 6, new THREE.Color(1, 1, 0)],
-			[5 / 6, new THREE.Color(1, 0.64, 0)],
-			[1, new THREE.Color(1, 0, 0)]
-		],
 		// From chroma spectral http://gka.github.io/chroma.js/
 		SPECTRAL: [
 			[0, new THREE.Color(0.3686, 0.3098, 0.6353)],
@@ -4760,6 +4810,15 @@
 			[0.87, new THREE.Color(0.92105, 0.31489, 0.05475)],
 			[0.93, new THREE.Color(0.81608, 0.18462, 0.01809)],
 			[1.00, new THREE.Color(0.66449, 0.08436, 0.00424)],
+		],
+		RAINBOW: [
+			[0, new THREE.Color(0.278, 0, 0.714)],
+			[1 / 6, new THREE.Color(0, 0, 1)],
+			[2 / 6, new THREE.Color(0, 1, 1)],
+			[3 / 6, new THREE.Color(0, 1, 0)],
+			[4 / 6, new THREE.Color(1, 1, 0)],
+			[5 / 6, new THREE.Color(1, 0.64, 0)],
+			[1, new THREE.Color(1, 0, 0)]
 		],
 		CONTOUR: [
 			[0.00, new THREE.Color(0, 0, 0)],
@@ -5331,6 +5390,7 @@ vec3 getColor(){
 		float linearDepth = gl_Position.w;
 		float expDepth = (gl_Position.z / gl_Position.w) * 0.5 + 0.5;
 		color = vec3(linearDepth, expDepth, 0.0);
+		//color = vec3(1.0, 0.5, 0.3);
 	#elif defined color_type_intensity
 		float w = getIntensity();
 		color = vec3(w, w, w);
@@ -5588,79 +5648,88 @@ void main() {
 	// CLIPPING
 	doClipping();
 
-	// #if defined(num_clipspheres) && num_clipspheres > 0
-	// 	for(int i = 0; i < num_clipspheres; i++){
-	// 		vec4 sphereLocal = uClipSpheres[i] * mvPosition;
+	#if defined(num_clipspheres) && num_clipspheres > 0
+		for(int i = 0; i < num_clipspheres; i++){
+			vec4 sphereLocal = uClipSpheres[i] * mvPosition;
 
-	// 		float distance = length(sphereLocal.xyz);
+			float distance = length(sphereLocal.xyz);
 
-	// 		if(distance < 1.0){
-	// 			float w = distance;
-	// 			vec3 cGradient = texture2D(gradient, vec2(w, 1.0 - w)).rgb;
+			if(distance < 1.0){
+				float w = distance;
+				vec3 cGradient = texture2D(gradient, vec2(w, 1.0 - w)).rgb;
 				
-	// 			vColor = cGradient;
-	// 			//vColor = cGradient * 0.7 + vColor * 0.3;
-	// 		}
-	// 	}
-	// #endif
+				vColor = cGradient;
+				//vColor = cGradient * 0.7 + vColor * 0.3;
+			}
+		}
+	#endif
 
-	// #if defined(num_shadowmaps) && num_shadowmaps > 0
+	#if defined(num_shadowmaps) && num_shadowmaps > 0
 
-	// 	const float sm_near = 0.1;
-	// 	const float sm_far = 10000.0;
+		const float sm_near = 0.1;
+		const float sm_far = 10000.0;
 
-	// 	for(int i = 0; i < num_shadowmaps; i++){
-	// 		vec3 viewPos = (uShadowWorldView[i] * vec4(position, 1.0)).xyz;
-	// 		float distanceToLight = abs(viewPos.z);
+		for(int i = 0; i < num_shadowmaps; i++){
+			vec3 viewPos = (uShadowWorldView[i] * vec4(position, 1.0)).xyz;
+			float distanceToLight = abs(viewPos.z);
 			
-	// 		vec4 projPos = uShadowProj[i] * uShadowWorldView[i] * vec4(position, 1);
-	// 		vec3 nc = projPos.xyz / projPos.w;
+			vec4 projPos = uShadowProj[i] * uShadowWorldView[i] * vec4(position, 1);
+			vec3 nc = projPos.xyz / projPos.w;
 			
-	// 		float u = nc.x * 0.5 + 0.5;
-	// 		float v = nc.y * 0.5 + 0.5;
+			float u = nc.x * 0.5 + 0.5;
+			float v = nc.y * 0.5 + 0.5;
 
-	// 		vec2 sampleStep = vec2(1.0 / (2.0*1024.0), 1.0 / (2.0*1024.0)) * 1.5;
-	// 		vec2 sampleLocations[9];
-	// 		sampleLocations[0] = vec2(0.0, 0.0);
-	// 		sampleLocations[1] = sampleStep;
-	// 		sampleLocations[2] = -sampleStep;
-	// 		sampleLocations[3] = vec2(sampleStep.x, -sampleStep.y);
-	// 		sampleLocations[4] = vec2(-sampleStep.x, sampleStep.y);
+			vec2 sampleStep = vec2(1.0 / (2.0*1024.0), 1.0 / (2.0*1024.0)) * 1.5;
+			vec2 sampleLocations[9];
+			sampleLocations[0] = vec2(0.0, 0.0);
+			sampleLocations[1] = sampleStep;
+			sampleLocations[2] = -sampleStep;
+			sampleLocations[3] = vec2(sampleStep.x, -sampleStep.y);
+			sampleLocations[4] = vec2(-sampleStep.x, sampleStep.y);
 
-	// 		sampleLocations[5] = vec2(0.0, sampleStep.y);
-	// 		sampleLocations[6] = vec2(0.0, -sampleStep.y);
-	// 		sampleLocations[7] = vec2(sampleStep.x, 0.0);
-	// 		sampleLocations[8] = vec2(-sampleStep.x, 0.0);
+			sampleLocations[5] = vec2(0.0, sampleStep.y);
+			sampleLocations[6] = vec2(0.0, -sampleStep.y);
+			sampleLocations[7] = vec2(sampleStep.x, 0.0);
+			sampleLocations[8] = vec2(-sampleStep.x, 0.0);
 
-	// 		float visibleSamples = 0.0;
-	// 		float numSamples = 0.0;
+			float visibleSamples = 0.0;
+			float numSamples = 0.0;
 
-	// 		float bias = vRadius * 2.0;
+			float bias = vRadius * 2.0;
 
-	// 		for(int j = 0; j < 9; j++){
-	// 			vec4 depthMapValue = texture2D(uShadowMap[i], vec2(u, v) + sampleLocations[j]);
+			for(int j = 0; j < 9; j++){
+				vec4 depthMapValue = texture2D(uShadowMap[i], vec2(u, v) + sampleLocations[j]);
 
-	// 			float linearDepthFromSM = depthMapValue.x + bias;
-	// 			float linearDepthFromViewer = distanceToLight;
+				float linearDepthFromSM = depthMapValue.x + bias;
+				float linearDepthFromViewer = distanceToLight;
 
-	// 			if(linearDepthFromSM > linearDepthFromViewer){
-	// 				visibleSamples += 1.0;
-	// 			}
+				if(linearDepthFromSM > linearDepthFromViewer){
+					visibleSamples += 1.0;
+				}
 
-	// 			numSamples += 1.0;
-	// 		}
+				numSamples += 1.0;
+			}
 
-	// 		float visibility = visibleSamples / numSamples;
+			float visibility = visibleSamples / numSamples;
 
-	// 		if(u < 0.0 || u > 1.0 || v < 0.0 || v > 1.0 || nc.x < -1.0 || nc.x > 1.0 || nc.y < -1.0 || nc.y > 1.0 || nc.z < -1.0 || nc.z > 1.0){
-	// 			//vColor = vec3(0.0, 0.0, 0.2);
-	// 		}else{
-	// 			//vColor = vec3(1.0, 1.0, 1.0) * visibility + vec3(1.0, 1.0, 1.0) * vec3(0.5, 0.0, 0.0) * (1.0 - visibility);
-	// 			vColor = vColor * visibility + vColor * uShadowColor * (1.0 - visibility);
-	// 		}
-	// 	}
+			if(u < 0.0 || u > 1.0 || v < 0.0 || v > 1.0 || nc.x < -1.0 || nc.x > 1.0 || nc.y < -1.0 || nc.y > 1.0 || nc.z < -1.0 || nc.z > 1.0){
+				//vColor = vec3(0.0, 0.0, 0.2);
+			}else{
+				//vColor = vec3(1.0, 1.0, 1.0) * visibility + vec3(1.0, 1.0, 1.0) * vec3(0.5, 0.0, 0.0) * (1.0 - visibility);
+				vColor = vColor * visibility + vColor * uShadowColor * (1.0 - visibility);
+			}
 
-	// #endif
+			{ // debug
+				vec4 depthMapValue = texture2D(uShadowMap[i], vec2(u, v) + sampleLocations[0]);
+
+				float t = depthMapValue.x * 20.0;
+				vColor = vec3(t, t, t);
+
+			}
+
+		}
+
+	#endif
 }
 `;
 
@@ -5758,6 +5827,8 @@ void main() {
 		gl_FragColor.a = weight;
 		gl_FragColor.xyz = gl_FragColor.xyz * weight;
 	#endif
+
+	//gl_FragColor = vec4(0.0, 0.7, 0.0, 1.0);
 	
 }
 
@@ -7900,6 +7971,81 @@ void main() {
 		getVisibleExtent () {
 			return this.visibleBounds.applyMatrix4(this.matrixWorld);
 		};
+
+		intersectsPoint(position){
+
+			let rootAvailable = this.pcoGeometry.root && this.pcoGeometry.root.geometry;
+
+			if(!rootAvailable){
+				return false;
+			}
+
+			if(typeof this.signedDistanceField === "undefined"){
+
+				const resolution = 32;
+				const field = new Float32Array(resolution ** 3).fill(Infinity);
+
+				const positions = this.pcoGeometry.root.geometry.attributes.position;
+				const boundingBox = this.boundingBox;
+
+				const n = positions.count;
+
+				for(let i = 0; i < n; i = i + 3){
+					const x = positions.array[3 * i + 0];
+					const y = positions.array[3 * i + 1];
+					const z = positions.array[3 * i + 2];
+
+					const ix = parseInt(Math.min(resolution * (x / boundingBox.max.x), resolution - 1));
+					const iy = parseInt(Math.min(resolution * (y / boundingBox.max.y), resolution - 1));
+					const iz = parseInt(Math.min(resolution * (z / boundingBox.max.z), resolution - 1));
+
+					const index = ix + iy * resolution + iz * resolution * resolution;
+
+					field[index] = 0;
+				}
+
+				const sdf = {
+					resolution: resolution,
+					field: field,
+				};
+
+				this.signedDistanceField = sdf;
+			}
+
+
+			{
+				const sdf = this.signedDistanceField;
+				const boundingBox = this.boundingBox;
+
+				const toObjectSpace = new THREE.Matrix4().getInverse(this.matrixWorld);
+
+				const objPos = position.clone().applyMatrix4(toObjectSpace);
+
+				const resolution = sdf.resolution;
+				const ix = parseInt(resolution * (objPos.x / boundingBox.max.x));
+				const iy = parseInt(resolution * (objPos.y / boundingBox.max.y));
+				const iz = parseInt(resolution * (objPos.z / boundingBox.max.z));
+
+				if(ix < 0 || iy < 0 || iz < 0){
+					return false;
+				}
+				if(ix >= resolution || iy >= resolution || iz >= resolution){
+					return false;
+				}
+
+				const index = ix + iy * resolution + iz * resolution * resolution;
+
+				const value = sdf.field[index];
+
+				if(value === 0){
+					return true;
+				}
+
+			}
+
+			return false;
+
+		}
 
 		/**
 		 *
@@ -10423,10 +10569,6 @@ void main() {
 					let numClipSpheres = (params.clipSpheres && params.clipSpheres.length) ? params.clipSpheres.length : 0;
 					let numClipPolygons = (material.clipPolygons && material.clipPolygons.length) ? material.clipPolygons.length : 0;
 
-					//debugger;
-
-
-
 					let defines = [
 						`#define num_shadowmaps ${shadowMaps.length}`,
 						`#define num_snapshots ${numSnapshots}`,
@@ -10452,9 +10594,6 @@ void main() {
 						}
 
 					}
-
-					//vs = `#define num_shadowmaps ${shadowMaps.length}\n` + vs;
-					//fs = `#define num_shadowmaps ${shadowMaps.length}\n` + fs;
 
 					let definesString = defines.join("\n");
 
@@ -11287,6 +11426,7 @@ void main() {
 
 	function createProfileData(profile){
 		const data = {
+			uuid: profile.uuid,
 			name: profile.name,
 			points: profile.points.map(p => p.toArray()),
 			height: profile.height,
@@ -11298,6 +11438,7 @@ void main() {
 
 	function createVolumeData(volume){
 		const data = {
+			uuid: volume.uuid,
 			type: volume.constructor.name,
 			name: volume.name,
 			position: volume.position.toArray(),
@@ -11312,14 +11453,6 @@ void main() {
 
 	function createCameraAnimationData(animation){
 
-		// const controlPoints = [];
-
-		// for(const cp of animation.controlPoints){
-		// 	const cpdata = {};
-
-		// 	control
-		// }
-
 		const controlPoints = animation.controlPoints.map( cp => {
 			const cpdata = {
 				position: cp.position.toArray(),
@@ -11330,6 +11463,7 @@ void main() {
 		});
 
 		const data = {
+			uuid: animation.uuid,
 			name: animation.name,
 			duration: animation.duration,
 			t: animation.t,
@@ -11342,7 +11476,9 @@ void main() {
 	}
 
 	function createMeasurementData(measurement){
+
 		const data = {
+			uuid: measurement.uuid,
 			name: measurement.name,
 			points: measurement.points.map(p => p.position.toArray()),
 			showDistances: measurement.showDistances,
@@ -11358,7 +11494,9 @@ void main() {
 	}
 
 	function createAnnotationData(annotation){
+
 		const data = {
+			uuid: annotation.uuid,
 			title: annotation.title,
 			description: annotation.description,
 			position: annotation.position.toArray(),
@@ -11482,9 +11620,6 @@ void main() {
 	}
 
 	function createClassificationData(viewer){
-
-		//const data = {};
-
 		const classifications = viewer.classifications;
 
 		const data = classifications;
@@ -11492,7 +11627,7 @@ void main() {
 		return data;
 	}
 
-	function createSaveData(viewer) {
+	function saveProject(viewer) {
 
 		const scene = viewer.scene;
 
@@ -11538,6 +11673,8 @@ void main() {
 
 			this.controlPoints = [];
 
+			this.uuid = THREE.Math.generateUUID();
+
 			this.node = new THREE.Object3D();
 			this.node.name = "camera animation";
 			this.viewer.scene.scene.add(this.node);
@@ -11554,6 +11691,56 @@ void main() {
 
 			this.createUpdateHook();
 			this.createPath();
+		}
+
+		static defaultFromView(viewer){
+			const animation = new CameraAnimation(viewer);
+
+			const camera = viewer.scene.getActiveCamera();
+			const target = viewer.scene.view.getPivot();
+
+			const cpCenter = new THREE.Vector3(
+				0.3 * camera.position.x + 0.7 * target.x,
+				0.3 * camera.position.y + 0.7 * target.y,
+				0.3 * camera.position.z + 0.7 * target.z,
+			);
+
+			const targetCenter = new THREE.Vector3(
+				0.05 * camera.position.x + 0.95 * target.x,
+				0.05 * camera.position.y + 0.95 * target.y,
+				0.05 * camera.position.z + 0.95 * target.z,
+			);
+
+			const r = camera.position.distanceTo(target) * 0.3;
+
+			//const dir = target.clone().sub(camera.position).normalize();
+			const angle = Utils.computeAzimuth(camera.position, target);
+
+			const n = 5;
+			for(let i = 0; i < n; i++){
+				let u = 1.5 * Math.PI * (i / n) + angle;
+
+				const dx = r * Math.cos(u);
+				const dy = r * Math.sin(u);
+
+				const cpPos = [
+					cpCenter.x + dx,
+					cpCenter.y + dy,
+					cpCenter.z,
+				];
+
+				const targetPos = [
+					targetCenter.x + dx * 0.1,
+					targetCenter.y + dy * 0.1,
+					targetCenter.z,
+				];
+
+				const cp = animation.createControlPoint();
+				cp.position.set(...cpPos);
+				cp.target.set(...targetPos);
+			}
+
+			return animation;
 		}
 
 		createUpdateHook(){
@@ -11630,8 +11817,35 @@ void main() {
 
 			const cp = new ControlPoint();
 
-			cp.position.copy(viewer.scene.view.position);
-			cp.target.copy(viewer.scene.view.getPivot());
+
+			if(this.controlPoints.length >= 2 && index === 0){
+				const cp1 = this.controlPoints[0];
+				const cp2 = this.controlPoints[1];
+
+				const dir = cp1.position.clone().sub(cp2.position).multiplyScalar(0.5);
+				cp.position.copy(cp1.position).add(dir);
+
+				const tDir = cp1.target.clone().sub(cp2.target).multiplyScalar(0.5);
+				cp.target.copy(cp1.target).add(tDir);
+			}else if(this.controlPoints.length >= 2 && index === this.controlPoints.length){
+				const cp1 = this.controlPoints[this.controlPoints.length - 2];
+				const cp2 = this.controlPoints[this.controlPoints.length - 1];
+
+				const dir = cp2.position.clone().sub(cp1.position).multiplyScalar(0.5);
+				cp.position.copy(cp1.position).add(dir);
+
+				const tDir = cp2.target.clone().sub(cp1.target).multiplyScalar(0.5);
+				cp.target.copy(cp2.target).add(tDir);
+			}else if(this.controlPoints.length >= 2){
+				const cp1 = this.controlPoints[index - 1];
+				const cp2 = this.controlPoints[index];
+
+				cp.position.copy(cp1.position.clone().add(cp2.position).multiplyScalar(0.5));
+				cp.target.copy(cp1.target.clone().add(cp2.target).multiplyScalar(0.5));
+			}
+
+			// cp.position.copy(viewer.scene.view.position);
+			// cp.target.copy(viewer.scene.view.getPivot());
 
 			cp.positionHandle = this.createHandle(cp.position);
 			cp.targetHandle = this.createHandle(cp.target);
@@ -11803,8 +12017,15 @@ void main() {
 		}
 
 		at(t){
-			const camPos = this.cameraCurve.getPoint(t);
-			const target = this.targetCurve.getPoint(t);
+			
+			if(t > 1){
+				t = 1;
+			}else if(t < 0){
+				t = 0;
+			}
+
+			const camPos = this.cameraCurve.getPointAt(t);
+			const target = this.targetCurve.getPointAt(t);
 
 			const frame = {
 				position: camPos,
@@ -11969,8 +12190,14 @@ void main() {
 
 	function loadMeasurement(viewer, data){
 
+		const duplicate = viewer.scene.measurements.find(measure => measure.uuid === data.uuid);
+		if(duplicate){
+			return;
+		}
+
 		const measure = new Measure();
 
+		measure.uuid = data.uuid;
 		measure.name = data.name;
 		measure.showDistances = data.showDistances;
 		measure.showCoordinates = data.showCoordinates;
@@ -11990,8 +12217,15 @@ void main() {
 	}
 
 	function loadVolume(viewer, data){
+
+		const duplicate = viewer.scene.volumes.find(volume => volume.uuid === data.uuid);
+		if(duplicate){
+			return;
+		}
+
 		let volume = new Potree[data.type];
 
+		volume.uuid = data.uuid;
 		volume.name = data.name;
 		volume.position.set(...data.position);
 		volume.rotation.set(...data.rotation);
@@ -12004,8 +12238,14 @@ void main() {
 
 	function loadCameraAnimation(viewer, data){
 
+		const duplicate = viewer.scene.cameraAnimations.find(a => a.uuid === data.uuid);
+		if(duplicate){
+			return;
+		}
+
 		const animation = new CameraAnimation(viewer);
 
+		animation.uuid = data.uuid;
 		animation.name = data.name;
 		animation.duration = data.duration;
 		animation.t = data.t;
@@ -12036,7 +12276,6 @@ void main() {
 		viewer.setBackground(data.background);
 		viewer.setMinNodeSize(data.minNodeSize);
 		viewer.setShowBoundingBox(data.showBoundingBoxes);
-
 	}
 
 	function loadView(viewer, view){
@@ -12045,11 +12284,13 @@ void main() {
 	}
 
 	function loadAnnotationItem(item){
+
 		const annotation = new Annotation({
 			position: item.position,
 			title: item.title,
 		});
 
+		annotation.uuid = item.uuid;
 		annotation.offset.set(...item.offset);
 
 		return annotation;
@@ -12063,9 +12304,19 @@ void main() {
 
 		const {items, hierarchy} = data;
 
-		const annotations = items.map(loadAnnotationItem);
+		const existingAnnotations = [];
+		viewer.scene.annotations.traverseDescendants(annotation => {
+			existingAnnotations.push(annotation);
+		});
 
-		for(const annotation of annotations){
+		for(const item of items){
+
+			const duplicate = existingAnnotations.find(ann => ann.uuid === item.uuid);
+			if(duplicate){
+				continue;
+			}
+
+			const annotation = loadAnnotationItem(item);
 			viewer.scene.annotations.add(annotation);
 		}
 
@@ -12073,16 +12324,24 @@ void main() {
 
 	function loadProfile(viewer, data){
 		
-		// const {name, points} = data;
+		const {name, points} = data;
 
-		// let profile = new Potree.Profile();
-		// profile.name = "Elevation Profile";
-		// profile.setWidth(6)
-		// profile.addMarker(new THREE.Vector3(2561699.409, 1205164.310, 478.648));
-		// profile.addMarker(new THREE.Vector3(2561659.311, 1205242.101, 491.235));
+		const duplicate = viewer.scene.profiles.find(profile => profile.uuid === data.uuid);
+		if(duplicate){
+			return;
+		}
+
+		let profile = new Potree.Profile();
+		profile.name = name;
+		profile.uuid = data.uuid;
+
+		profile.setWidth(data.width);
+
+		for(const point of points){
+			profile.addMarker(new THREE.Vector3(...point));
+		}
 		
-		// viewer.scene.addProfile(profile);
-
+		viewer.scene.addProfile(profile);
 	}
 
 	function loadClassification(viewer, data){
@@ -12096,8 +12355,7 @@ void main() {
 		
 	}
 
-
-	function loadSaveData(viewer, data){
+	function loadProject(viewer, data){
 
 		if(data.type !== "Potree"){
 			console.error("not a valid Potree project");
@@ -12131,7 +12389,6 @@ void main() {
 		loadAnnotations(viewer, data.annotations);
 
 		loadClassification(viewer, data.classification);
-
 	}
 
 	//
@@ -13385,8 +13642,11 @@ void main() {
 
 		static async loadUrl(url, params){
 
-			// Utils.loadScript("../
-
+			await Promise.all([
+				Utils.loadScript(`${Potree.scriptPath}/lazylibs/geopackage/geopackage.js`),
+				Utils.loadScript(`${Potree.scriptPath}/lazylibs/sql.js/sql-wasm.js`),
+			]);
+			
 			const result = await fetch(url);
 			const buffer = await result.arrayBuffer();
 
@@ -13399,6 +13659,11 @@ void main() {
 
 		static async loadBuffer(buffer, params){
 
+			await Promise.all([
+				Utils.loadScript(`${Potree.scriptPath}/lazylibs/geopackage/geopackage.js`),
+				Utils.loadScript(`${Potree.scriptPath}/lazylibs/sql.js/sql-wasm.js`),
+			]);
+
 			params = params || {};
 
 			const resolver = async (resolve) => {
@@ -13408,7 +13673,8 @@ void main() {
 					transform = {forward: () => {}};
 				}
 
-				const SQL = await initSqlJs({ locateFile: filename => "../libs/sql.js/sql-wasm.wasm" });
+				const wasmPath = `${Potree.scriptPath}/lazylibs/sql.js/sql-wasm.wasm`;
+				const SQL = await initSqlJs({ locateFile: filename => wasmPath});
 
 				const u8 = new Uint8Array(buffer);
 
@@ -14730,17 +14996,19 @@ void main() {
 			this.target.depthTexture = new THREE.DepthTexture();
 			this.target.depthTexture.type = THREE.UnsignedIntType;
 
-			//this.target = new THREE.WebGLRenderTarget(1024, 1024, {
-			//	minFilter: THREE.NearestFilter,
-			//	magFilter: THREE.NearestFilter,
-			//	format: THREE.RGBAFormat,
-			//	type: THREE.FloatType,
-			//	depthTexture: new THREE.DepthTexture(undefined, undefined, THREE.UnsignedIntType)
-			//});
+			//this.threeRenderer.setClearColor(0x000000, 1);
+			this.threeRenderer.setClearColor(0xff0000, 1);
 
-			this.threeRenderer.setClearColor(0x000000, 1);
 			//HACK? removed while moving to three.js 109
 			//this.threeRenderer.clearTarget(this.target, true, true, true); 
+			{
+				const oldTarget = this.threeRenderer.getRenderTarget();
+
+				this.threeRenderer.setRenderTarget(this.target);
+				this.threeRenderer.clear(true, true, true);
+
+				this.threeRenderer.setRenderTarget(oldTarget);
+			}
 		}
 
 		setLight(light){
@@ -14771,10 +15039,17 @@ void main() {
 		}
 
 		render(scene, camera){
-			//this.threeRenderer.setClearColor(0x00ff00, 1);
 
-			this.threeRenderer.clearTarget( this.target, true, true, true );
+			this.threeRenderer.setClearColor(0x000000, 1);
+			
+			const oldTarget = this.threeRenderer.getRenderTarget();
+
+			this.threeRenderer.setRenderTarget(this.target);
+			this.threeRenderer.clear(true, true, true);
+			this.threeRenderer.setRenderTarget(oldTarget);
+
 			this.potreeRenderer.render(scene, this.camera, this.target, {});
+
 		}
 
 
@@ -15106,17 +15381,17 @@ void main() {
 				
 
 				let positions = new Float32Array([
-					+0, +0, +0,     +0, +0, +1,
+					+0, +0, +0,     +0, +0, -1,
 
-					+0, +0, +0,     -1, -1, +1,
-					+0, +0, +0,     +1, -1, +1,
-					+0, +0, +0,     +1, +1, +1,
-					+0, +0, +0,     -1, +1, +1,
+					+0, +0, +0,     -1, -1, -1,
+					+0, +0, +0,     +1, -1, -1,
+					+0, +0, +0,     +1, +1, -1,
+					+0, +0, +0,     -1, +1, -1,
 
-					-1, -1, +1,     +1, -1, +1,
-					+1, -1, +1,     +1, +1, +1,
-					+1, +1, +1,     -1, +1, +1,
-					-1, +1, +1,     -1, -1, +1,
+					-1, -1, -1,     +1, -1, -1,
+					+1, -1, -1,     +1, +1, -1,
+					+1, +1, -1,     -1, +1, -1,
+					-1, +1, -1,     -1, -1, -1,
 				]);
 
 				let geometry = new THREE.BufferGeometry();
@@ -15180,34 +15455,6 @@ void main() {
 		}
 
 	}
-
-	function toInterleavedBufferAttribute(pointAttribute){
-		let att = null;
-		
-		if (pointAttribute.name === PointAttribute.POSITION_CARTESIAN.name) {
-			att = new Potree.InterleavedBufferAttribute("position", 12, 3, "FLOAT", false);
-		} else if (pointAttribute.name === PointAttribute.COLOR_PACKED.name) {
-			att = new Potree.InterleavedBufferAttribute("color", 4, 4, "UNSIGNED_BYTE", true);
-		} else if (pointAttribute.name === PointAttribute.INTENSITY.name) {
-			att = new Potree.InterleavedBufferAttribute("intensity", 4, 1, "FLOAT", false);
-		} else if (pointAttribute.name === PointAttribute.CLASSIFICATION.name) {
-			att = new Potree.InterleavedBufferAttribute("classification", 4, 1, "FLOAT", false);
-		} else if (pointAttribute.name === PointAttribute.RETURN_NUMBER.name) {
-			att = new Potree.InterleavedBufferAttribute("returnNumber", 4, 1, "FLOAT", false);
-		} else if (pointAttribute.name === PointAttribute.NUMBER_OF_RETURNS.name) {
-			att = new Potree.InterleavedBufferAttribute("numberOfReturns", 4, 1, "FLOAT", false);
-		} else if (pointAttribute.name === PointAttribute.SOURCE_ID.name) {
-			att = new Potree.InterleavedBufferAttribute("pointSourceID", 4, 1, "FLOAT", false);
-		} else if (pointAttribute.name === PointAttribute.NORMAL_SPHEREMAPPED.name) {
-			att = new Potree.InterleavedBufferAttribute("normal", 12, 3, "FLOAT", false);
-		} else if (pointAttribute.name === PointAttribute.NORMAL_OCT16.name) {
-			att = new Potree.InterleavedBufferAttribute("normal", 12, 3, "FLOAT", false);
-		} else if (pointAttribute.name === PointAttribute.NORMAL.name) {
-			att = new Potree.InterleavedBufferAttribute("normal", 12, 3, "FLOAT", false);
-		}
-		
-		return att;
-	};
 
 	class TransformationTool {
 		constructor(viewer) {
@@ -16256,6 +16503,66 @@ void main() {
 
 	}
 
+	class Compass{
+
+		constructor(viewer){
+			this.viewer = viewer;
+
+			this.visible = false;
+			this.dom = this.createElement();
+
+			viewer.addEventListener("update", () => {
+				const direction = viewer.scene.view.direction.clone();
+				direction.z = 0;
+				direction.normalize();
+				// const north = new THREE.Vector3(0, 1, 0);
+
+				// const angleNorth = Math.atan2(north.y, north.x);
+				// const angleDir = Math.atan2(direction.y, direction.x);
+				// const azimuth = angleDir - angleNorth;
+				
+				
+				const camera = viewer.scene.getActiveCamera();
+
+				const p1 = camera.getWorldPosition(new THREE.Vector3());
+				const p2 = p1.clone().add(direction);
+
+				const projection = viewer.getProjection();
+				const azimuth = Utils.computeAzimuth(p1, p2, projection);
+				
+				this.dom.css("transform", `rotateZ(${azimuth}rad)`);
+			});
+
+			this.dom.click( () => {
+				viewer.setTopView();
+			});
+
+			const renderArea = $(viewer.renderArea);
+			renderArea.append(this.dom);
+
+			this.setVisible(this.visible);
+		}
+
+		setVisible(visible){
+			this.visible = visible;
+
+			const value = visible ? "" : "none";
+			this.dom.css("display", value);
+		}
+
+		isVisible(){
+			return this.visible;
+		}
+
+		createElement(){
+			const style = `style="position: absolute; top: 10px; right: 10px; z-index: 10000; width: 64px;"`;
+			const img = $(`<img src="${Potree.resourcePath}/images/compas.svg" ${style} />`);
+
+			return img;
+		}
+
+	};
+
 	class PotreeRenderer {
 
 		constructor (viewer) {
@@ -16506,6 +16813,41 @@ void main() {
 			this.clearTargets();
 		}
 
+		renderShadowMap(visiblePointClouds, camera, lights){
+
+			const {viewer} = this;
+
+			const doShadows = lights.length > 0 && !(lights[0].disableShadowUpdates);
+			if(doShadows){
+				let light = lights[0];
+
+				this.shadowMap.setLight(light);
+
+				let originalAttributes = new Map();
+				for(let pointcloud of viewer.scene.pointclouds){
+					// TODO IMPORTANT !!! check
+					originalAttributes.set(pointcloud, pointcloud.material.activeAttributeName);
+					pointcloud.material.disableEvents();
+					pointcloud.material.activeAttributeName = "depth";
+					//pointcloud.material.pointColorType = PointColorType.DEPTH;
+				}
+
+				this.shadowMap.render(viewer.scene.scenePointCloud, camera);
+
+				for(let pointcloud of visiblePointClouds){
+					let originalAttribute = originalAttributes.get(pointcloud);
+					// TODO IMPORTANT !!! check
+					pointcloud.material.activeAttributeName = originalAttribute;
+					pointcloud.material.enableEvents();
+				}
+
+				viewer.shadowTestCam.updateMatrixWorld();
+				viewer.shadowTestCam.matrixWorldInverse.getInverse(viewer.shadowTestCam.matrixWorld);
+				viewer.shadowTestCam.updateProjectionMatrix();
+			}
+
+		}
+
 		render(params){
 			this.initEDL();
 
@@ -16536,7 +16878,6 @@ void main() {
 				}
 			});
 
-
 			if(viewer.background === "skybox"){
 				viewer.skybox.camera.rotation.copy(viewer.scene.cameraP.rotation);
 				viewer.skybox.camera.fov = viewer.scene.cameraP.fov;
@@ -16548,32 +16889,7 @@ void main() {
 			} 
 
 			//TODO adapt to multiple lights
-			if(lights.length > 0 && !(lights[0].disableShadowUpdates)){
-				let light = lights[0];
-
-				this.shadowMap.setLight(light);
-
-				let originalAttributes = new Map();
-				for(let pointcloud of viewer.scene.pointclouds){
-					// TODO IMPORTANT !!! check
-					//originalAttributes.set(pointcloud, pointcloud.material.pointColorType);
-					//pointcloud.material.disableEvents();
-					//pointcloud.material.pointColorType = PointColorType.DEPTH;
-				}
-
-				this.shadowMap.render(viewer.scene.scenePointCloud, camera);
-
-				for(let pointcloud of visiblePointClouds){
-					let originalAttribute = originalAttributes.get(pointcloud);
-					// TODO IMPORTANT !!! check
-					//pointcloud.material.pointColorType = originalAttribute;
-					pointcloud.material.enableEvents();
-				}
-
-				viewer.shadowTestCam.updateMatrixWorld();
-				viewer.shadowTestCam.matrixWorldInverse.getInverse(viewer.shadowTestCam.matrixWorld);
-				viewer.shadowTestCam.updateProjectionMatrix();
-			}
+			this.renderShadowMap(visiblePointClouds, camera, lights);
 
 			{ // COLOR & DEPTH PASS
 				for (let pointcloud of visiblePointClouds) {
@@ -17095,12 +17411,26 @@ void main() {
 		}
 
 		setView(position, target, duration = 0, callback = null){
+
+			let endPosition = null;
+			if(position instanceof Array){
+				endPosition = new THREE.Vector3(...position);
+			}else if(position instanceof THREE.Vector3){
+				endPosition = position.clone();
+			}
+
+			let endTarget = null;
+			if(target instanceof Array){
+				endTarget = new THREE.Vector3(...target);
+			}else if(target instanceof THREE.Vector3){
+				endTarget = target.clone();
+			}
 			
 			const startPosition = this.position.clone();
 			const startTarget = this.getPivot();
 
-			const endPosition = position.clone();
-			const endTarget = target.clone();
+			//const endPosition = position.clone();
+			//const endTarget = target.clone();
 
 			let easing = TWEEN.Easing.Quartic.Out;
 
@@ -17455,28 +17785,28 @@ void main() {
 				this.sceneBG.add(bg);
 			}
 
-			//{ // lights
-			//	{
-			//		let light = new THREE.DirectionalLight(0xffffff);
-			//		light.position.set(10, 10, 1);
-			//		light.target.position.set(0, 0, 0);
-			//		this.scene.add(light);
-			//	}
+			// { // lights
+			// 	{
+			// 		let light = new THREE.DirectionalLight(0xffffff);
+			// 		light.position.set(10, 10, 1);
+			// 		light.target.position.set(0, 0, 0);
+			// 		this.scene.add(light);
+			// 	}
 
-			//	{
-			//		let light = new THREE.DirectionalLight(0xffffff);
-			//		light.position.set(-10, 10, 1);
-			//		light.target.position.set(0, 0, 0);
-			//		this.scene.add(light);
-			//	}
+			// 	{
+			// 		let light = new THREE.DirectionalLight(0xffffff);
+			// 		light.position.set(-10, 10, 1);
+			// 		light.target.position.set(0, 0, 0);
+			// 		this.scene.add(light);
+			// 	}
 
-			//	{
-			//		let light = new THREE.DirectionalLight(0xffffff);
-			//		light.position.set(0, -10, 20);
-			//		light.target.position.set(0, 0, 0);
-			//		this.scene.add(light);
-			//	}
-			//}
+			// 	{
+			// 		let light = new THREE.DirectionalLight(0xffffff);
+			// 		light.position.set(0, -10, 20);
+			// 		light.target.position.set(0, 0, 0);
+			// 		this.scene.add(light);
+			// 	}
+			// }
 		}
 		
 		addAnnotation(position, args = {}){		
@@ -18920,7 +19250,7 @@ void main() {
 							const pointClassID = points.data.classification[i];
 							const pointClassValue = classification[pointClassID];
 
-							if(pointClassValue && pointClassValue.w === 0){
+							if(pointClassValue && (!pointClassValue.visible || pointClassValue.color.w === 0)){
 								unfilteredClass = false;
 							}
 						}
@@ -21153,20 +21483,22 @@ ENDSEC
 			const updateKeyframes = () => {
 				elKeyframes.empty();
 
-				let index = 0;
+				//let index = 0;
+
+				// <span style="flex-grow: 0;">
+				// 				<img name="add" src="${Potree.resourcePath}/icons/add.svg" style="width: 1.5em; height: 1.5em"/>
+				// 			</span>
 
 				const addNewKeyframeItem = (index) => {
 					let elNewKeyframe = $(`
 					<div style="display: flex; margin: 0.2em 0em">
-						
-						<span style="flex-grow: 0;">
-							<img name="add" src="${Potree.resourcePath}/icons/add.svg" style="width: 1.5em; height: 1.5em"/>
-						</span>
+						<span style="flex-grow: 1"></span>
+						<input type="button" name="add" value="create control point" />
 						<span style="flex-grow: 1"></span>
 					</div>
 				`);
 
-					const elAdd = elNewKeyframe.find("img[name=add]");
+					const elAdd = elNewKeyframe.find("input[name=add]");
 					elAdd.click( () => {
 						animation.createControlPoint(index);
 					});
@@ -21217,6 +21549,8 @@ ENDSEC
 
 					elKeyframes.append(elKeyframe);
 				};
+
+				let index = 0;
 
 				addNewKeyframeItem(index);
 
@@ -21418,7 +21752,7 @@ ENDSEC
 
 					<li>
 						<span>Gradient Scheme:</span>
-						<div id="elevation_gradient_scheme_selection" style="display: flex">
+						<div id="elevation_gradient_scheme_selection" style="display: flex; padding: 1em 0em">
 						</div>
 					</li>
 				</div>
@@ -21583,6 +21917,11 @@ ENDSEC
 
 				options.push(...attributes.map(a => a.name));
 
+				const intensityIndex = options.indexOf("intensity");
+				if(intensityIndex >= 0){
+					options.splice(intensityIndex + 1, 0, "intensity gradient");
+				}
+
 				options.push(
 					"elevation",
 					"color",
@@ -21610,7 +21949,9 @@ ENDSEC
 
 					const attribute = pointcloud.getAttribute(selectedValue);
 
-					if(attribute !== null && attribute.name === "intensity"){
+					const isIntensity = attribute !== null 
+						&& (attribute.name === "intensity" || attribute.name === "intensity gradient");
+					if(isIntensity){
 						if(pointcloud.material.intensityRange[0] === Infinity){
 							pointcloud.material.intensityRange = attribute.range;
 						}
@@ -21682,7 +22023,7 @@ ENDSEC
 						blockColor.css('display', 'block');
 					} else if (selectedValue === 'intensity') {
 						blockIntensity.css('display', 'block');
-					} else if (selectedValue === 'Intensity Gradient') {
+					} else if (selectedValue === 'intensity gradient') {
 						blockIntensity.css('display', 'block');
 					} else if (selectedValue === "indices" ){
 						blockIndex.css('display', 'block');
@@ -21710,22 +22051,20 @@ ENDSEC
 			}
 
 			{
-				let schemes = [
-					{name: "SPECTRAL", icon: `${Potree.resourcePath}/icons/gradients_spectral.png`},
-					{name: "YELLOW_GREEN", icon: `${Potree.resourcePath}/icons/gradients_yellow_green.png`},
-					{name: "PLASMA", icon: `${Potree.resourcePath}/icons/gradients_plasma.png`},
-					{name: "GRAYSCALE", icon: `${Potree.resourcePath}/icons/gradients_grayscale.png`},
-					{name: "RAINBOW", icon: `${Potree.resourcePath}/icons/gradients_rainbow.png`},
-				];
+				const schemes = Object.keys(Potree.Gradients).map(name => ({name: name, values: Gradients[name]}));
 
 				let elSchemeContainer = panel.find("#elevation_gradient_scheme_selection");
 
 				for(let scheme of schemes){
 					let elScheme = $(`
 					<span style="flex-grow: 1;">
-						<img src="${scheme.icon}" class="button-icon" style="max-width: 100%" />
 					</span>
 				`);
+
+					const svg = Potree.Utils.createSvgGradient(scheme.values);
+					svg.setAttributeNS(null, "class", `button-icon`);
+
+					elScheme.append($(svg));
 
 					elScheme.click( () => {
 						material.gradient = Gradients[scheme.name];
@@ -22606,7 +22945,7 @@ ENDSEC
 				let elDownloadPotree = elExport.find("img[name=potree_export_button]").parent();
 				elDownloadPotree.click( (event) => {
 
-					let data = Potree.createSaveData(this.viewer);
+					let data = Potree.saveProject(this.viewer);
 					let dataString = JSON.stringify(data, null, "\t");
 
 					let url = window.URL.createObjectURL(new Blob([dataString], {type: 'data:application/octet-stream'}));
@@ -22849,7 +23188,7 @@ ENDSEC
 			let onCameraAnimationAdded = (e) => {
 				const animation = e.animation;
 
-				const animationIcon = `${Potree.resourcePath}/icons/annotation.svg`;
+				const animationIcon = `${Potree.resourcePath}/icons/camera_animation.svg`;
 				let annotationID = createNode(otherID, "animation", animationIcon, animation);
 			};
 
@@ -23621,13 +23960,31 @@ ENDSEC
 				() => { this.viewer.fitToScreen(); }
 			));
 
-
-			
 			elNavigation.append(this.createToolIcon(
 				Potree.resourcePath + "/icons/navigation_cube.svg",
 				"[title]tt.navigation_cube_control",
 				() => {this.viewer.toggleNavigationCube();}
 			));
+
+			elNavigation.append(this.createToolIcon(
+				Potree.resourcePath + "/images/compas.svg",
+				"Compass",
+				() => {
+					const visible = !this.viewer.compass.isVisible();
+					this.viewer.compass.setVisible(visible);
+				}
+			));
+
+			elNavigation.append(this.createToolIcon(
+				Potree.resourcePath + "/icons/camera_animation.svg",
+				"Camera Animation",
+				() => {
+					const animation = CameraAnimation.defaultFromView(this.viewer);
+
+					viewer.scene.addCameraAnimation(animation);
+				}
+			));
+
 
 			elNavigation.append("<br>");
 
@@ -25621,6 +25978,7 @@ ENDSEC
 			this.guiLoadTasks = [];
 
 			this.vr = null;
+			this.onVrListeners = [];
 
 			this.messages = [];
 			this.elMessages = $(`
@@ -25673,20 +26031,8 @@ ENDSEC
 			this.edlRadius = 1.4;
 			this.edlOpacity = 1.0;
 			this.useEDL = false;
+			this.description = "";
 
-			// this.classifications = {
-			// 	0:  { visible: true, name: 'never classified'  , color: [0.5,  0.5,  0.5,  1.0] },
-			// 	1:  { visible: true, name: 'unclassified'      , color: [0.5,  0.5,  0.5,  1.0] },
-			// 	2:  { visible: true, name: 'ground'            , color: [0.63, 0.32, 0.18, 1.0] },
-			// 	3:  { visible: true, name: 'low vegetation'    , color: [0.0,  1.0,  0.0,  1.0] },
-			// 	4:  { visible: true, name: 'medium vegetation' , color: [0.0,  0.8,  0.0,  1.0] },
-			// 	5:  { visible: true, name: 'high vegetation'   , color: [0.0,  0.6,  0.0,  1.0] },
-			// 	6:  { visible: true, name: 'building'          , color: [1.0,  0.66, 0.0,  1.0] },
-			// 	7:  { visible: true, name: 'low point(noise)'  , color: [1.0,  0.0,  1.0,  1.0] },
-			// 	8:  { visible: true, name: 'key-point'         , color: [1.0,  0.0,  0.0,  1.0] },
-			// 	9:  { visible: true, name: 'water'             , color: [0.0,  0.0,  1.0,  1.0] },
-			// 	12: { visible: true, name: 'overlap'           , color: [1.0,  1.0,  0.0,  1.0] },
-			// };
 			this.classifications = ClassificationScheme.DEFAULT;
 
 			this.moveSpeed = 10;
@@ -25721,6 +26067,7 @@ ENDSEC
 			this.clippingTool =  null;
 			this.transformationTool = null;
 			this.navigationCube = null;
+			this.compass = null;
 			
 			this.skybox = null;
 			this.clock = new THREE.Clock();
@@ -25781,6 +26128,8 @@ ENDSEC
 				this.transformationTool = new TransformationTool(this);
 				this.navigationCube = new NavigationCube(this);
 				this.navigationCube.visible = false;
+
+				this.compass = new Compass(this);
 				
 				this.createControls();
 
@@ -25975,7 +26324,7 @@ ENDSEC
 
 		getBackground () {
 			return this.background;
-		};
+		}
 
 		setBackground(bg){
 			if (this.background === bg) {
@@ -25991,8 +26340,15 @@ ENDSEC
 		}
 
 		setDescription (value) {
-			$('#potree_description')[0].innerHTML = value;
-		};
+			this.description = value;
+			
+			$('#potree_description').html(value);
+			//$('#potree_description').text(value);
+		}
+
+		getDescription(){
+			return this.description;
+		}
 
 		setShowBoundingBox (value) {
 			if (this.showBoundingBox !== value) {
@@ -26484,6 +26840,34 @@ ENDSEC
 				pointcloud.material.useOrthographicCamera = mode == CameraMode.ORTHOGRAPHIC;
 			}
 		}
+
+		getProjection(){
+			const pointcloud = this.scene.pointclouds[0];
+
+			if(pointcloud){
+				return pointcloud.projection;
+			}else{
+				return null;
+			}
+		}
+
+		async loadProject(url){
+
+			const response = await fetch(url);
+		
+			const json = await response.json();
+			// const json = JSON.parse(text);
+
+			if(json.type === "Potree"){
+				Potree.loadProject(viewer, json);
+			}
+
+			Potree.loadProject(this, url);
+		}
+
+		saveProject(){
+			return Potree.saveProject(this);
+		}
 		
 		loadSettingsFromURL(){
 			if(Utils.getParameterByName("pointSize")){
@@ -26775,7 +27159,7 @@ ENDSEC
 							const json = JSON.parse(text);
 
 							if(json.type === "Potree"){
-								Potree.loadSaveData(viewer, json);
+								Potree.loadProject(viewer, json);
 							}
 						}catch(e){
 							console.error("failed to parse the dropped file as JSON");
@@ -26901,6 +27285,16 @@ ENDSEC
 			
 		}
 
+		onVr(callback){
+
+			if(this.vr){
+				callback();
+			}else{
+				this.onVrListeners.push(callback);
+			}
+
+		}
+
 		async prepareVR(){
 
 			if(!navigator.getVRDisplays){
@@ -26909,29 +27303,39 @@ ENDSEC
 				return false;
 			}
 
-			let frameData = new VRFrameData();
-			let displays = await navigator.getVRDisplays();
+			try{
+				let frameData = new VRFrameData();
+				let displays = await navigator.getVRDisplays();
 
-			if(displays.length == 0){
-				console.info("no VR display found");
+				if(displays.length == 0){
+					console.info("no VR display found");
+					return false;
+				}
+
+				let display = displays[displays.length - 1];
+				display.depthNear = 0.1;
+				display.depthFar = 10000.0;
+
+				if(!display.capabilities.canPresent){
+					// Not sure why canPresent would ever be false?
+					console.error("VR display canPresent === false");
+					return false;
+				}
+
+				this.vr = {
+					frameData: frameData,
+					display: display,
+					node: new THREE.Object3D(),
+				};
+
+				for(const listener of this.onVrListeners){
+					listener();
+				}
+			}catch(err){
+				console.error(err);
+
 				return false;
 			}
-
-			let display = displays[displays.length - 1];
-			display.depthNear = 0.1;
-			display.depthFar = 10000.0;
-
-			if(!display.capabilities.canPresent){
-				// Not sure why canPresent would ever be false?
-				console.error("VR display canPresent === false");
-				return false;
-			}
-
-			this.vr = {
-				frameData: frameData,
-				display: display,
-				node: new THREE.Object3D(),
-			};
 			
 		}
 
@@ -27075,8 +27479,9 @@ ENDSEC
 			
 			Potree.pointLoadLimit = Potree.pointBudget * 2;
 
+			const lTarget = camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1000));
 			this.scene.directionalLight.position.copy(camera.position);
-			this.scene.directionalLight.lookAt(new THREE.Vector3().addVectors(camera.position, camera.getWorldDirection(new THREE.Vector3())));
+			this.scene.directionalLight.lookAt(lTarget);
 
 
 			for (let pointcloud of visiblePointClouds) {
@@ -28458,18 +28863,8 @@ ENDSEC
 
 			const I = [];
 			for(const pointcloud of pointclouds){
-
-				const world = pointcloud.matrixWorld;
-				const worldToObject = new THREE.Matrix4().getInverse(world);
-
-				const center = position.clone();
-				const radius = 0.01;
-				//const radius = node.scale.x;
-				const sphere = new THREE.Sphere(center, radius);
-				sphere.applyMatrix4(worldToObject);
-
-				const box = pointcloud.boundingBox;
-				const intersects = box.intersectsSphere(sphere);
+				
+				const intersects = pointcloud.intersectsPoint(position);
 
 				if(intersects){
 					I.push(pointcloud);
@@ -28566,25 +28961,23 @@ ENDSEC
 			});
 
 			if(triggered.length === 0){
-				const positions = gamepads.map(pad => toScene(new THREE.Vector3(...pad.pose.position)));
 
-				const hovered = new Set();
-				for(const position of positions){
+				for(const pad of gamepads){
+					const position = new THREE.Vector3(...pad.pose.position);
+
 					const I = this.getPointcloudsAt(pointclouds, position);
-					for(let pc of I){
-						hovered.add(pc);
-					}
-				}
 
-				if(hovered.size > 0){
-					const pointcloud = Array.from(hovered)[0];
-					this.selectionBox.visible = true;
-					this.selectionBox.scale.copy(pointcloud.boundingBox.max).multiply(pointcloud.scale);
-					this.selectionBox.position.copy(pointcloud.position);
-					this.selectionBox.rotation.copy(pointcloud.rotation);
-					//this.selectionBox.scale.copy(pointcloud.scale);
-				}else{
-					this.selectionBox.visible = false;
+					let controler = {
+						"left": snLeft,
+						"right": snRight,
+					}[pad.hand];
+
+					if(I.length > 0){
+						controler.node.material.color.setRGB(0, 1, 0);
+						console.log(pad.hand);
+					}else{
+						controler.node.material.color.setRGB(1, 0, 0);
+					}
 				}
 			}else{
 				if(selection.length > 0){
@@ -28762,86 +29155,166 @@ ENDSEC
 		
 			{ // MOVE WITH JOYSTICK
 
-				let pad = [right, left].find(pad => pad !== undefined);
+				const flipWorld = new THREE.Matrix4().fromArray([
+					1, 0, 0, 0, 
+					0, 0, 1, 0, 
+					0, -1, 0, 0,
+					0, 0, 0, 1
+				]);
+				const flipView = new THREE.Matrix4().getInverse(flipWorld);
+				const {display, frameData} = vr;
 
-				if(pad){
-
-					const flipWorld = new THREE.Matrix4().fromArray([
-						1, 0, 0, 0, 
-						0, 0, 1, 0, 
-						0, -1, 0, 0,
-						0, 0, 0, 1
-					]);
-					const flipView = new THREE.Matrix4().getInverse(flipWorld);
-
+				const computeMove = (pad) => {
 					const axes = pad.axes;
 
-					const {frameData} = vr;
+					const opos = new THREE.Vector3(...pad.pose.position);
+					const rotation = new THREE.Quaternion(...pad.pose.orientation);
+					const d = new THREE.Vector3(0, 0, -1);
+					d.applyQuaternion(rotation);
+					
+					const worldPos = toScene(opos);
+					const worldTarget = toScene(new THREE.Vector3().addVectors(opos, d));
+					const dir = new THREE.Vector3().subVectors(worldTarget, worldPos).normalize();
 
-					const leftView = new THREE.Matrix4().fromArray(frameData.leftViewMatrix);
-					const view = new THREE.Matrix4().multiplyMatrices(leftView, flipView);
-					const world = new THREE.Matrix4().getInverse(view);
+					const amount = axes[1];
 
-					{ // move to where the controller points
-						const opos = new THREE.Vector3(...right.pose.position);
-						const rotation = new THREE.Quaternion(...pad.pose.orientation);
-						const d = new THREE.Vector3(0, 0, -1);
-						d.applyQuaternion(rotation);
-						
-						const worldPos = toScene(opos);
-						const worldTarget = toScene(new THREE.Vector3().addVectors(opos, d));
-						const dir = new THREE.Vector3().subVectors(worldTarget, worldPos).normalize();
+					const move = dir.clone().multiplyScalar(amount);
 
-						const amount = axes[1];
+					return move;
+				};
 
-						const move = dir.clone().multiplyScalar(delta * amount);
-
-						//const d = dir.clone().multiplyScalar(delta);
-						vr.node.position.add(move);
-					}
-
-					{ // move to trigger direction
-						// const pos = new THREE.Vector3(0, 0, 0).applyMatrix4(world);
-						// const pForward = new THREE.Vector3(0, 0, -1).applyMatrix4(world);
-						// const pRight = new THREE.Vector3(1, 0, 0).applyMatrix4(world);
-						// const pUp = new THREE.Vector3(0, 1, 0).applyMatrix4(world);
-
-						// const dForward = new THREE.Vector3().subVectors(pForward, pos).normalize();
-						// const dRight = new THREE.Vector3().subVectors(pRight, pos).normalize();
-						// const dUp = new THREE.Vector3().subVectors(pUp, pos).normalize();
-
-						// const dir = new THREE.Vector3().addVectors(
-						// 	dRight.clone().multiplyScalar(axes[0]),
-						// 	dForward.clone().multiplyScalar(axes[1])
-						// );
-
-						// const d = dir.clone().multiplyScalar(delta);
-						// vr.node.position.add(d);
-					}
-
+				let flip = 1;
+				if(display.displayName.includes("Oculus")){
+					flip = -1;
 				}
+
+				let move = null;
+
+				if(left && right){
+					move = computeMove(right);
+
+					const leftAdjustAxe = flip * left.axes[1];
+					const adjust = 10 ** leftAdjustAxe;
+
+					move = move.multiplyScalar(adjust);
+
+
+				}else if(right){
+					move = computeMove(right);
+				}else if(left){
+					move = computeMove(left);
+				}
+
+				if(move){
+					move.multiplyScalar(delta * flip);
+
+					vr.node.position.add(move);
+				}
+
+				// for(const pad of [left, right].filter(pad => pad)){
+
+					
+
+				// 	moves.push(move);
+
+				// 	// vr.node.position.add(move);
+				// }
+
+				// if(moves.length === 1){
+				// 	vr.node.position.add(moves[0]);
+				// }else if(moves.length > 1){
+
+				// 	const factor = 10;
+				// 	const [adjust, main] = moves;
+				// 	// main gives direction, adjust modifies speed between [0, factor]
+
+				// 	const mMain = main.length();
+
+
+				// 	let mAdjust = 
+
+
+
+				// 	const move = mMain.multiplyScalar(adjust);
+
+
+				// 	// const move = moves[0].clone().add(moves[1]);
+
+				// 	// const amount = (move.length() ** 3) * delta;
+				// 	// move.multiplyScalar(amount);
+
+				// 	// vr.node.position.add(move);
+				// }
+
+
+				// let pad = [right, left].find(pad => pad !== undefined);
+
+				// if(pad){
+
+				// 	const axes = pad.axes;
+
+
+				// 	// const leftView = new THREE.Matrix4().fromArray(frameData.leftViewMatrix);
+				// 	// const view = new THREE.Matrix4().multiplyMatrices(leftView, flipView);
+				// 	// const world = new THREE.Matrix4().getInverse(view);
+
+				// 	{ // move to where the controller points
+				// 		const opos = new THREE.Vector3(...right.pose.position);
+				// 		const rotation = new THREE.Quaternion(...pad.pose.orientation);
+				// 		const d = new THREE.Vector3(0, 0, -1);
+				// 		d.applyQuaternion(rotation);
+						
+				// 		const worldPos = toScene(opos);
+				// 		const worldTarget = toScene(new THREE.Vector3().addVectors(opos, d));
+				// 		const dir = new THREE.Vector3().subVectors(worldTarget, worldPos).normalize();
+
+				// 		const amount = axes[1];
+
+				// 		const move = dir.clone().multiplyScalar(delta * amount);
+
+				// 		//const d = dir.clone().multiplyScalar(delta);
+				// 		vr.node.position.add(move);
+				// 	}
+
+				// 	{ // move to trigger direction
+				// 		// const pos = new THREE.Vector3(0, 0, 0).applyMatrix4(world);
+				// 		// const pForward = new THREE.Vector3(0, 0, -1).applyMatrix4(world);
+				// 		// const pRight = new THREE.Vector3(1, 0, 0).applyMatrix4(world);
+				// 		// const pUp = new THREE.Vector3(0, 1, 0).applyMatrix4(world);
+
+				// 		// const dForward = new THREE.Vector3().subVectors(pForward, pos).normalize();
+				// 		// const dRight = new THREE.Vector3().subVectors(pRight, pos).normalize();
+				// 		// const dUp = new THREE.Vector3().subVectors(pUp, pos).normalize();
+
+				// 		// const dir = new THREE.Vector3().addVectors(
+				// 		// 	dRight.clone().multiplyScalar(axes[0]),
+				// 		// 	dForward.clone().multiplyScalar(axes[1])
+				// 		// );
+
+				// 		// const d = dir.clone().multiplyScalar(delta);
+				// 		// vr.node.position.add(d);
+				// 	}
+
+				// }
 
 			}
 
 			{ // MOVE CONTROLLER SCENE NODE
 				if(right){
-					const {node, debug} = snLeft;
+					const {node, debug} = snRight;
 					const opos = new THREE.Vector3(...right.pose.position);
 					const position = toScene(opos);
 					
 					const rotation = new THREE.Quaternion(...right.pose.orientation);
 					const d = new THREE.Vector3(0, 0, -1);
 					d.applyQuaternion(rotation);
-					const target = toScene(new THREE.Vector3().addVectors(opos, d));
-
-					//snLeft.debug.position.copy(target);
-					//snLeft.debug.visible = true;
+					// const target = toScene(new THREE.Vector3().addVectors(opos, d));
 
 					node.position.copy(position);
 				}
 				
 				if(left){
-					const {node, debug} = snRight;
+					const {node, debug} = snLeft;
 					
 					const position = toScene(new THREE.Vector3(...left.pose.position));
 					node.position.copy(position);
@@ -29089,6 +29562,7 @@ ENDSEC
 	exports.ClipTask = ClipTask;
 	exports.ClipVolume = ClipVolume;
 	exports.ClippingTool = ClippingTool;
+	exports.Compass = Compass;
 	exports.DeviceOrientationControls = DeviceOrientationControls;
 	exports.EarthControls = EarthControls;
 	exports.ElevationGradientRepeat = ElevationGradientRepeat;
@@ -29158,17 +29632,16 @@ ENDSEC
 	exports.VolumeTool = VolumeTool;
 	exports.WorkerPool = WorkerPool;
 	exports.XHRFactory = XHRFactory;
-	exports.createSaveData = createSaveData;
 	exports.debug = debug;
 	exports.framenumber = framenumber;
 	exports.loadPointCloud = loadPointCloud$1;
-	exports.loadSaveData = loadSaveData;
+	exports.loadProject = loadProject;
 	exports.lru = lru;
 	exports.maxNodesLoading = maxNodesLoading;
 	exports.numNodesLoading = numNodesLoading;
 	exports.pointBudget = pointBudget;
 	exports.resourcePath = resourcePath;
-	exports.toInterleavedBufferAttribute = toInterleavedBufferAttribute;
+	exports.saveProject = saveProject;
 	exports.updatePointClouds = updatePointClouds;
 	exports.updateVisibility = updateVisibility;
 	exports.updateVisibilityStructures = updateVisibilityStructures;

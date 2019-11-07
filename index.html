@@ -133,30 +133,26 @@
 				convName = npath.basename(first);
 			}
 
-			let outputPath = npath.normalize(`D:/temp/${convName}`);
+			let suggestedPath = npath.normalize(`${first}/../${convName}`);
 
 			//dialog.showSaveDialogSync([browserWindow, ]options)
 			//const { dialog } = require('electron');
 			const dialog = require('electron').remote.dialog;
-			const result = dialog.showSaveDialogSync(null, {
+			const chosenPath = dialog.showSaveDialogSync(null, {
 				title: "Chose Conversion Directory",
-				defaultPath: outputPath,
+				defaultPath: suggestedPath,
 				buttonLabel: "start conversion",
 			});
 
-			return;
-
-			//fs.exists()
-
 			let message = `Starting conversion.<br>
 			input: ${inputPaths}<br>
-			output: ${outputPath}`;
+			output: ${chosenPath}`;
 			viewer.postMessage(message, {duration: 15000});
 
 			const { spawn } = require('child_process');
 			const converter = spawn('./libs/PotreeConverter/PotreeConverter.exe', [
 				...inputPaths,
-				"-o", outputPath,
+				"-o", chosenPath,
 				"--overwrite"
 			]);
 
@@ -215,7 +211,7 @@
 			converter.on('close', (code) => {
 				console.log(`child process exited with code ${code}`);
 
-				const cloudJS = `${outputPath}/cloud.js`;
+				const cloudJS = `${chosenPath}/cloud.js`;
 				console.log("now loading point cloud: " + cloudJS);
 
 				if(placeholder){
