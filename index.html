@@ -133,16 +133,20 @@
 				convName = npath.basename(first);
 			}
 
-			let suggestedPath = npath.normalize(`${first}/../${convName}`);
+			const suggestedPath = npath.normalize(`${first}/../${convName}`);
 
-			//dialog.showSaveDialogSync([browserWindow, ]options)
-			//const { dialog } = require('electron');
 			const dialog = require('electron').remote.dialog;
 			const chosenPath = dialog.showSaveDialogSync(null, {
 				title: "Chose Conversion Directory",
 				defaultPath: suggestedPath,
 				buttonLabel: "start conversion",
 			});
+
+			if(chosenPath === undefined){
+				console.log("no path was chosen. aborting converison.");
+
+				return;
+			}
 
 			let message = `Starting conversion.<br>
 			input: ${inputPaths}<br>
