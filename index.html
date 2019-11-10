@@ -20,9 +20,9 @@
 
 	<script src="./libs/jquery/jquery-3.1.1.min.js"></script>
 	<script src="./libs/spectrum/spectrum.js"></script>
-	<script src="./libs/perfect-scrollbar/js/perfect-scrollbar.jquery.js"></script>
 	<script src="./libs/jquery-ui/jquery-ui.min.js"></script>
 	<script src="./libs/three.js/build/three.min.js"></script>
+	<script src="./libs/three.js/extra/lines.js"></script>
 	<script src="./libs/other/BinaryHeap.js"></script>
 	<script src="./libs/tween/tween.min.js"></script>
 	<script src="./libs/d3/d3.js"></script>
@@ -32,9 +32,7 @@
 	<script src="./libs/jstree/jstree.js"></script>
 	<script src="./libs/potree/potree.js"></script>
 	<script src="./libs/plasio/js/laslaz.js"></script>
-	
-	<!-- INCLUDE ADDITIONAL DEPENDENCIES HERE -->
-	<!-- INCLUDE SETTINGS HERE -->
+
 	
 	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0px; top: 0px; ">
 		<div id="potree_render_area"></div>
@@ -59,10 +57,192 @@
 			e.preventDefault();
 		}
 
+		function loadDroppedPointcloud(cloudjsPath){
+			const folderName = cloudjsPath.replace(/\\/g, "/").split("/").reverse()[1];
 
-		function dropHandler(event){
+			Potree.loadPointCloud(cloudjsPath, folderName, function(e){
+				viewer.scene.addPointCloud(e.pointcloud);
+
+				let material = e.pointcloud.material;
+				material.size = 1;
+				material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+
+				viewer.zoomTo(e.pointcloud);
+			});
+		}
+
+		function createPlaceholder(aabb){
+			console.log("create palceholder");
+			console.log(aabb);
+
+			const placeholder = {};
+
+			const node = new THREE.Object3D();
+			
+			const min = new THREE.Vector3(...aabb.min);
+			const max = new THREE.Vector3(...aabb.max);
+			const center = new THREE.Vector3(
+				(min.x + max.x) / 2,
+				(min.y + max.y) / 2,
+				(min.z + max.z) / 2,
+			);
+			const radius = center.distanceTo(max);
+			node.boundingSphere = new THREE.Sphere(center, radius);
+
+			const text = new Potree.TextSprite("");
+			text.position.copy(center);
+			const textScale = radius / 5;
+			text.material.depthTest = false;
+			text.material.depthWrite = false;
+			text.material.transparent = true;
+			text.material.opacity = 0.7;
+			text.scale.set(textScale, textScale, textScale);
+			viewer.scene.scene.add(text);
+
+			const box = new THREE.Box3(min, max);
+			const box3 = new Potree.Box3Helper(box, 0xff0000);
+			viewer.scene.scene.add(box3);
+
+			const camera = viewer.scene.getActiveCamera();
+			viewer.zoomTo(node);
+
+			placeholder.text = text;
+			placeholder.box = box3;
+			placeholder.remove = () => {
+				viewer.scene.scene.remove(box3);
+				viewer.scene.scene.remove(text);
+			};
+
+
+			return placeholder;
+		}
+
+		async function doConversion(inputPaths){
+
+			const fs = require("fs");
+			const npath = require("path");
+			
+			const first = inputPaths[0];
+			const stat = await fs.promises.lstat(first);
+
+			let convName = "converted";
+			
+			if(stat.isFile()){
+				convName = npath.basename(first, npath.extname(first));
+			}else if(stat.isDirectory()){
+				convName = npath.basename(first);
+			}
+
+			const suggestedPath = npath.normalize(`${first}/../${convName}`);
+
+			const dialog = require('electron').remote.dialog;
+			const chosenPath = dialog.showSaveDialogSync(null, {
+				title: "Chose Conversion Directory",
+				defaultPath: suggestedPath,
+				buttonLabel: "start conversion",
+			});
+
+			if(chosenPath === undefined){
+				console.log("no path was chosen. aborting converison.");
+
+				return;
+			}
+
+			let message = `Starting conversion.<br>
+			input: ${inputPaths}<br>
+			output: ${chosenPath}`;
+			viewer.postMessage(message, {duration: 15000});
+
+			const { spawn } = require('child_process');
+			const converter = spawn('./libs/PotreeConverter/PotreeConverter.exe', [
+				...inputPaths,
+				"-o", chosenPath,
+				"--overwrite"
+			]);
+
+			let placeholder = null;
+			converter.stdout.on('data', (data) => {
+				console.log("==");
+				console.log(`stdout: ${data}`);
+
+				const string = new TextDecoder("utf-8").decode(data);
+
+				if(!placeholder){ // match for AABB
+					const regexp = /(.*AABB): ({[.\s\S]*?})/g;
+					const matches = string.matchAll(regexp);
+						
+					for (const match of matches) {
+						try{
+							const name = match[1];
+							const value = match[2];
+							const aabb = JSON.parse(match[2]);
+							console.log(aabb);
+
+							if(name === "cubicAABB"){
+								placeholder = createPlaceholder(aabb);
+							}
+						}catch(e){
+							console.error(match[0]);
+							console.error(e);
+						}
+					}
+				}
+
+				window.placeholder = placeholder;
+
+				if(placeholder){ // match for progress
+					const regexp = /INDEXING: ([\w\.]*) of ([\w\.]*) processed/g;
+					const matches = string.matchAll(regexp);
+
+					for(const match of matches){
+
+						const processed = parseInt(match[1].replace(/\D/g,''));
+						const total = parseInt(match[2].replace(/\D/g,''));
+						const percent = parseInt(100 * (processed / total));
+						
+						const text = `${percent}%`;
+						placeholder.text.setText(text);
+					}
+				}
+
+			});
+
+			converter.stderr.on('data', (data) => {
+				console.log("==");
+				console.error(`stderr: ${data}`);
+			});
+
+			converter.on('close', (code) => {
+				console.log(`child process exited with code ${code}`);
+
+				const cloudJS = `${chosenPath}/cloud.js`;
+				console.log("now loading point cloud: " + cloudJS);
+
+				if(placeholder){
+					placeholder.remove();
+				}
+
+				let message = `conversion finished, now loading ${cloudJS}`;
+				viewer.postMessage(message, {duration: 15000});
+
+				Potree.loadPointCloud(cloudJS, convName, function(e){
+					viewer.scene.addPointCloud(e.pointcloud);
+
+					let material = e.pointcloud.material;
+					material.size = 1;
+					material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+
+					//viewer.zoomTo(e.pointcloud);
+				});
+			});
+		}
+
+		async function dropHandler(event){
 			console.log(event);
 			event.preventDefault();
+
+			const cloudJsFiles = [];
+			const lasLazFiles = [];
 
 			for(let i = 0; i < event.dataTransfer.items.length; i++){
 				let item = event.dataTransfer.items[i];
@@ -73,37 +253,94 @@
 
 				let file = item.getAsFile();
 				let path = file.path;
-				//let folderName = path.replace(/\\/g, "/").split("/").reverse()[1];
 
 				const fs = require("fs");
+				const fsp = fs.promises;
+				const np = require('path');
 
-				let cloudjsPath = null;
-				let folderName = null;
+				if(fs.lstatSync(path).isFile() && path.indexOf("cloud.js") >= 0){
+					cloudJsFiles.push(file.path);
+				}else if(fs.lstatSync(path).isFile()){
 
-				if(fs.lstatSync(path).isDirectory()){
+					const extension = np.extname(path).toLowerCase();
+					const whitelist = [".las", ".laz"];
 
-					if(fs.lstatSync(`${path}/cloud.js`).isFile()){
-						cloudjsPath = `${path}/cloud.js`;
-						folderName = path.replace(/\\/g, "/").split("/").reverse()[0];
+					const isOkay = whitelist.includes(extension);
+
+					if(isOkay){
+						lasLazFiles.push(file.path);
 					}
+				}else if(fs.lstatSync(path).isDirectory()){
+					// handle directory
 
-				}else if(fs.lstatSync(path).isFile() && path.indexOf("cloud.js") >= 0){
-					cloudjsPath = path;
-					folderName = path.replace(/\\/g, "/").split("/").reverse()[1];
-				}
+					const files = await fsp.readdir(path);
+					for(const file of files){
+						
+						const extension = np.extname(file).toLowerCase();
+						const whitelist = [".las", ".laz"];
 
-				if(cloudjsPath !== null){
-					Potree.loadPointCloud(cloudjsPath, folderName, function(e){
-						viewer.scene.addPointCloud(e.pointcloud);
+						if(file === "cloud.js"){
+							cloudJsFiles.push(`${path}/${file}`);
+						}else if(whitelist.includes(extension)){
+							lasLazFiles.push(`${path}/${file}`);
+						}
+					
+					};
 
-						let material = e.pointcloud.material;
-						material.size = 1;
-						material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+					// console.log(files);
 
-						viewer.zoomTo(e.pointcloud);
-					});
 				}
 			}
+
+			console.log(cloudJsFiles);
+			console.log(lasLazFiles);
+
+			if(lasLazFiles.length > 0){
+				doConversion(lasLazFiles);
+			}
+
+			for(const cloudjs of cloudJsFiles){
+				loadDroppedPointcloud(cloudjs);
+			}
+
+			// for(let i = 0; i < event.dataTransfer.items.length; i++){
+			// 	let item = event.dataTransfer.items[i];
+
+			// 	if(item.kind !== "file"){
+			// 		continue;
+			// 	}
+
+			// 	let file = item.getAsFile();
+			// 	let path = file.path;
+
+			// 	const fs = require("fs");
+			// 	const np = require('path');
+
+			// 	let cloudjsPath = null;
+			// 	let folderName = null;
+
+			// 	if(fs.lstatSync(path).isDirectory()){
+			// 		if(fs.lstatSync(`${path}/cloud.js`).isFile()){
+			// 			cloudjsPath = `${path}/cloud.js`;
+			// 			loadDroppedPointcloud(cloudjsPath);
+			// 		}
+			// 	}else if(fs.lstatSync(path).isFile() && path.indexOf("cloud.js") >= 0){
+			// 		cloudjsPath = path;
+			// 		loadDroppedPointcloud(cloudjsPath);
+			// 	}else if(fs.lstatSync(path).isFile()){
+
+			// 		const extension = np.extname(path).toLowerCase();
+			// 		const whitelist = [".las", ".laz"];
+
+			// 		const isOkay = whitelist.includes(extension);
+
+			// 		if(isOkay){
+			// 			doConversion([path]);
+			// 		}
+
+			// 	}
+
+			// }
 		}
 		$("body")[0].addEventListener("dragenter", allowDrag);
 		$("body")[0].addEventListener("dragover", allowDrag);
@@ -111,7 +348,7 @@
 	
 		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
 		
-		viewer.setEDLEnabled(true);
+		viewer.setEDLEnabled(false);
 		viewer.setFOV(60);
 		viewer.setPointBudget(3*1000*1000);
 		viewer.setMinNodeSize(0);
@@ -162,22 +399,22 @@
 		//});
 
 		
-		viewer.onGUILoaded(() => {
-			let message = `
-			Welcome to Potree Desktop.<br>
-			<p>
-			This portable version can be used to load <a href="https://github.com/potree/PotreeConverter", target="_blank"> converted point clouds</a>
-			directly from disk. Just drag & drop a cloud.js file, or it's parent folder, into this window.
-			</p>
+		// viewer.onGUILoaded(() => {
+		// 	let message = `
+		// 	Welcome to Potree Desktop.<br>
+		// 	<p>
+		// 	This portable version can be used to load <a href="https://github.com/potree/PotreeConverter", target="_blank"> converted point clouds</a>
+		// 	directly from disk. Just drag & drop a cloud.js file, or it's parent folder, into this window.
+		// 	</p>
 
-			<p>
-			You can set up a default scene by modifying the index.html file in the potree desktop folder. 
-			</p>
-			`;
+		// 	<p>
+		// 	You can set up a default scene by modifying the index.html file in the potree desktop folder. 
+		// 	</p>
+		// 	`;
 
-			//viewer.postMessage(message);
-			viewer.postMessage(message, {duration: 15000});
-		});
+		// 	//viewer.postMessage(message);
+		// 	viewer.postMessage(message, {duration: 15000});
+		// });
 
 		window.addEventListener('error', (e) => {
 			//console.log(e);
