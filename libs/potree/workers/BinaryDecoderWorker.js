@@ -64,7 +64,6 @@ for (let obj in PointAttributeTypes) {
 	i++;
 }
 
-
 class PointAttribute{
 	
 	constructor(name, type, numElements){
@@ -77,6 +76,7 @@ class PointAttribute{
 	}
 
 }
+
 PointAttribute.POSITION_CARTESIAN = new PointAttribute(
 	"POSITION_CARTESIAN", PointAttributeTypes.DATA_TYPE_FLOAT, 3);
 
@@ -135,7 +135,6 @@ function CustomView (buffer) {
 	let tmpf = new Float32Array(tmp);
 	let tmpd = new Float64Array(tmp);
 	let tmpu8 = new Uint8Array(tmp);
-
 	this.getUint32 = function (i) {
 		return (this.u8[i + 3] << 24) | (this.u8[i + 2] << 16) | (this.u8[i + 1] << 8) | this.u8[i];
 	};
