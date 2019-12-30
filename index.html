@@ -121,19 +121,52 @@
 
 			const fs = require("fs");
 			const npath = require("path");
-			
-			const first = inputPaths[0];
-			const stat = await fs.promises.lstat(first);
+			const fsp = fs.promises;
 
-			let convName = "converted";
-			
-			if(stat.isFile()){
-				convName = npath.basename(first, npath.extname(first));
-			}else if(stat.isDirectory()){
-				convName = npath.basename(first);
+			const whitelist = [".las", ".laz"];
+			const lasLazFiles = [];
+
+			let suggestedDirectory = null;
+			let suggestedName = null;
+
+			for(const path of inputPaths){
+				const stat = await fs.promises.lstat(path);
+
+				if(suggestedName === null){
+					suggestedDirectory = npath.normalize(`${path}/..`);
+					suggestedName = npath.basename(path, npath.extname(path)) + "_converted";
+				}
+
+				if(stat.isFile()){
+					const extension = npath.extname(path).toLowerCase();
+
+					if(whitelist.includes(extension)){
+						//lasLazFiles.push(`${path}/${file}`);
+						lasLazFiles.push(path);
+					}
+				}else if(stat.isDirectory()){
+					const files = await fsp.readdir(path);
+
+					for(const file of files){
+						const extension = npath.extname(file).toLowerCase();
+
+						if(whitelist.includes(extension)){
+							lasLazFiles.push(`${path}/${file}`);
+						}
+
+					};
+				}
 			}
 
-			const suggestedPath = npath.normalize(`${first}/../${convName}`);
+			let suggestedPath = `${suggestedDirectory}/${suggestedName}`;
+			//let suggestedPath = npath.normalize(`${first}/../${suggestedName}`);
+
+			let i = 1; 
+			while(fs.existsSync(suggestedPath)){
+				suggestedPath = `${suggestedDirectory}/${suggestedName}_${i}`;
+				//suggestedPath = npath.normalize(`${first}/../${suggestedName}_${i}`);
+				i++;
+			}
 
 			const dialog = require('electron').remote.dialog;
 			const chosenPath = dialog.showSaveDialogSync(null, {
@@ -225,7 +258,7 @@
 				let message = `conversion finished, now loading ${cloudJS}`;
 				viewer.postMessage(message, {duration: 15000});
 
-				Potree.loadPointCloud(cloudJS, convName, function(e){
+				Potree.loadPointCloud(cloudJS, suggestedName, function(e){
 					viewer.scene.addPointCloud(e.pointcloud);
 
 					let material = e.pointcloud.material;
@@ -273,19 +306,21 @@
 				}else if(fs.lstatSync(path).isDirectory()){
 					// handle directory
 
-					const files = await fsp.readdir(path);
-					for(const file of files){
-						
-						const extension = np.extname(file).toLowerCase();
-						const whitelist = [".las", ".laz"];
+					lasLazFiles.push(path);
 
-						if(file === "cloud.js"){
-							cloudJsFiles.push(`${path}/${file}`);
-						}else if(whitelist.includes(extension)){
-							lasLazFiles.push(`${path}/${file}`);
-						}
+					// const files = await fsp.readdir(path);
+					// for(const file of files){
+						
+					// 	const extension = np.extname(file).toLowerCase();
+					// 	const whitelist = [".las", ".laz"];
+
+					// 	if(file === "cloud.js"){
+					// 		cloudJsFiles.push(`${path}/${file}`);
+					// 	}else if(whitelist.includes(extension)){
+					// 		lasLazFiles.push(`${path}/${file}`);
+					// 	}
 					
-					};
+					// };
 
 					// console.log(files);
 
