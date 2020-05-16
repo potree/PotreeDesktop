@@ -64,6 +64,7 @@ for (let obj in PointAttributeTypes) {
 	i++;
 }
 
+
 class PointAttribute{
 	
 	constructor(name, type, numElements){
@@ -76,7 +77,6 @@ class PointAttribute{
 	}
 
 }
-
 PointAttribute.POSITION_CARTESIAN = new PointAttribute(
 	"POSITION_CARTESIAN", PointAttributeTypes.DATA_TYPE_FLOAT, 3);
 
@@ -135,6 +135,7 @@ function CustomView (buffer) {
 	let tmpf = new Float32Array(tmp);
 	let tmpd = new Float64Array(tmp);
 	let tmpu8 = new Uint8Array(tmp);
+
 	this.getUint32 = function (i) {
 		return (this.u8[i + 3] << 24) | (this.u8[i + 2] << 16) | (this.u8[i + 1] << 8) | this.u8[i];
 	};
@@ -169,6 +170,19 @@ function CustomView (buffer) {
 		return this.u8[i];
 	};
 }
+
+const typedArrayMapping = {
+	"int8":   Int8Array,
+	"int16":  Int16Array,
+	"int32":  Int32Array,
+	"int64":  Float64Array,
+	"uint8":  Uint8Array,
+	"uint16": Uint16Array,
+	"uint32": Uint32Array,
+	"uint64": Float64Array,
+	"float":  Float32Array,
+	"double": Float64Array,
+};
 
 Potree = {};
 
@@ -231,7 +245,7 @@ onmessage = function (event) {
 			}
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
-		} else if (pointAttribute.name === "RGBA") {
+		} else if (pointAttribute.name === "rgba") {
 			let buff = new ArrayBuffer(numPoints * 4);
 			let colors = new Uint8Array(buff);
 
@@ -326,6 +340,9 @@ onmessage = function (event) {
 			let buff = new ArrayBuffer(numPoints * 4);
 			let f32 = new Float32Array(buff);
 
+			let TypedArray = typedArrayMapping[pointAttribute.type.name];
+			preciseBuffer = new TypedArray(numPoints);
+
 			let [min, max] = [Infinity, -Infinity];
 			let [offset, scale] = [0, 1];
 
@@ -354,9 +371,18 @@ onmessage = function (event) {
 					}
 				}
 
-				offset = min;
-				scale = 1 / (max - min);
+				
+
+				if(pointAttribute.initialRange != null){
+					offset = pointAttribute.initialRange[0];
+					scale = 1 / (pointAttribute.initialRange[1] - pointAttribute.initialRange[0]);
+				}else {
+					offset = min;
+					scale = 1 / (max - min);
+				}
 			}
+
+			
 
 			for(let j = 0; j < numPoints; j++){
 				let value = getter(inOffset + j * pointAttributes.byteSize);
@@ -367,12 +393,14 @@ onmessage = function (event) {
 				}
 
 				f32[j] = (value - offset) * scale;
+				preciseBuffer[j] = value;
 			}
 
 			pointAttribute.range = [min, max];
 
 			attributeBuffers[pointAttribute.name] = { 
-				buffer: buff, 
+				buffer: buff,
+				preciseBuffer: preciseBuffer,
 				attribute: pointAttribute,
 				offset: offset,
 				scale: scale,
@@ -391,6 +419,49 @@ onmessage = function (event) {
 		}
 		
 		attributeBuffers["INDICES"] = { buffer: buff, attribute: PointAttribute.INDICES };
+	}
+
+	{ // handle attribute vectors
+
+		
+
+		let vectors = pointAttributes.vectors;
+
+		for(let vector of vectors){
+
+			let {name, attributes} = vector;
+			let numVectorElements = attributes.length;
+			let buffer = new ArrayBuffer(numVectorElements * numPoints * 4);
+			let f32 = new Float32Array(buffer);
+
+			let iElement = 0;
+			for(let sourceName of attributes){
+				let sourceBuffer = attributeBuffers[sourceName];
+				let {offset, scale} = sourceBuffer;
+				let cv = new CustomView(sourceBuffer.buffer);
+
+				const getter = cv.getFloat32.bind(cv);
+
+				for(let j = 0; j < numPoints; j++){
+					let value = getter(j * 4);
+
+					f32[j * numVectorElements + iElement] = (value / scale) + offset;
+				}
+
+				iElement++;
+			}
+
+			let vecAttribute = new PointAttribute(name, PointAttributeTypes.DATA_TYPE_FLOAT, 3);
+
+			attributeBuffers[name] = { 
+				buffer: buffer, 
+				attribute: vecAttribute,
+				// offset: offset,
+				// scale: scale,
+			};
+
+		}
+
 	}
 
 	performance.mark("binary-decoder-end");
