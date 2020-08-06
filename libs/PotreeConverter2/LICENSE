@@ -1,0 +1,37 @@
+========================
+== Potree Converter 
+========================
+
+http://potree.org
+https://github.com/potree/PotreeConverter
+
+Copyright (c) 2011-2020, Markus Schütz
+All rights reserved.
+
+Contact: licensing@potree.org
+
+PotreeConverter comprises a free and a paid part.
+
+1. Non-commercial and non-government users may use and modify the 
+source code and binaries for free.
+This includes universities and research institutions as long as the 
+application is not used for or part of a commercial product or service.
+2. Commercial and government users may use and modify the 
+source code and binaries after purchasing a commercial license. 
+3. Commercial and government users may use PotreeConverer 
+for free for three months, before deciding whether to purchase a license. 
+4. Paid licenses are per simultaneously running instance. A single license 
+may be used to install PotreeConverter on multiple devices of the licensee, 
+as long as only one instance runs at a time. 
+5. Anyone may redistribute source, binaries, and modifications of either, but 
+redistributions and modifications must retain this LICENSE file and recipients 
+are also subject to its conditions. The recipients must be made aware of the 
+license conditions. If the recipient is a commercial or government user, 
+then the recipient must also purchase a license. 
+
+Exceptions: If you feel that the terms above don't fit your use case or that you 
+can't afford a paid license for your project (e.g., art, indie, ...), 
+feel free to inquire for different terms or exceptions at licensing@potree.org. 
+Note that the first three months are free in any case. 
+
+For questions and clarifications, please contact licensing@potree.org.

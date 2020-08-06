@@ -9,13 +9,98 @@
 
 	<link rel="stylesheet" type="text/css" href="./libs/potree/potree.css">
 	<link rel="stylesheet" type="text/css" href="./libs/jquery-ui/jquery-ui.min.css">
-	<link rel="stylesheet" type="text/css" href="./libs/perfect-scrollbar/css/perfect-scrollbar.css">
 	<link rel="stylesheet" type="text/css" href="./libs/openlayers3/ol.css">
 	<link rel="stylesheet" type="text/css" href="./libs/spectrum/spectrum.css">
 	<link rel="stylesheet" type="text/css" href="./libs/jstree/themes/mixed/style.css">
+
+	<style>
+
+		.droproot{
+			display: none;
+			pointer-events: none;
+		}
+
+		.dropzone{
+			border: 1em solid black;
+			background: white;
+		}
+
+		/* .dropzone:drop{
+			opacity: 0.8;
+		} */
+
+		.dropzone:before{
+			 display: block;
+  			position: absolute;
+			border: 0.4em solid red;
+			border-style: dashed;
+			background: white;
+			opacity: 0.8;
+			content: " ";
+			top: 1em;
+			left: 1em;
+			right: 1em;
+			bottom: 1em;
+		}
+
+		.middle {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			-webkit-transform: translate(-50%, -50%);
+			transform: translate(-50%, -50%);
+			pointer-events: none;
+		}
+
+		.dropzone_title{
+			font-size: 3vw;
+			font-family: Arial;
+			font-weight: bold;
+			white-space: nowrap;
+			text-align: center;
+		}
+
+		.dropzone_text{
+			font-size: 1.4vw;
+			font-family: Arial;
+			font-weight: bold;
+			white-space: nowrap;
+		}
+
+		#drop * {pointer-events: none;}
+
+	</style>
 </head>
 
 <body>
+
+	<span id="pointcloud_file_dropzone" style="position: absolute; width:100%; height: 100%; z-index: 1000" class="droproot">
+		<span id="dropzone_1.7" style="position:absolute; left: 0px; right: 50%; top: 0px; bottom: 0px" class="dropzone">
+			
+			<span class="middle">
+				<p class="dropzone_title">PotreeConverter 1.7</p>
+
+				<ul class="dropzone_text">
+					<li>Free for anyone.</li>
+				</ul>
+			</span>
+
+		</span>
+		<span id="dropzone_2.0" style="position:absolute; left: 50%; right: 0px; top: 0px; bottom: 0px" class="dropzone">
+
+			<span class="middle">
+				<p class="dropzone_title">PotreeConverter 2.0</p>
+
+				<ul class="dropzone_text">
+					<li>Free for non-commercial and non-government users</li>
+					<li>Three month trial for commercial and government users.</li>
+					<li>https://github.com/potree/PotreeConverter</li>
+				</ul>
+			</span>
+			
+		</span>
+	</span>
+
 	<script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
 
 	<script src="./libs/jquery/jquery-3.1.1.min.js"></script>
@@ -52,18 +137,24 @@
 			});
 		}
 
-		function allowDrag(e) {
-			e.dataTransfer.dropEffect = 'copy';
-			e.preventDefault();
-		}
-
 		function loadDroppedPointcloud(cloudjsPath){
 			const folderName = cloudjsPath.replace(/\\/g, "/").split("/").reverse()[1];
 
-			Potree.loadPointCloud(cloudjsPath, folderName, function(e){
-				viewer.scene.addPointCloud(e.pointcloud);
+			Potree.loadPointCloud(cloudjsPath).then(e => {
+				let pointcloud = e.pointcloud;
+				let material = pointcloud.material;
 
-				let material = e.pointcloud.material;
+				pointcloud.name = folderName;
+
+				viewer.scene.addPointCloud(pointcloud);
+
+				let hasRGBA = pointcloud.getAttributes().attributes.find(a => a.name === "rgba") !== undefined
+				if(hasRGBA){
+					pointcloud.material.activeAttributeName = "rgba";
+				}else{
+					pointcloud.material.activeAttributeName = "color";
+				}
+
 				material.size = 1;
 				material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
 
@@ -72,7 +163,7 @@
 		}
 
 		function createPlaceholder(aabb){
-			console.log("create palceholder");
+			console.log("create placeholder");
 			console.log(aabb);
 
 			const placeholder = {};
@@ -187,10 +278,9 @@
 			viewer.postMessage(message, {duration: 15000});
 
 			const { spawn } = require('child_process');
-			const converter = spawn('./libs/PotreeConverter/PotreeConverter.exe', [
+			const converter = spawn('./libs/PotreeConverter2/Converter.exe', [
 				...inputPaths,
-				"-o", chosenPath,
-				"--overwrite"
+				"-o", chosenPath
 			]);
 
 			let placeholder = null;
@@ -224,18 +314,18 @@
 				window.placeholder = placeholder;
 
 				if(placeholder){ // match for progress
-					const regexp = /INDEXING: ([\w\.]*) of ([\w\.]*) processed/g;
-					const matches = string.matchAll(regexp);
+
+					let regexp = /\[(\d+)%,/g;
+
+					const matches = string.replace(/'/g, "").matchAll(regexp);
 
 					for(const match of matches){
-
-						const processed = parseInt(match[1].replace(/\D/g,''));
-						const total = parseInt(match[2].replace(/\D/g,''));
-						const percent = parseInt(100 * (processed / total));
+						const percent = parseInt(match[1].replace(/\D/g,''));
 						
 						const text = `${percent}%`;
 						placeholder.text.setText(text);
 					}
+
 				}
 
 			});
@@ -248,7 +338,7 @@
 			converter.on('close', (code) => {
 				console.log(`child process exited with code ${code}`);
 
-				const cloudJS = `${chosenPath}/cloud.js`;
+				const cloudJS = `${chosenPath}/metadata.json`;
 				console.log("now loading point cloud: " + cloudJS);
 
 				if(placeholder){
@@ -258,21 +348,93 @@
 				let message = `conversion finished, now loading ${cloudJS}`;
 				viewer.postMessage(message, {duration: 15000});
 
-				Potree.loadPointCloud(cloudJS, suggestedName, function(e){
-					viewer.scene.addPointCloud(e.pointcloud);
+				Potree.loadPointCloud(cloudJS).then(e => {
+					let pointcloud = e.pointcloud;
+					let material = pointcloud.material;
 
-					let material = e.pointcloud.material;
+					pointcloud.name = suggestedName;
+
+					let hasRGBA = pointcloud.getAttributes().attributes.find(a => a.name === "rgba") !== undefined
+					if(hasRGBA){
+						pointcloud.material.activeAttributeName = "rgba";
+					}else{
+						pointcloud.material.activeAttributeName = "color";
+					}
+
 					material.size = 1;
 					material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
 
-					//viewer.zoomTo(e.pointcloud);
+					viewer.scene.addPointCloud(pointcloud);
+					//viewer.fitToScreen();
+					viewer.zoomTo(e.pointcloud);
 				});
+
 			});
+		}
+
+		function showDropzones(){
+			let element = document.getElementById("pointcloud_file_dropzone");
+
+			element.style.display = "block";
+		}
+
+		function hideDropzones(){
+			let element = document.getElementById("pointcloud_file_dropzone");
+
+			element.style.display = "none";
+		}
+
+		function dragEnter(e) {
+			e.dataTransfer.dropEffect = 'copy';
+
+			e.preventDefault();
+			e.stopPropagation();
+
+			// this.style.opacity = "0.8";
+			console.log("enter");
+
+			showDropzones();
+
+			return false;
+		}
+
+		function dragOver(e){
+			showDropzones();
+
+			let u = e.clientX / document.body.clientWidth;
+
+			let elLeft = document.getElementById("dropzone_1.7");
+			let elRight = document.getElementById("dropzone_2.0");
+
+			if(u < 0.5){
+				elLeft.style.opacity = 0.9;
+				elRight.style.opacity = 0.2;
+			}else{
+				elLeft.style.opacity = 0.2;
+				elRight.style.opacity = 0.9;
+			}
+
+		}
+
+		function dragLeave(e){
+
+			e.preventDefault();
+			e.stopPropagation();
+
+			hideDropzones();
+
+			return false;
 		}
 
 		async function dropHandler(event){
 			console.log(event);
 			event.preventDefault();
+
+			hideDropzones();
+
+			let u = event.clientX / document.body.clientWidth;
+
+			console.log(u);
 
 			const cloudJsFiles = [];
 			const lasLazFiles = [];
@@ -291,10 +453,13 @@
 				const fsp = fs.promises;
 				const np = require('path');
 
-				if(fs.lstatSync(path).isFile() && path.indexOf("cloud.js") >= 0){
-					cloudJsFiles.push(file.path);
-				}else if(fs.lstatSync(path).isFile()){
+				let isFile = fs.lstatSync(path).isFile();
 
+				if(isFile && path.indexOf("cloud.js") >= 0){
+					cloudJsFiles.push(file.path);
+				}else if(isFile && path.indexOf("metadata.json") >= 0){
+					cloudJsFiles.push(file.path);
+				}else if(isFile){
 					const extension = np.extname(path).toLowerCase();
 					const whitelist = [".las", ".laz"];
 
@@ -307,22 +472,6 @@
 					// handle directory
 
 					lasLazFiles.push(path);
-
-					// const files = await fsp.readdir(path);
-					// for(const file of files){
-						
-					// 	const extension = np.extname(file).toLowerCase();
-					// 	const whitelist = [".las", ".laz"];
-
-					// 	if(file === "cloud.js"){
-					// 		cloudJsFiles.push(`${path}/${file}`);
-					// 	}else if(whitelist.includes(extension)){
-					// 		lasLazFiles.push(`${path}/${file}`);
-					// 	}
-					
-					// };
-
-					// console.log(files);
 
 				}
 			}
@@ -337,53 +486,20 @@
 			for(const cloudjs of cloudJsFiles){
 				loadDroppedPointcloud(cloudjs);
 			}
-
-			// for(let i = 0; i < event.dataTransfer.items.length; i++){
-			// 	let item = event.dataTransfer.items[i];
-
-			// 	if(item.kind !== "file"){
-			// 		continue;
-			// 	}
-
-			// 	let file = item.getAsFile();
-			// 	let path = file.path;
-
-			// 	const fs = require("fs");
-			// 	const np = require('path');
-
-			// 	let cloudjsPath = null;
-			// 	let folderName = null;
-
-			// 	if(fs.lstatSync(path).isDirectory()){
-			// 		if(fs.lstatSync(`${path}/cloud.js`).isFile()){
-			// 			cloudjsPath = `${path}/cloud.js`;
-			// 			loadDroppedPointcloud(cloudjsPath);
-			// 		}
-			// 	}else if(fs.lstatSync(path).isFile() && path.indexOf("cloud.js") >= 0){
-			// 		cloudjsPath = path;
-			// 		loadDroppedPointcloud(cloudjsPath);
-			// 	}else if(fs.lstatSync(path).isFile()){
-
-			// 		const extension = np.extname(path).toLowerCase();
-			// 		const whitelist = [".las", ".laz"];
-
-			// 		const isOkay = whitelist.includes(extension);
-
-			// 		if(isOkay){
-			// 			doConversion([path]);
-			// 		}
-
-			// 	}
-
-			// }
 		}
-		$("body")[0].addEventListener("dragenter", allowDrag);
-		$("body")[0].addEventListener("dragover", allowDrag);
-		$("body")[0].addEventListener("drop", dropHandler);
+
+		let elBody = document.body;
+		//let elBody = document.getElementById("dropzone_2.0");
+
+		elBody.addEventListener("dragenter", dragEnter);
+		elBody.addEventListener("dragover", dragOver);
+		elBody.addEventListener("dragleave", dragLeave);
+		elBody.addEventListener("drop", dropHandler);
+		// elBody.addEventListener("dragover", dragEnter);
 	
 		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
 		
-		viewer.setEDLEnabled(false);
+		viewer.setEDLEnabled(true);
 		viewer.setFOV(60);
 		viewer.setPointBudget(3*1000*1000);
 		viewer.setMinNodeSize(0);

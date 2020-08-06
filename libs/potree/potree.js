@@ -711,33 +711,40 @@
 
 			let boxFrameGeometry = new THREE.Geometry();
 			{
-				// bottom
-				boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, 0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, 0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, 0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, -0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, -0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, -0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, -0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, 0.5));
-				// top
-				boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, 0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, 0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, 0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, -0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, -0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, -0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, -0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, 0.5));
-				// sides
-				boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, 0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, 0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, 0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, 0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, -0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, -0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, -0.5));
-				boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, -0.5));
+				let Vector3 = THREE.Vector3;
+
+				boxFrameGeometry.vertices.push(
+
+					// bottom
+					new Vector3(-0.5, -0.5, 0.5),
+					new Vector3(0.5, -0.5, 0.5),
+					new Vector3(0.5, -0.5, 0.5),
+					new Vector3(0.5, -0.5, -0.5),
+					new Vector3(0.5, -0.5, -0.5),
+					new Vector3(-0.5, -0.5, -0.5),
+					new Vector3(-0.5, -0.5, -0.5),
+					new Vector3(-0.5, -0.5, 0.5),
+					// top
+					new Vector3(-0.5, 0.5, 0.5),
+					new Vector3(0.5, 0.5, 0.5),
+					new Vector3(0.5, 0.5, 0.5),
+					new Vector3(0.5, 0.5, -0.5),
+					new Vector3(0.5, 0.5, -0.5),
+					new Vector3(-0.5, 0.5, -0.5),
+					new Vector3(-0.5, 0.5, -0.5),
+					new Vector3(-0.5, 0.5, 0.5),
+					// sides
+					new Vector3(-0.5, -0.5, 0.5),
+					new Vector3(-0.5, 0.5, 0.5),
+					new Vector3(0.5, -0.5, 0.5),
+					new Vector3(0.5, 0.5, 0.5),
+					new Vector3(0.5, -0.5, -0.5),
+					new Vector3(0.5, 0.5, -0.5),
+					new Vector3(-0.5, -0.5, -0.5),
+					new Vector3(-0.5, 0.5, -0.5),
+
+				);
+
 			}
 
 			this.material = new THREE.MeshBasicMaterial({
@@ -4484,6 +4491,20 @@
 				else this.fallbackProjection = info.srs.wkt;
 			}
 
+			{ 
+				// TODO [mschuetz]: named projections that proj4 can't handle seem to cause problems.
+				// remove them for now
+
+				try{
+					proj4(this.projection);
+				}catch(e){
+					this.projection = null;
+				}
+
+			
+
+			}
+
 			
 			{
 				const attributes = new PointAttributes();
@@ -4892,6 +4913,9 @@
 
 			// load hierarchy
 			let callback = function (node, hbuffer) {
+
+				let tStart = performance.now();
+
 				let view = new DataView(hbuffer);
 
 				let stack = [];
@@ -4950,6 +4974,12 @@
 					currentNode.spacing = pco.spacing / Math.pow(2, level);
 					parentNode.addChild(currentNode);
 					nodes[name] = currentNode;
+				}
+
+				let duration = performance.now() - tStart;
+				if(duration > 5){
+					let msg = `duration: ${duration}ms, numNodes: ${decoded.length}`;
+					console.log(msg);
 				}
 
 				node.loadPoints();
@@ -5394,8 +5424,11 @@ float getLOD(){
 			depth++;
 		}else{
 			// no more visible child nodes at this position
-			return value.a * 255.0;
-			//return depth;
+			//return value.a * 255.0;
+
+			float lodOffset = (255.0 * value.a) / 10.0 - 10.0;
+
+			return depth  + lodOffset;
 		}
 		
 		offset = offset + (vec3(1.0, 1.0, 1.0) * nodeSizeAtLevel * 0.5) * index3d;
@@ -5597,6 +5630,46 @@ vec4 getClassification(){
 	return classColor;
 }
 
+vec3 getReturns(){
+
+	// 0b 00_000_111
+	float rn = mod(returnNumber, 8.0);
+	// 0b 00_111_000
+	float nr = mod(returnNumber / 8.0, 8.0);
+
+	if(nr <= 1.0){
+		return vec3(1.0, 0.0, 0.0);
+	}else{
+		return vec3(0.0, 1.0, 0.0);
+	}
+
+	// return vec3(nr / 4.0, 0.0, 0.0);
+
+	// if(nr == 1.0){
+	// 	return vec3(1.0, 1.0, 0.0);
+	// }else{
+	// 	if(rn == 1.0){
+	// 		return vec3(1.0, 0.0, 0.0);
+	// 	}else if(rn == nr){
+	// 		return vec3(0.0, 0.0, 1.0);
+	// 	}else{
+	// 		return vec3(0.0, 1.0, 0.0);
+	// 	}
+	// }
+
+	// if(numberOfReturns == 1.0){
+	// 	return vec3(1.0, 1.0, 0.0);
+	// }else{
+	// 	if(returnNumber == 1.0){
+	// 		return vec3(1.0, 0.0, 0.0);
+	// 	}else if(returnNumber == numberOfReturns){
+	// 		return vec3(0.0, 0.0, 1.0);
+	// 	}else{
+	// 		return vec3(0.0, 1.0, 0.0);
+	// 	}
+	// }
+}
+
 vec3 getReturnNumber(){
 	if(numberOfReturns == 1.0){
 		return vec3(1.0, 1.0, 0.0);
@@ -5747,9 +5820,13 @@ vec3 getColor(){
 		color = cl.rgb;
 	#elif defined color_type_return_number
 		color = getReturnNumber();
+	#elif defined color_type_returns
+		color = getReturns();
 	#elif defined color_type_number_of_returns
 		color = getNumberOfReturns();
 	#elif defined color_type_source_id
+		color = getSourceID();
+	#elif defined color_type_point_source_id
 		color = getSourceID();
 	#elif defined color_type_normal
 		color = (modelMatrix * vec4(normal, 0.0)).xyz;
@@ -5793,12 +5870,22 @@ float getPointSize(){
 			pointSize = (worldSpaceSize / uOrthoWidth) * uScreenWidth;
 		} else {
 
-			if(uIsLeafNode && false){
-				pointSize = size * spacing * projFactor;
-			}else{
+			// float leafSpacing = 0.122069092 * 8.0;
+			
+			// bool isLeafNode = getLOD() == 1000.0;
+			// if(isLeafNode){
+			// 	// pointSize = size * spacing * projFactor;
+
+			// 	float worldSpaceSize = size * leafSpacing;
+			// 	pointSize = worldSpaceSize * projFactor;
+			// }else{
 				float worldSpaceSize = 1.0 * size * r / getPointSizeAttenuation();
+
+				// minimum world space size
+				// worldSpaceSize = max(worldSpaceSize, leafSpacing);
+
 				pointSize = worldSpaceSize * projFactor;
-			}
+			// }
 		}
 	#endif
 
@@ -5984,6 +6071,11 @@ void main() {
 
 	//gl_PointSize = 5.0;
 	//vColor = vec3(1.0, 1.0, 1.0);
+
+	// only for "replacing" approaches
+	// if(getLOD() != uLevel){
+	// 	gl_Position = vec4(10.0, 10.0, 10.0, 1.0);
+	// }
 
 
 	#if defined hq_depth_pass
@@ -8100,7 +8192,21 @@ void main() {
 					data[parentOffset * 4 + 2] = (offsetsToChild[parentOffset] % 256);
 				}
 
-				data[i * 4 + 3] = node.name.length - 1;
+				// data[i * 4 + 3] = node.geometryNode.nodeType === 1 ? 1 : 0;
+				// data[i * 4 + 3] = node.name.length - 1;
+
+				let density = node.geometryNode.density;
+				
+				if(typeof density === "number"){
+					let lodOffset = Math.log2(density) / 2 - 1.5;
+
+					let offsetUint8 = (lodOffset + 10) * 10;
+
+					data[i * 4 + 3] = offsetUint8;
+				}else {
+					data[i * 4 + 3] = 100;
+				}
+
 			}
 
 			var a = 10;
@@ -10077,10 +10183,12 @@ void main() {
 		"classification": {name: "classification", location: 3},
 		"returnNumber": {name: "returnNumber", location: 4},
 		"return number": {name: "returnNumber", location: 4},
+		"returns": {name: "returnNumber", location: 4},
 		"numberOfReturns": {name: "numberOfReturns", location: 5},
 		"number of returns": {name: "numberOfReturns", location: 5},
 		"pointSourceID": {name: "pointSourceID", location: 6},
 		"source id": {name: "pointSourceID", location: 6},
+		"point source id": {name: "pointSourceID", location: 6},
 		"indices": {name: "indices", location: 7},
 		"normal": {name: "normal", location: 8},
 		"spacing": {name: "spacing", location: 9},
@@ -11039,7 +11147,7 @@ void main() {
 							defines.push("#define clip_number_of_returns_enabled");
 						}
 
-						if(attributes["source id"]){
+						if(attributes["source id"] || attributes["point source id"]){
 							defines.push("#define clip_point_source_id_enabled");
 						}
 
@@ -11859,6 +11967,19 @@ void main() {
 			});
 		}
 
+		if(typeof material.elevationRange[0] === "number"){
+			ranges.push({
+				name: "elevationRange",
+				value: material.elevationRange,
+			});
+		}
+		if(typeof material.intensityRange[0] === "number"){
+			ranges.push({
+				name: "intensityRange",
+				value: material.intensityRange,
+			});
+		}
+
 		let pointSizeTypeName = Object.entries(Potree.PointSizeType).find(e => e[1] === material.pointSizeType)[0];
 
 		let jsonMaterial = {
@@ -12635,7 +12756,15 @@ void main() {
 
 				if(data.material.ranges != null){
 					for(let range of data.material.ranges){
-						target.setRange(range.name, range.value);
+
+						if(range.name === "elevationRange"){
+							target.elevationRange = range.value;
+						}else if(range.name === "intensityRange"){
+							target.intensityRange = range.value;
+						}else {
+							target.setRange(range.name, range.value);
+						}
+
 					}
 				}
 
@@ -12855,59 +12984,38 @@ void main() {
 			return;
 		}
 
-		// const findDuplicate = (item) => {
+		const findDuplicate = (item) => {
 
-		// 	let duplicate = null;
+			let duplicate = null;
 
-		// 	viewer.scene.annotations.traverse( a => {
-		// 		if(a.uuid === item.uuid){
-		// 			duplicate = a;
-		// 		}
-		// 	});
+			viewer.scene.annotations.traverse( a => {
+				if(a.uuid === item.uuid){
+					duplicate = a;
+				}
+			});
 
-		// 	return duplicate;
-		// };
+			return duplicate;
+		};
 
-		// const traverse = (item, parent) => {
+		const traverse = (item, parent) => {
 
-		// 	const duplicate = findDuplicate(item);
-		// 	if(duplicate){
-		// 		return;
-		// 	}
-
-		// 	const annotation = loadAnnotationItem(item);
-
-		// 	for(const childItem of item.children){
-		// 		traverse(childItem, annotation);
-		// 	}
-
-		// 	parent.add(annotation);
-
-		// };
-
-		// for(const item of data.items){
-		// 	traverse(item, viewer.scene.annotations);
-		// 	// viewer.scene.annotations.add(annotation);
-		// }
-
-
-
-		const {items, hierarchy} = data;
-
-		const existingAnnotations = [];
-		viewer.scene.annotations.traverseDescendants(annotation => {
-			existingAnnotations.push(annotation);
-		});
-
-		for(const item of items){
-
-			const duplicate = existingAnnotations.find(ann => ann.uuid === item.uuid);
+			const duplicate = findDuplicate(item);
 			if(duplicate){
-				continue;
+				return;
 			}
 
 			const annotation = loadAnnotationItem(item);
-			viewer.scene.annotations.add(annotation);
+
+			for(const childItem of item.children){
+				traverse(childItem, annotation);
+			}
+
+			parent.add(annotation);
+
+		};
+
+		for(const item of data){
+			traverse(item, viewer.scene.annotations);
 		}
 
 	}
@@ -13786,6 +13894,508 @@ void main() {
 			return new THREE.Box3(min, max);
 		}
 	}
+
+	class OctreeGeometry{
+
+		constructor(){
+			this.url = null;
+			this.spacing = 0;
+			this.boundingBox = null;
+			this.root = null;
+			this.pointAttributes = null;
+			this.loader = null;
+		}
+
+	};
+
+	class OctreeGeometryNode{
+
+		constructor(name, octreeGeometry, boundingBox){
+			this.id = OctreeGeometryNode.IDCount++;
+			this.name = name;
+			this.index = parseInt(name.charAt(name.length - 1));
+			this.octreeGeometry = octreeGeometry;
+			this.boundingBox = boundingBox;
+			this.boundingSphere = boundingBox.getBoundingSphere(new THREE.Sphere());
+			this.children = {};
+			this.numPoints = 0;
+			this.level = null;
+			this.oneTimeDisposeHandlers = [];
+		}
+
+		isGeometryNode(){
+			return true;
+		}
+
+		getLevel(){
+			return this.level;
+		}
+
+		isTreeNode(){
+			return false;
+		}
+
+		isLoaded(){
+			return this.loaded;
+		}
+
+		getBoundingSphere(){
+			return this.boundingSphere;
+		}
+
+		getBoundingBox(){
+			return this.boundingBox;
+		}
+
+		getChildren(){
+			let children = [];
+
+			for (let i = 0; i < 8; i++) {
+				if (this.children[i]) {
+					children.push(this.children[i]);
+				}
+			}
+
+			return children;
+		}
+
+		getBoundingBox(){
+			return this.boundingBox;
+		}
+
+		load(){
+
+			if (Potree.numNodesLoading >= Potree.maxNodesLoading) {
+				return;
+			}
+
+			this.octreeGeometry.loader.load(this);
+		}
+
+		getNumPoints(){
+			return this.numPoints;
+		}
+
+		dispose(){
+			if (this.geometry && this.parent != null) {
+				this.geometry.dispose();
+				this.geometry = null;
+				this.loaded = false;
+
+				// this.dispatchEvent( { type: 'dispose' } );
+				for (let i = 0; i < this.oneTimeDisposeHandlers.length; i++) {
+					let handler = this.oneTimeDisposeHandlers[i];
+					handler();
+				}
+				this.oneTimeDisposeHandlers = [];
+			}
+		}
+
+	};
+
+	OctreeGeometryNode.IDCount = 0;
+
+	class NodeLoader{
+
+		constructor(url){
+			this.url = url;
+		}
+
+		async load(node){
+
+			if(node.loaded || node.loading){
+				return;
+			}
+
+			node.loading = true;
+			Potree.numNodesLoading++;
+
+			if(node.nodeType === 2){
+				await this.loadHierarchy(node);
+			}
+
+			let {byteOffset, byteSize} = node;
+
+			try{
+
+				let urlOctree = `${this.url}/../octree.bin`;
+
+				let first = byteOffset;
+				let last = byteOffset + byteSize - 1n;
+
+				let response = await fetch(urlOctree, {
+					headers: {
+						'content-type': 'multipart/byteranges',
+						'Range': `bytes=${first}-${last}`,
+					},
+				});
+
+				let buffer = await response.arrayBuffer();
+
+				let workerPath = Potree.scriptPath + '/workers/OctreeDecoderWorker.js';
+				let worker = Potree.workerPool.getWorker(workerPath);
+
+				worker.onmessage = function (e) {
+
+					let data = e.data;
+					let buffers = data.attributeBuffers;
+
+					Potree.workerPool.returnWorker(workerPath, worker);
+
+					let geometry = new THREE.BufferGeometry();
+					
+					for(let property in buffers){
+
+						let buffer = buffers[property].buffer;
+
+						if(property === "position"){
+							geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(buffer), 3));
+						}else if(property === "rgba"){
+							geometry.addAttribute('rgba', new THREE.BufferAttribute(new Uint8Array(buffer), 4, true));
+						}else if(property === "NORMAL"){
+							//geometry.addAttribute('rgba', new THREE.BufferAttribute(new Uint8Array(buffer), 4, true));
+							geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(buffer), 3));
+						}else if (property === "INDICES") {
+							let bufferAttribute = new THREE.BufferAttribute(new Uint8Array(buffer), 4);
+							bufferAttribute.normalized = true;
+							geometry.addAttribute('indices', bufferAttribute);
+						}else {
+							const bufferAttribute = new THREE.BufferAttribute(new Float32Array(buffer), 1);
+
+							let batchAttribute = buffers[property].attribute;
+							bufferAttribute.potree = {
+								offset: buffers[property].offset,
+								scale: buffers[property].scale,
+								preciseBuffer: buffers[property].preciseBuffer,
+								range: batchAttribute.range,
+							};
+
+							geometry.addAttribute(property, bufferAttribute);
+						}
+
+					}
+					// indices ??
+
+					node.density = data.density;
+					node.geometry = geometry;
+					node.loaded = true;
+					node.loading = false;
+					Potree.numNodesLoading--;
+				};
+
+				let pointAttributes = node.octreeGeometry.pointAttributes;
+				let scale = node.octreeGeometry.scale;
+
+				let box = node.boundingBox;
+				let min = node.octreeGeometry.offset.clone().add(box.min);
+				let size = box.max.clone().sub(box.min);
+				let max = min.clone().add(size);
+
+				let offset = node.octreeGeometry.loader.offset;
+
+				let message = {
+					name: node.name,
+					buffer: buffer,
+					pointAttributes: pointAttributes,
+					scale: scale,
+					min: min,
+					max: max,
+					size: size,
+					offset: offset,
+				};
+
+				worker.postMessage(message, [message.buffer]);
+			}catch(e){
+				node.loaded = false;
+				node.loading = false;
+				Potree.numNodesLoading--;
+
+				console.log(`failed to load ${node.name}`);
+				console.log(e);
+				console.log(`trying again!`);
+			}
+		}
+
+		parseHierarchy(node, buffer){
+
+			let view = new DataView(buffer);
+			let tStart = performance.now();
+
+			let bytesPerNode = 22;
+			let numNodes = buffer.byteLength / bytesPerNode;
+
+			let octree = node.octreeGeometry;
+			// let nodes = [node];
+			let nodes = new Array(numNodes);
+			nodes[0] = node;
+			let nodePos = 1;
+
+			for(let i = 0; i < numNodes; i++){
+				let current = nodes[i];
+
+				let type = view.getUint8(i * bytesPerNode + 0);
+				let childMask = view.getUint8(i * bytesPerNode + 1);
+				let numPoints = view.getUint32(i * bytesPerNode + 2, true);
+				let byteOffset = view.getBigInt64(i * bytesPerNode + 6, true);
+				let byteSize = view.getBigInt64(i * bytesPerNode + 14, true);
+
+
+				if(current.nodeType === 2){
+					// replace proxy with real node
+					current.byteOffset = byteOffset;
+					current.byteSize = byteSize;
+					current.numPoints = numPoints;
+				}else if(type === 2){
+					// load proxy
+					current.hierarchyByteOffset = byteOffset;
+					current.hierarchyByteSize = byteSize;
+					current.numPoints = numPoints;
+				}else {
+					// load real node 
+					current.byteOffset = byteOffset;
+					current.byteSize = byteSize;
+					current.numPoints = numPoints;
+				}
+				
+				current.nodeType = type;
+
+				if(current.nodeType === 2){
+					continue;
+				}
+
+				for(let childIndex = 0; childIndex < 8; childIndex++){
+					let childExists = ((1 << childIndex) & childMask) !== 0;
+
+					if(!childExists){
+						continue;
+					}
+
+					let childName = current.name + childIndex;
+
+					let childAABB = createChildAABB(current.boundingBox, childIndex);
+					let child = new OctreeGeometryNode(childName, octree, childAABB);
+					child.name = childName;
+					child.spacing = current.spacing / 2;
+					child.level = current.level + 1;
+
+					current.children[childIndex] = child;
+					child.parent = current;
+
+					// nodes.push(child);
+					nodes[nodePos] = child;
+					nodePos++;
+				}
+
+				// if((i % 500) === 0){
+				// 	yield;
+				// }
+			}
+
+			let duration = (performance.now() - tStart);
+
+			if(duration > 20){
+				let msg = `duration: ${duration}ms, numNodes: ${numNodes}`;
+				console.log(msg);
+			}
+		}
+
+		async loadHierarchy(node){
+
+			let {hierarchyByteOffset, hierarchyByteSize} = node;
+			let hierarchyPath = `${this.url}/../hierarchy.bin`;
+			
+			let first = hierarchyByteOffset;
+			let last = first + hierarchyByteSize - 1n;
+
+			let response = await fetch(hierarchyPath, {
+				headers: {
+					'content-type': 'multipart/byteranges',
+					'Range': `bytes=${first}-${last}`,
+				},
+			});
+
+
+
+			let buffer = await response.arrayBuffer();
+
+			this.parseHierarchy(node, buffer);
+
+			// let promise = new Promise((resolve) => {
+			// 	let generator = this.parseHierarchy(node, buffer);
+
+			// 	let repeatUntilDone = () => {
+			// 		let result = generator.next();
+
+			// 		if(result.done){
+			// 			resolve();
+			// 		}else{
+			// 			requestAnimationFrame(repeatUntilDone);
+			// 		}
+			// 	};
+				
+			// 	repeatUntilDone();
+			// });
+
+			// await promise;
+
+			
+
+
+
+		}
+
+	}
+
+	let tmpVec3 = new THREE.Vector3();
+	function createChildAABB(aabb, index){
+		let min = aabb.min.clone();
+		let max = aabb.max.clone();
+		let size = tmpVec3.subVectors(max, min);
+
+		if ((index & 0b0001) > 0) {
+			min.z += size.z / 2;
+		} else {
+			max.z -= size.z / 2;
+		}
+
+		if ((index & 0b0010) > 0) {
+			min.y += size.y / 2;
+		} else {
+			max.y -= size.y / 2;
+		}
+		
+		if ((index & 0b0100) > 0) {
+			min.x += size.x / 2;
+		} else {
+			max.x -= size.x / 2;
+		}
+
+		return new THREE.Box3(min, max);
+	}
+
+	let typenameTypeattributeMap = {
+		"double": PointAttributeTypes.DATA_TYPE_DOUBLE,
+		"float": PointAttributeTypes.DATA_TYPE_FLOAT,
+		"int8": PointAttributeTypes.DATA_TYPE_INT8,
+		"uint8": PointAttributeTypes.DATA_TYPE_UINT8,
+		"int16": PointAttributeTypes.DATA_TYPE_INT16,
+		"uint16": PointAttributeTypes.DATA_TYPE_UINT16,
+		"int32": PointAttributeTypes.DATA_TYPE_INT32,
+		"uint32": PointAttributeTypes.DATA_TYPE_UINT32,
+		"int64": PointAttributeTypes.DATA_TYPE_INT64,
+		"uint64": PointAttributeTypes.DATA_TYPE_UINT64,
+	};
+
+	class OctreeLoader_1_8{
+
+		static parseAttributes(jsonAttributes){
+
+			let attributes = new PointAttributes();
+
+			let replacements = {
+				"rgb": "rgba",
+			};
+
+			for(let jsonAttribute of jsonAttributes){
+				let {name, description, size, numElements, elementSize, min, max} = jsonAttribute;
+
+				let type = typenameTypeattributeMap[jsonAttribute.type];
+
+				let potreeAttributeName = replacements[name] ? replacements[name] : name;
+
+				let attribute = new PointAttribute(potreeAttributeName, type, numElements);
+
+				if(numElements === 1){
+					attribute.range = [min[0], max[0]];
+				}else {
+					attribute.range = [min, max];
+				}
+				
+				attribute.initialRange = attribute.range;
+
+				attributes.add(attribute);
+			}
+
+			{
+				// check if it has normals
+				let hasNormals = 
+					attributes.attributes.find(a => a.name === "NormalX") !== undefined &&
+					attributes.attributes.find(a => a.name === "NormalY") !== undefined &&
+					attributes.attributes.find(a => a.name === "NormalZ") !== undefined;
+
+				if(hasNormals){
+					let vector = {
+						name: "NORMAL",
+						attributes: ["NormalX", "NormalY", "NormalZ"],
+					};
+					attributes.addVector(vector);
+				}
+			}
+
+			return attributes;
+		}
+
+		static async load(url){
+
+			let response = await fetch(url);
+			let metadata = await response.json();
+
+			let attributes = OctreeLoader_1_8.parseAttributes(metadata.attributes);
+
+			let loader = new NodeLoader(url);
+			loader.metadata = metadata;
+			loader.attributes = attributes;
+			loader.scale = metadata.scale;
+			loader.offset = metadata.offset;
+
+			let octree = new OctreeGeometry();
+			octree.url = url;
+			octree.spacing = metadata.spacing;
+			octree.scale = metadata.scale;
+
+			// let aPosition = metadata.attributes.find(a => a.name === "position");
+			// octree
+
+			let min = new THREE.Vector3(...metadata.boundingBox.min);
+			let max = new THREE.Vector3(...metadata.boundingBox.max);
+			let boundingBox = new THREE.Box3(min, max);
+
+			let offset = min.clone();
+			boundingBox.min.sub(offset);
+			boundingBox.max.sub(offset);
+
+			octree.projection = metadata.projection;
+			octree.boundingBox = boundingBox;
+			octree.tightBoundingBox = boundingBox.clone();
+			octree.boundingSphere = boundingBox.getBoundingSphere(new THREE.Sphere());
+			octree.tightBoundingSphere = boundingBox.getBoundingSphere(new THREE.Sphere());
+			octree.offset = offset;
+			octree.pointAttributes = OctreeLoader_1_8.parseAttributes(metadata.attributes);
+			octree.loader = loader;
+
+			let root = new OctreeGeometryNode("r", octree, boundingBox);
+			root.level = 0;
+			root.nodeType = 2;
+			root.hierarchyByteOffset = 0n;
+			root.hierarchyByteSize = BigInt(metadata.hierarchy.firstChunkSize);
+			root.hasChildren = false;
+			root.spacing = octree.spacing;
+			root.byteOffset = 0;
+
+			octree.root = root;
+
+			//await OctreeLoader_1_8.loadHierarchy(url, root);
+			await loader.load(root);
+
+			let result = {
+				geometry: octree,
+			};
+
+			return result;
+
+		}
+
+	};
 
 	/**
 	 * @author Connor Manning
@@ -19644,10 +20254,11 @@ void main() {
 					view.setUint16(boffset + 18, points.data.pointSourceID[i]);
 				}
 
-				if (points.data.color) {
-					view.setUint16(boffset + 20, (points.data.color[4 * i + 0] * 255), true);
-					view.setUint16(boffset + 22, (points.data.color[4 * i + 1] * 255), true);
-					view.setUint16(boffset + 24, (points.data.color[4 * i + 2] * 255), true);
+				if (points.data.rgba) {
+					let rgba = points.data.rgba;
+					view.setUint16(boffset + 20, (rgba[4 * i + 0] * 255), true);
+					view.setUint16(boffset + 22, (rgba[4 * i + 1] * 255), true);
+					view.setUint16(boffset + 24, (rgba[4 * i + 2] * 255), true);
 				}
 
 				boffset += 28;
@@ -19747,6 +20358,8 @@ void main() {
 			};
 			let projectedBox = new THREE.Box3();
 
+			let truePos = new THREE.Vector3();
+
 			for(let i = 0; i < data.numPoints; i++){
 
 				if(updateRange.start + updateRange.count >= this.batchSize){
@@ -19769,9 +20382,15 @@ void main() {
 					};
 				}
 
+				truePos.set(
+					data.data.position[3 * i + 0] + this.trueOctree.position.x,
+					data.data.position[3 * i + 1] + this.trueOctree.position.y,
+					data.data.position[3 * i + 2] + this.trueOctree.position.z,
+				);
+
 				let x = data.data.mileage[i];
 				let y = 0;
-				let z = data.data.position[3 * i + 2];
+				let z = truePos.z;
 
 				projectedBox.expandByPoint(new THREE.Vector3(x, y, z));
 
@@ -19986,7 +20605,7 @@ void main() {
 						this.elRoot.find('#profileSelectionProperties').fadeIn(200);
 						this.pickSphere.visible = true;
 						this.pickSphere.scale.set(0.5 * radius, 0.5 * radius, 0.5 * radius);
-						this.pickSphere.position.set(point.mileage, 0, point.position[2]);
+						this.pickSphere.position.set(point.mileage, 0, position[2]);
 
 						this.viewerPickSphere.position.set(...position);
 						
@@ -20117,33 +20736,40 @@ void main() {
 				this.hide();
 			});
 
-			$('#potree_download_csv_icon').click(() => {
+			let getProfilePoints = () => {
 				let points = new Points();
 				
 				for(let [pointcloud, entry] of this.pointclouds){
 					for(let pointSet of entry.points){
+
+						let originPos = pointSet.data.position;
+						let trueElevationPosition = new Float32Array(originPos);
+						for(let i = 0; i < pointSet.numPoints; i++){
+							trueElevationPosition[3 * i + 2] += pointcloud.position.z;
+						}
+
+						pointSet.data.position = trueElevationPosition;
 						points.add(pointSet);
+						pointSet.data.position = originPos;
 					}
 				}
+
+				return points;
+			};
+
+			$('#potree_download_csv_icon').click(() => {
+				
+				let points = getProfilePoints();
 
 				let string = CSVExporter.toString(points);
 
 				let blob = new Blob([string], {type: "text/string"});
 				$('#potree_download_profile_ortho_link').attr('href', URL.createObjectURL(blob));
-
-				//let uri = 'data:application/octet-stream;base64,' + btoa(string);
-				//$('#potree_download_profile_ortho_link').attr('href', uri);
 			});
 
 			$('#potree_download_las_icon').click(() => {
 
-				let points = new Points();
-
-				for(let [pointcloud, entry] of this.pointclouds){
-					for(let pointSet of entry.points){
-						points.add(pointSet);
-					}
-				}
+				let points = getProfilePoints();
 
 				let buffer = LASExporter.toLAS(points);
 
@@ -20191,7 +20817,7 @@ void main() {
 					for (let i = 0; i < points.numPoints; i++) {
 
 						let m = points.data.mileage[i] - mileage;
-						let e = points.data.position[3 * i + 2] - elevation;
+						let e = points.data.position[3 * i + 2] - elevation + pointcloud.position.z;
 						let r = Math.sqrt(m * m + e * e);
 
 						const withinDistance = r < radius && r < closest.distance;
@@ -20342,6 +20968,10 @@ void main() {
 		}
 
 		addPoints (pointcloud, points) {
+
+			if(points.numPoints === 0){
+				return;
+			}
 
 			let entry = this.pointclouds.get(pointcloud);
 			if(!entry){
@@ -22892,6 +23522,7 @@ ENDSEC
 
 				const blacklist = [
 					"POSITION_CARTESIAN",
+					"position",
 				];
 
 				options = options.filter(o => !blacklist.includes(o));
@@ -22912,9 +23543,8 @@ ENDSEC
 						attribute = pointcloud.getAttribute("intensity");
 					}
 
-					
+					const isIntensity = attribute ? ["intensity", "intensity gradient"].includes(attribute.name) : false;
 
-					const isIntensity = ["intensity", "intensity gradient"].includes(attribute.name);
 					if(isIntensity){
 						if(pointcloud.material.intensityRange[0] === Infinity){
 							pointcloud.material.intensityRange = attribute.range;
@@ -23009,7 +23639,7 @@ ENDSEC
 						
 					} else if(selectedValue === "return number"){
 						
-					} else if(selectedValue === "source id"){
+					} else if(["source id", "point source id"].includes(selectedValue)){
 						
 					} else {
 						blockExtra.css('display', 'block');
@@ -23223,15 +23853,32 @@ ENDSEC
 				});
 
 				let updateHeightRange = function () {
-					let box = [pointcloud.pcoGeometry.tightBoundingBox, pointcloud.getBoundingBoxWorld()]
-						.find(v => v !== undefined);
+					
 
-					pointcloud.updateMatrixWorld(true);
-					box = Utils.computeTransformedBoundingBox(box, pointcloud.matrixWorld);
+					let aPosition = pointcloud.getAttribute("position");
 
-					let bWidth = box.max.z - box.min.z;
-					let bMin = box.min.z - 0.2 * bWidth;
-					let bMax = box.max.z + 0.2 * bWidth;
+					let bMin, bMax;
+
+					if(aPosition){
+						// for new format 2.0 and loader that contain precomputed min/max of attributes
+						let min = aPosition.range[0][2];
+						let max = aPosition.range[1][2];
+						let width = max - min;
+
+						bMin = min - 0.2 * width;
+						bMax = max + 0.2 * width;
+					}else {
+						// for format up until exlusive 2.0
+						let box = [pointcloud.pcoGeometry.tightBoundingBox, pointcloud.getBoundingBoxWorld()]
+							.find(v => v !== undefined);
+
+						pointcloud.updateMatrixWorld(true);
+						box = Utils.computeTransformedBoundingBox(box, pointcloud.matrixWorld);
+
+						let bWidth = box.max.z - box.min.z;
+						bMin = box.min.z - 0.2 * bWidth;
+						bMax = box.max.z + 0.2 * bWidth;
+					}
 
 					let range = material.elevationRange;
 
@@ -23247,9 +23894,14 @@ ENDSEC
 					if(attribute == null){
 						return;
 					}
-
 					
 					let range = material.getRange(attributeName);
+
+					// currently only supporting scalar ranges.
+					// rgba, normals, positions, etc have vector ranges, however
+					if(typeof range !== "number"){
+						return;
+					}
 
 					if(range == null){
 						range = attribute.range;
@@ -23561,6 +24213,2432 @@ ENDSEC
 
 	}
 
+	class OrientedImageControls extends EventDispatcher{
+		
+		constructor(viewer){
+			super();
+			
+			this.viewer = viewer;
+			this.renderer = viewer.renderer;
+
+			this.originalCam = viewer.scene.getActiveCamera();
+			this.shearCam = viewer.scene.getActiveCamera().clone();
+			this.shearCam.rotation.set(this.originalCam.rotation.toArray());
+			this.shearCam.updateProjectionMatrix();
+			this.shearCam.updateProjectionMatrix = () => {
+				return this.shearCam.projectionMatrix;
+			};
+
+			this.image = null;
+
+			this.fadeFactor = 20;
+			this.fovDelta = 0;
+
+			this.fovMin = 0.1;
+			this.fovMax = 120;
+
+			this.shear = [0, 0];
+
+			// const style = ``;
+			this.elUp =    $(`<input type="button" value="🡅" style="position: absolute; top: 10px; left: calc(50%); z-index: 1000" />`);
+			this.elRight = $(`<input type="button" value="🡆" style="position: absolute; top: calc(50%); right: 10px; z-index: 1000" />`);
+			this.elDown =  $(`<input type="button" value="🡇" style="position: absolute; bottom: 10px; left: calc(50%); z-index: 1000" />`);
+			this.elLeft =  $(`<input type="button" value="🡄" style="position: absolute; top: calc(50%); left: 10px; z-index: 1000" />`);
+			this.elExit = $(`<input type="button" value="Back to 3D view" style="position: absolute; bottom: 10px; right: 10px; z-index: 1000" />`);
+
+			this.elExit.click( () => {
+				this.release();
+			});
+
+			this.elUp.click(() => {
+				const fovY = viewer.getFOV();
+				const top = Math.tan(THREE.Math.degToRad(fovY / 2));
+				this.shear[1] += 0.1 * top;
+			});
+
+			this.elRight.click(() => {
+				const fovY = viewer.getFOV();
+				const top = Math.tan(THREE.Math.degToRad(fovY / 2));
+				this.shear[0] += 0.1 * top;
+			});
+
+			this.elDown.click(() => {
+				const fovY = viewer.getFOV();
+				const top = Math.tan(THREE.Math.degToRad(fovY / 2));
+				this.shear[1] -= 0.1 * top;
+			});
+
+			this.elLeft.click(() => {
+				const fovY = viewer.getFOV();
+				const top = Math.tan(THREE.Math.degToRad(fovY / 2));
+				this.shear[0] -= 0.1 * top;
+			});
+
+			this.scene = null;
+			this.sceneControls = new THREE.Scene();
+
+			let scroll = (e) => {
+				this.fovDelta += -e.delta * 1.0;
+			};
+
+			this.addEventListener('mousewheel', scroll);
+			//this.addEventListener("mousemove", onMove);
+		}
+
+		hasSomethingCaptured(){
+			return this.image !== null;
+		}
+
+		capture(image){
+			if(this.hasSomethingCaptured()){
+				return;
+			}
+
+			this.image = image;
+
+			this.originalFOV = this.viewer.getFOV();
+			this.originalControls = this.viewer.getControls();
+
+			this.viewer.setControls(this);
+			this.viewer.scene.overrideCamera = this.shearCam;
+
+			const elCanvas = this.viewer.renderer.domElement;
+			const elRoot = $(elCanvas.parentElement);
+
+			this.shear = [0, 0];
+
+
+			elRoot.append(this.elUp);
+			elRoot.append(this.elRight);
+			elRoot.append(this.elDown);
+			elRoot.append(this.elLeft);
+			elRoot.append(this.elExit);
+		}
+
+		release(){
+			this.image = null;
+
+			this.viewer.scene.overrideCamera = null;
+
+			this.elUp.detach();
+			this.elRight.detach();
+			this.elDown.detach();
+			this.elLeft.detach();
+			this.elExit.detach();
+
+			this.viewer.setFOV(this.originalFOV);
+			this.viewer.setControls(this.originalControls);
+		}
+
+		setScene (scene) {
+			this.scene = scene;
+		}
+
+		update (delta) {
+			// const view = this.scene.view;
+
+			// let prevTotal = this.shearCam.projectionMatrix.elements.reduce( (a, i) => a + i, 0);
+
+			//const progression = Math.min(1, this.fadeFactor * delta);
+			//const attenuation = Math.max(0, 1 - this.fadeFactor * delta);
+			const progression = 1;
+			const attenuation = 0;
+
+			const oldFov = this.viewer.getFOV();
+			let fovProgression =  progression * this.fovDelta;
+			let newFov = oldFov * ((1 + fovProgression / 10));
+
+			newFov = Math.max(this.fovMin, newFov);
+			newFov = Math.min(this.fovMax, newFov);
+
+			let diff = newFov / oldFov;
+
+			const mouse = this.viewer.inputHandler.mouse;
+			const canvasSize = this.viewer.renderer.getSize(new THREE.Vector2());
+			const uv = [
+				(mouse.x / canvasSize.x),
+				((canvasSize.y - mouse.y) / canvasSize.y)
+			];
+
+			const fovY = newFov;
+			const aspect = canvasSize.x / canvasSize.y;
+			const top = Math.tan(THREE.Math.degToRad(fovY / 2));
+			const height = 2 * top;
+			const width = aspect * height;
+
+			const shearRangeX = [
+				this.shear[0] - 0.5 * width,
+				this.shear[0] + 0.5 * width,
+			];
+
+			const shearRangeY = [
+				this.shear[1] - 0.5 * height,
+				this.shear[1] + 0.5 * height,
+			];
+
+			const shx = (1 - uv[0]) * shearRangeX[0] + uv[0] * shearRangeX[1];
+			const shy = (1 - uv[1]) * shearRangeY[0] + uv[1] * shearRangeY[1];
+
+			const shu = (1 - diff);
+
+			const newShear =  [
+				(1 - shu) * this.shear[0] + shu * shx,
+				(1 - shu) * this.shear[1] + shu * shy,
+			];
+			
+			this.shear = newShear;
+			this.viewer.setFOV(newFov);
+			
+			const {originalCam, shearCam} = this;
+
+			originalCam.fov = newFov;
+			originalCam.updateMatrixWorld();
+			originalCam.updateProjectionMatrix();
+			shearCam.copy(originalCam);
+			shearCam.rotation.set(...originalCam.rotation.toArray());
+
+			shearCam.updateMatrixWorld();
+			shearCam.projectionMatrix.copy(originalCam.projectionMatrix);
+
+			const [sx, sy] = this.shear;
+			const mShear = new THREE.Matrix4().set(
+				1, 0, sx, 0,
+				0, 1, sy, 0,
+				0, 0, 1, 0,
+				0, 0, 0, 1,
+			);
+
+			const proj = shearCam.projectionMatrix;
+			proj.multiply(mShear);
+			shearCam.projectionMatrixInverse.getInverse( proj );
+
+			let total = shearCam.projectionMatrix.elements.reduce( (a, i) => a + i, 0);
+
+			this.fovDelta *= attenuation;
+		}
+	};
+
+	// https://support.pix4d.com/hc/en-us/articles/205675256-How-are-yaw-pitch-roll-defined
+	// https://support.pix4d.com/hc/en-us/articles/202558969-How-are-omega-phi-kappa-defined
+
+	function createMaterial(){
+
+		let vertexShader = `
+	uniform float uNear;
+	varying vec2 vUV;
+	varying vec4 vDebug;
+	
+	void main(){
+		vDebug = vec4(0.0, 1.0, 0.0, 1.0);
+		vec4 modelViewPosition = modelViewMatrix * vec4(position, 1.0);
+		// make sure that this mesh is at least in front of the near plane
+		modelViewPosition.xyz += normalize(modelViewPosition.xyz) * uNear;
+		gl_Position = projectionMatrix * modelViewPosition;
+		vUV = uv;
+	}
+	`;
+
+		let fragmentShader = `
+	uniform sampler2D tColor;
+	uniform float uOpacity;
+	varying vec2 vUV;
+	varying vec4 vDebug;
+	void main(){
+		vec4 color = texture2D(tColor, vUV);
+		gl_FragColor = color;
+		gl_FragColor.a = uOpacity;
+	}
+	`;
+		const material = new THREE.ShaderMaterial( {
+			uniforms: {
+				// time: { value: 1.0 },
+				// resolution: { value: new THREE.Vector2() }
+				tColor: {value: new THREE.Texture() },
+				uNear: {value: 0.0},
+				uOpacity: {value: 1.0},
+			},
+			vertexShader: vertexShader,
+			fragmentShader: fragmentShader,
+			side: THREE.DoubleSide,
+		} );
+
+		material.side = THREE.DoubleSide;
+
+		return material;
+	}
+
+	const planeGeometry = new THREE.PlaneGeometry(1, 1);
+	const lineGeometry = new THREE.Geometry();
+
+	lineGeometry.vertices.push(
+		new THREE.Vector3(-0.5, -0.5, 0),
+		new THREE.Vector3( 0.5, -0.5, 0),
+		new THREE.Vector3( 0.5,  0.5, 0),
+		new THREE.Vector3(-0.5,  0.5, 0),
+		new THREE.Vector3(-0.5, -0.5, 0),
+	);
+
+	class OrientedImage{
+
+		constructor(id){
+
+			this.id = id;
+			this.fov = 1.0;
+			this.position = new THREE.Vector3();
+			this.rotation = new THREE.Vector3();
+			this.width = 0;
+			this.height = 0;
+			this.fov = 1.0;
+
+			const material = createMaterial();
+			const lineMaterial = new THREE.LineBasicMaterial( { color: 0x00ff00 } );
+			this.mesh = new THREE.Mesh(planeGeometry, material);
+			this.line = new THREE.Line(lineGeometry, lineMaterial);
+			this.texture = null;
+
+			this.mesh.orientedImage = this;
+		}
+
+		set(position, rotation, dimension, fov){
+
+			let radians = rotation.map(THREE.Math.degToRad);
+
+			this.position.set(...position);
+			this.mesh.position.set(...position);
+
+			this.rotation.set(...radians);
+			this.mesh.rotation.set(...radians);
+
+			[this.width, this.height] = dimension;
+			this.mesh.scale.set(this.width / this.height, 1, 1);
+
+			this.fov = fov;
+
+			this.updateTransform();
+		}
+
+		updateTransform(){
+			let {mesh, line, fov} = this;
+
+			mesh.updateMatrixWorld();
+			const dir = mesh.getWorldDirection();
+			const alpha = THREE.Math.degToRad(fov / 2);
+			const d = -0.5 / Math.tan(alpha);
+			const move = dir.clone().multiplyScalar(d);
+			mesh.position.add(move);
+
+			line.position.copy(mesh.position);
+			line.scale.copy(mesh.scale);
+			line.rotation.copy(mesh.rotation);
+		}
+
+	};
+
+	class OrientedImages extends EventDispatcher{
+
+		constructor(){
+			super();
+
+			this.node = null;
+			this.cameraParams = null;
+			this.imageParams = null;
+			this.images = null;
+			this._visible = true;
+		}
+
+		set visible(visible){
+			if(this._visible === visible){
+				return;
+			}
+
+			for(const image of this.images){
+				image.mesh.visible = visible;
+				image.line.visible = visible;
+			}
+
+			this._visible = visible;
+			this.dispatchEvent({
+				type: "visibility_changed",
+				images: this,
+			});
+		}
+
+		get visible(){
+			return this._visible;
+		}
+
+
+	};
+
+	class OrientedImageLoader{
+
+		static async loadCameraParams(path){
+			const res = await fetch(path);
+			const text = await res.text();
+
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(text, "application/xml");
+
+			const width = parseInt(doc.getElementsByTagName("width")[0].textContent);
+			const height = parseInt(doc.getElementsByTagName("height")[0].textContent);
+			const f = parseFloat(doc.getElementsByTagName("f")[0].textContent);
+
+			let a = (height / 2)  / f;
+			let fov = 2 * THREE.Math.radToDeg(Math.atan(a));
+
+			const params = {
+				path: path,
+				width: width,
+				height: height,
+				f: f,
+				fov: fov,
+			};
+
+			return params;
+		}
+
+		static async loadImageParams(path){
+
+			const response = await fetch(path);
+			if(!response.ok){
+				console.error(`failed to load ${path}`);
+				return;
+			}
+
+			const content = await response.text();
+			const lines = content.split(/\r?\n/);
+			const imageParams = [];
+
+			for(let i = 1; i < lines.length; i++){
+				const line = lines[i];
+
+				if(line.startsWith("#")){
+					continue;
+				}
+
+				const tokens = line.split(/\s+/);
+
+				if(tokens.length < 6){
+					continue;
+				}
+
+				const params = {
+					id: tokens[0],
+					x: Number.parseFloat(tokens[1]),
+					y: Number.parseFloat(tokens[2]),
+					z: Number.parseFloat(tokens[3]),
+					omega: Number.parseFloat(tokens[4]),
+					phi: Number.parseFloat(tokens[5]),
+					kappa: Number.parseFloat(tokens[6]),
+				};
+
+				// const whitelist = ["47518.jpg"];
+				// if(whitelist.includes(params.id)){
+				// 	imageParams.push(params);
+				// }
+				imageParams.push(params);
+			}
+
+			// debug
+			//return [imageParams[50]];
+
+			return imageParams;
+		}
+
+		static async load(cameraParamsPath, imageParamsPath, viewer){
+
+			const tStart = performance.now();
+
+			const [cameraParams, imageParams] = await Promise.all([
+				OrientedImageLoader.loadCameraParams(cameraParamsPath),
+				OrientedImageLoader.loadImageParams(imageParamsPath),
+			]);
+
+			const orientedImageControls = new OrientedImageControls(viewer);
+			const raycaster = new THREE.Raycaster();
+
+			const tEnd = performance.now();
+			console.log(tEnd - tStart);
+
+			// const sp = new THREE.PlaneGeometry(1, 1);
+			// const lg = new THREE.Geometry();
+
+			// lg.vertices.push(
+			// 	new THREE.Vector3(-0.5, -0.5, 0),
+			// 	new THREE.Vector3( 0.5, -0.5, 0),
+			// 	new THREE.Vector3( 0.5,  0.5, 0),
+			// 	new THREE.Vector3(-0.5,  0.5, 0),
+			// 	new THREE.Vector3(-0.5, -0.5, 0),
+			// );
+
+			const {width, height} = cameraParams;
+			const orientedImages = [];
+			const sceneNode = new THREE.Object3D();
+			sceneNode.name = "oriented_images";
+
+			for(const params of imageParams){
+
+				// const material = createMaterial();
+				// const lm = new THREE.LineBasicMaterial( { color: 0x00ff00 } );
+				// const mesh = new THREE.Mesh(sp, material);
+
+				const {x, y, z, omega, phi, kappa} = params;
+				// const [rx, ry, rz] = [omega, phi, kappa]
+				// 	.map(THREE.Math.degToRad);
+				
+				// mesh.position.set(x, y, z);
+				// mesh.scale.set(width / height, 1, 1);
+				// mesh.rotation.set(rx, ry, rz);
+				// {
+				// 	mesh.updateMatrixWorld();
+				// 	const dir = mesh.getWorldDirection();
+				// 	const alpha = THREE.Math.degToRad(cameraParams.fov / 2);
+				// 	const d = -0.5 / Math.tan(alpha);
+				// 	const move = dir.clone().multiplyScalar(d);
+				// 	mesh.position.add(move);
+				// }
+				// sceneNode.add(mesh);
+
+				// const line = new THREE.Line(lg, lm);
+				// line.position.copy(mesh.position);
+				// line.scale.copy(mesh.scale);
+				// line.rotation.copy(mesh.rotation);
+				// sceneNode.add(line);
+
+				let orientedImage = new OrientedImage(params.id);
+				// orientedImage.setPosition(x, y, z);
+				// orientedImage.setRotation(omega, phi, kappa);
+				// orientedImage.setDimension(width, height);
+				let position = [x, y, z];
+				let rotation = [omega, phi, kappa];
+				let dimension = [width, height];
+				orientedImage.set(position, rotation, dimension, cameraParams.fov);
+
+				sceneNode.add(orientedImage.mesh);
+				sceneNode.add(orientedImage.line);
+				
+				orientedImages.push(orientedImage);
+			}
+
+			let hoveredElement = null;
+			let clipVolume = null;
+
+			const onMouseMove = (evt) => {
+				const tStart = performance.now();
+				if(hoveredElement){
+					hoveredElement.line.material.color.setRGB(0, 1, 0);
+				}
+				evt.preventDefault();
+
+				//var array = getMousePosition( container, evt.clientX, evt.clientY );
+				const rect = viewer.renderer.domElement.getBoundingClientRect();
+				const [x, y] = [evt.clientX, evt.clientY];
+				const array = [ 
+					( x - rect.left ) / rect.width, 
+					( y - rect.top ) / rect.height 
+				];
+				const onClickPosition = new THREE.Vector2(...array);
+				//const intersects = getIntersects(onClickPosition, scene.children);
+				const camera = viewer.scene.getActiveCamera();
+				const mouse = new THREE.Vector3(
+					+ ( onClickPosition.x * 2 ) - 1, 
+					- ( onClickPosition.y * 2 ) + 1 );
+				const objects = orientedImages.map(i => i.mesh);
+				raycaster.setFromCamera( mouse, camera );
+				const intersects = raycaster.intersectObjects( objects );
+				let selectionChanged = false;
+
+				if ( intersects.length > 0){
+					//console.log(intersects);
+					const intersection = intersects[0];
+					const orientedImage = intersection.object.orientedImage;
+					orientedImage.line.material.color.setRGB(1, 0, 0);
+					selectionChanged = hoveredElement !== orientedImage;
+					hoveredElement = orientedImage;
+				}else {
+					hoveredElement = null;
+				}
+
+				let shouldRemoveClipVolume = clipVolume !== null && hoveredElement === null;
+				let shouldAddClipVolume = clipVolume === null && hoveredElement !== null;
+
+				if(clipVolume !== null && (hoveredElement === null || selectionChanged)){
+					// remove existing
+					viewer.scene.removePolygonClipVolume(clipVolume);
+					clipVolume = null;
+				}
+				
+				if(shouldAddClipVolume || selectionChanged){
+					const img = hoveredElement;
+					const fov = cameraParams.fov;
+					const aspect  = cameraParams.width / cameraParams.height;
+					const near = 1.0;
+					const far = 1000 * 1000;
+					const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+					camera.rotation.order = viewer.scene.getActiveCamera().rotation.order;
+					camera.rotation.copy(img.mesh.rotation);
+					{
+						const mesh = img.mesh;
+						const dir = mesh.getWorldDirection();
+						const pos = mesh.position;
+						const alpha = THREE.Math.degToRad(fov / 2);
+						const d = 0.5 / Math.tan(alpha);
+						const newCamPos = pos.clone().add(dir.clone().multiplyScalar(d));
+						const newCamDir = pos.clone().sub(newCamPos);
+						const newCamTarget = new THREE.Vector3().addVectors(
+							newCamPos,
+							newCamDir.clone().multiplyScalar(viewer.getMoveSpeed()));
+						camera.position.copy(newCamPos);
+					}
+					let volume = new Potree.PolygonClipVolume(camera);
+					let m0 = new THREE.Mesh();
+					let m1 = new THREE.Mesh();
+					let m2 = new THREE.Mesh();
+					let m3 = new THREE.Mesh();
+					m0.position.set(-1, -1, 0);
+					m1.position.set( 1, -1, 0);
+					m2.position.set( 1,  1, 0);
+					m3.position.set(-1,  1, 0);
+					volume.markers.push(m0, m1, m2, m3);
+					volume.initialized = true;
+					
+					viewer.scene.addPolygonClipVolume(volume);
+					clipVolume = volume;
+				}
+				const tEnd = performance.now();
+				//console.log(tEnd - tStart);
+			};
+
+			const moveToImage = (image) => {
+				console.log("move to image " + image.id);
+
+				const mesh = image.mesh;
+				const newCamPos = image.position.clone();
+				const newCamTarget = mesh.position.clone();
+
+				viewer.scene.view.setView(newCamPos, newCamTarget, 500, () => {
+					orientedImageControls.capture(image);
+				});
+
+				if(image.texture === null){
+
+					const target = image;
+
+					const tmpImagePath = `${Potree.resourcePath}/images/loading.jpg`;
+					new THREE.TextureLoader().load(tmpImagePath,
+						(texture) => {
+							if(target.texture === null){
+								target.texture = texture;
+								target.mesh.material.uniforms.tColor.value = texture;
+								mesh.material.needsUpdate = true;
+							}
+						}
+					);
+
+					const imagePath = `${imageParamsPath}/../${target.id}`;
+					new THREE.TextureLoader().load(imagePath,
+						(texture) => {
+							target.texture = texture;
+							target.mesh.material.uniforms.tColor.value = texture;
+							mesh.material.needsUpdate = true;
+						}
+					);
+					
+
+				}
+			};
+
+			const onMouseClick = (evt) => {
+
+				if(orientedImageControls.hasSomethingCaptured()){
+					return;
+				}
+
+				if(hoveredElement){
+					moveToImage(hoveredElement);
+				}
+			};
+			viewer.renderer.domElement.addEventListener( 'mousemove', onMouseMove, false );
+			viewer.renderer.domElement.addEventListener( 'mousedown', onMouseClick, false );
+
+			viewer.addEventListener("update", () => {
+
+				for(const image of orientedImages){
+					const world = image.mesh.matrixWorld;
+					const {width, height} = image;
+					const aspect = width / height;
+
+					const camera = viewer.scene.getActiveCamera();
+
+					const imgPos = image.mesh.getWorldPosition(new THREE.Vector3());
+					const camPos = camera.position;
+					const d = camPos.distanceTo(imgPos);
+
+					const minSize = 1; // in degrees of fov
+					const a = THREE.Math.degToRad(minSize);
+					let r = d * Math.tan(a);
+					r = Math.max(r, 1);
+
+
+					image.mesh.scale.set(r * aspect, r, 1);
+					image.line.scale.set(r * aspect, r, 1);
+
+					image.mesh.material.uniforms.uNear.value = camera.near;
+
+				}
+
+			});
+
+			const images = new OrientedImages();
+			images.node = sceneNode;
+			images.cameraParamsPath = cameraParamsPath;
+			images.imageParamsPath = imageParamsPath;
+			images.cameraParams = cameraParams;
+			images.imageParams = imageParams;
+			images.images = orientedImages;
+
+			Potree.debug.moveToImage = moveToImage;
+
+			return images;
+		}
+	}
+
+	let sg = new THREE.SphereGeometry(1, 8, 8);
+	let sgHigh = new THREE.SphereGeometry(1, 128, 128);
+
+	let sm = new THREE.MeshBasicMaterial({side: THREE.BackSide});
+	let smHovered = new THREE.MeshBasicMaterial({side: THREE.BackSide, color: 0xff0000});
+
+	let raycaster = new THREE.Raycaster();
+	let currentlyHovered = null;
+
+	let previousView = {
+		controls: null,
+		position: null,
+		target: null,
+	};
+
+	class Image360{
+
+		constructor(file, time, longitude, latitude, altitude, course, pitch, roll){
+			this.file = file;
+			this.time = time;
+			this.longitude = longitude;
+			this.latitude = latitude;
+			this.altitude = altitude;
+			this.course = course;
+			this.pitch = pitch;
+			this.roll = roll;
+			this.mesh = null;
+		}
+	};
+
+	class Images360 extends EventDispatcher{
+
+		constructor(viewer){
+			super();
+
+			this.viewer = viewer;
+
+			this.selectingEnabled = true;
+
+			this.images = [];
+			this.node = new THREE.Object3D();
+
+			this.sphere = new THREE.Mesh(sgHigh, sm);
+			this.sphere.visible = false;
+			this.sphere.scale.set(1000, 1000, 1000);
+			this.node.add(this.sphere);
+			this._visible = true;
+			// this.node.add(label);
+
+			this.focusedImage = null;
+
+			let elUnfocus = document.createElement("input");
+			elUnfocus.type = "button";
+			elUnfocus.value = "unfocus";
+			elUnfocus.style.position = "absolute";
+			elUnfocus.style.right = "10px";
+			elUnfocus.style.bottom = "10px";
+			elUnfocus.style.zIndex = "10000";
+			elUnfocus.style.fontSize = "2em";
+			elUnfocus.addEventListener("click", () => this.unfocus());
+			this.elUnfocus = elUnfocus;
+
+			this.domRoot = viewer.renderer.domElement.parentElement;
+			this.domRoot.appendChild(elUnfocus);
+			this.elUnfocus.style.display = "none";
+
+			viewer.addEventListener("update", () => {
+				this.update(viewer);
+			});
+			viewer.inputHandler.addInputListener(this);
+
+			this.addEventListener("mousedown", () => {
+				if(currentlyHovered){
+					this.focus(currentlyHovered.image360);
+				}
+			});
+			
+		};
+
+		set visible(visible){
+			if(this._visible === visible){
+				return;
+			}
+
+
+			for(const image of this.images){
+				image.mesh.visible = visible && (this.focusedImage == null);
+			}
+
+			this.sphere.visible = visible && (this.focusedImage != null);
+			this._visible = visible;
+			this.dispatchEvent({
+				type: "visibility_changed",
+				images: this,
+			});
+		}
+
+		get visible(){
+			return this._visible;
+		}
+
+		focus(image360){
+			if(this.focusedImage !== null){
+				this.unfocus();
+			}
+
+			previousView = {
+				controls: this.viewer.controls,
+				position: this.viewer.scene.view.position.clone(),
+				target: viewer.scene.view.getPivot(),
+			};
+
+			this.viewer.setControls(this.viewer.orbitControls);
+			this.viewer.orbitControls.doubleClockZoomEnabled = false;
+
+			for(let image of this.images){
+				image.mesh.visible = false;
+			}
+
+			this.selectingEnabled = false;
+
+			this.sphere.visible = false;
+
+			this.load(image360).then( () => {
+				this.sphere.visible = true;
+				this.sphere.material.map = image360.texture;
+				this.sphere.material.needsUpdate = true;
+			});
+
+			{ // orientation
+				let {course, pitch, roll} = image360;
+				this.sphere.rotation.set(
+					THREE.Math.degToRad(+roll + 90),
+					THREE.Math.degToRad(-pitch),
+					THREE.Math.degToRad(-course + 90),
+					"ZYX"
+				);
+			}
+
+			this.sphere.position.set(...image360.position);
+
+			let target = new THREE.Vector3(...image360.position);
+			let dir = target.clone().sub(viewer.scene.view.position).normalize();
+			let move = dir.multiplyScalar(0.000001);
+			let newCamPos = target.clone().sub(move);
+
+			viewer.scene.view.setView(
+				newCamPos, 
+				target,
+				500
+			);
+
+			this.focusedImage = image360;
+
+			this.elUnfocus.style.display = "";
+		}
+
+		unfocus(){
+			this.selectingEnabled = true;
+
+			for(let image of this.images){
+				image.mesh.visible = true;
+			}
+
+			let image = this.focusedImage;
+
+			if(image === null){
+				return;
+			}
+
+
+			this.sphere.material.map = null;
+			this.sphere.material.needsUpdate = true;
+			this.sphere.visible = false;
+
+			let pos = viewer.scene.view.position;
+			let target = viewer.scene.view.getPivot();
+			let dir = target.clone().sub(pos).normalize();
+			let move = dir.multiplyScalar(10);
+			let newCamPos = target.clone().sub(move);
+
+			viewer.orbitControls.doubleClockZoomEnabled = true;
+			viewer.setControls(previousView.controls);
+
+			viewer.scene.view.setView(
+				previousView.position, 
+				previousView.target,
+				500
+			);
+
+
+			this.focusedImage = null;
+
+			this.elUnfocus.style.display = "none";
+		}
+
+		load(image360){
+
+			return new Promise(resolve => {
+				let texture = new THREE.TextureLoader().load(image360.file, resolve);
+				texture.wrapS = THREE.RepeatWrapping;
+				texture.repeat.x = -1;
+
+				image360.texture = texture;
+			});
+
+		}
+
+		handleHovering(){
+			let mouse = viewer.inputHandler.mouse;
+			let camera = viewer.scene.getActiveCamera();
+			let domElement = viewer.renderer.domElement;
+
+			let ray = Potree.Utils.mouseToRay(mouse, camera, domElement.clientWidth, domElement.clientHeight);
+
+			// let tStart = performance.now();
+			raycaster.ray.copy(ray);
+			let intersections = raycaster.intersectObjects(this.node.children);
+
+			if(intersections.length === 0){
+				// label.visible = false;
+
+				return;
+			}
+
+			let intersection = intersections[0];
+			currentlyHovered = intersection.object;
+			currentlyHovered.material = smHovered;
+
+			//label.visible = true;
+			//label.setText(currentlyHovered.image360.file);
+			//currentlyHovered.getWorldPosition(label.position);
+		}
+
+		update(){
+
+			let {viewer} = this;
+
+			if(currentlyHovered){
+				currentlyHovered.material = sm;
+				currentlyHovered = null;
+			}
+
+			if(this.selectingEnabled){
+				this.handleHovering();
+			}
+
+		}
+
+	};
+
+
+	class Images360Loader{
+
+		static async load(url, viewer, params = {}){
+
+			if(!params.transform){
+				params.transform = {
+					forward: a => a,
+				};
+			}
+			
+			let response = await fetch(`${url}/coordinates.txt`);
+			let text = await response.text();
+
+			let lines = text.split(/\r?\n/);
+			let coordinateLines = lines.slice(1);
+
+			let images360 = new Images360(viewer);
+
+			for(let line of coordinateLines){
+
+				if(line.trim().length === 0){
+					continue;
+				}
+
+				let tokens = line.split(/\t/);
+
+				let [filename, time, long, lat, alt, course, pitch, roll] = tokens;
+				time = parseFloat(time);
+				long = parseFloat(long);
+				lat = parseFloat(lat);
+				alt = parseFloat(alt);
+				course = parseFloat(course);
+				pitch = parseFloat(pitch);
+				roll = parseFloat(roll);
+
+				filename = filename.replace(/"/g, "");
+				let file = `${url}/${filename}`;
+
+				let image360 = new Image360(file, time, long, lat, alt, course, pitch, roll);
+
+				let xy = params.transform.forward([long, lat]);
+				let position = [...xy, alt];
+				image360.position = position;
+
+				images360.images.push(image360);
+			}
+
+			Images360Loader.createSceneNodes(images360, params.transform);
+
+			return images360;
+
+		}
+
+		static createSceneNodes(images360, transform){
+
+			for(let image360 of images360.images){
+				let {longitude, latitude, altitude} = image360;
+				let xy = transform.forward([longitude, latitude]);
+
+				let mesh = new THREE.Mesh(sg, sm);
+				mesh.position.set(...xy, altitude);
+				mesh.scale.set(1, 1, 1);
+				mesh.material.transparent = true;
+				mesh.material.opacity = 0.75;
+				mesh.image360 = image360;
+
+				{ // orientation
+					var {course, pitch, roll} = image360;
+					mesh.rotation.set(
+						THREE.Math.degToRad(+roll + 90),
+						THREE.Math.degToRad(-pitch),
+						THREE.Math.degToRad(-course + 90),
+						"ZYX"
+					);
+				}
+
+				images360.node.add(mesh);
+
+				image360.mesh = mesh;
+			}
+		}
+
+		
+
+	};
+
+	// This is a generated file. Do not edit.
+	var Space_Separator = /[\u1680\u2000-\u200A\u202F\u205F\u3000]/;
+	var ID_Start = /[\xAA\xB5\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02C1\u02C6-\u02D1\u02E0-\u02E4\u02EC\u02EE\u0370-\u0374\u0376\u0377\u037A-\u037D\u037F\u0386\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03F5\u03F7-\u0481\u048A-\u052F\u0531-\u0556\u0559\u0561-\u0587\u05D0-\u05EA\u05F0-\u05F2\u0620-\u064A\u066E\u066F\u0671-\u06D3\u06D5\u06E5\u06E6\u06EE\u06EF\u06FA-\u06FC\u06FF\u0710\u0712-\u072F\u074D-\u07A5\u07B1\u07CA-\u07EA\u07F4\u07F5\u07FA\u0800-\u0815\u081A\u0824\u0828\u0840-\u0858\u0860-\u086A\u08A0-\u08B4\u08B6-\u08BD\u0904-\u0939\u093D\u0950\u0958-\u0961\u0971-\u0980\u0985-\u098C\u098F\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09BD\u09CE\u09DC\u09DD\u09DF-\u09E1\u09F0\u09F1\u09FC\u0A05-\u0A0A\u0A0F\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32\u0A33\u0A35\u0A36\u0A38\u0A39\u0A59-\u0A5C\u0A5E\u0A72-\u0A74\u0A85-\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2\u0AB3\u0AB5-\u0AB9\u0ABD\u0AD0\u0AE0\u0AE1\u0AF9\u0B05-\u0B0C\u0B0F\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32\u0B33\u0B35-\u0B39\u0B3D\u0B5C\u0B5D\u0B5F-\u0B61\u0B71\u0B83\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99\u0B9A\u0B9C\u0B9E\u0B9F\u0BA3\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB9\u0BD0\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C39\u0C3D\u0C58-\u0C5A\u0C60\u0C61\u0C80\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CBD\u0CDE\u0CE0\u0CE1\u0CF1\u0CF2\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D3A\u0D3D\u0D4E\u0D54-\u0D56\u0D5F-\u0D61\u0D7A-\u0D7F\u0D85-\u0D96\u0D9A-\u0DB1\u0DB3-\u0DBB\u0DBD\u0DC0-\u0DC6\u0E01-\u0E30\u0E32\u0E33\u0E40-\u0E46\u0E81\u0E82\u0E84\u0E87\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA\u0EAB\u0EAD-\u0EB0\u0EB2\u0EB3\u0EBD\u0EC0-\u0EC4\u0EC6\u0EDC-\u0EDF\u0F00\u0F40-\u0F47\u0F49-\u0F6C\u0F88-\u0F8C\u1000-\u102A\u103F\u1050-\u1055\u105A-\u105D\u1061\u1065\u1066\u106E-\u1070\u1075-\u1081\u108E\u10A0-\u10C5\u10C7\u10CD\u10D0-\u10FA\u10FC-\u1248\u124A-\u124D\u1250-\u1256\u1258\u125A-\u125D\u1260-\u1288\u128A-\u128D\u1290-\u12B0\u12B2-\u12B5\u12B8-\u12BE\u12C0\u12C2-\u12C5\u12C8-\u12D6\u12D8-\u1310\u1312-\u1315\u1318-\u135A\u1380-\u138F\u13A0-\u13F5\u13F8-\u13FD\u1401-\u166C\u166F-\u167F\u1681-\u169A\u16A0-\u16EA\u16EE-\u16F8\u1700-\u170C\u170E-\u1711\u1720-\u1731\u1740-\u1751\u1760-\u176C\u176E-\u1770\u1780-\u17B3\u17D7\u17DC\u1820-\u1877\u1880-\u1884\u1887-\u18A8\u18AA\u18B0-\u18F5\u1900-\u191E\u1950-\u196D\u1970-\u1974\u1980-\u19AB\u19B0-\u19C9\u1A00-\u1A16\u1A20-\u1A54\u1AA7\u1B05-\u1B33\u1B45-\u1B4B\u1B83-\u1BA0\u1BAE\u1BAF\u1BBA-\u1BE5\u1C00-\u1C23\u1C4D-\u1C4F\u1C5A-\u1C7D\u1C80-\u1C88\u1CE9-\u1CEC\u1CEE-\u1CF1\u1CF5\u1CF6\u1D00-\u1DBF\u1E00-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u2071\u207F\u2090-\u209C\u2102\u2107\u210A-\u2113\u2115\u2119-\u211D\u2124\u2126\u2128\u212A-\u212D\u212F-\u2139\u213C-\u213F\u2145-\u2149\u214E\u2160-\u2188\u2C00-\u2C2E\u2C30-\u2C5E\u2C60-\u2CE4\u2CEB-\u2CEE\u2CF2\u2CF3\u2D00-\u2D25\u2D27\u2D2D\u2D30-\u2D67\u2D6F\u2D80-\u2D96\u2DA0-\u2DA6\u2DA8-\u2DAE\u2DB0-\u2DB6\u2DB8-\u2DBE\u2DC0-\u2DC6\u2DC8-\u2DCE\u2DD0-\u2DD6\u2DD8-\u2DDE\u2E2F\u3005-\u3007\u3021-\u3029\u3031-\u3035\u3038-\u303C\u3041-\u3096\u309D-\u309F\u30A1-\u30FA\u30FC-\u30FF\u3105-\u312E\u3131-\u318E\u31A0-\u31BA\u31F0-\u31FF\u3400-\u4DB5\u4E00-\u9FEA\uA000-\uA48C\uA4D0-\uA4FD\uA500-\uA60C\uA610-\uA61F\uA62A\uA62B\uA640-\uA66E\uA67F-\uA69D\uA6A0-\uA6EF\uA717-\uA71F\uA722-\uA788\uA78B-\uA7AE\uA7B0-\uA7B7\uA7F7-\uA801\uA803-\uA805\uA807-\uA80A\uA80C-\uA822\uA840-\uA873\uA882-\uA8B3\uA8F2-\uA8F7\uA8FB\uA8FD\uA90A-\uA925\uA930-\uA946\uA960-\uA97C\uA984-\uA9B2\uA9CF\uA9E0-\uA9E4\uA9E6-\uA9EF\uA9FA-\uA9FE\uAA00-\uAA28\uAA40-\uAA42\uAA44-\uAA4B\uAA60-\uAA76\uAA7A\uAA7E-\uAAAF\uAAB1\uAAB5\uAAB6\uAAB9-\uAABD\uAAC0\uAAC2\uAADB-\uAADD\uAAE0-\uAAEA\uAAF2-\uAAF4\uAB01-\uAB06\uAB09-\uAB0E\uAB11-\uAB16\uAB20-\uAB26\uAB28-\uAB2E\uAB30-\uAB5A\uAB5C-\uAB65\uAB70-\uABE2\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFA6D\uFA70-\uFAD9\uFB00-\uFB06\uFB13-\uFB17\uFB1D\uFB1F-\uFB28\uFB2A-\uFB36\uFB38-\uFB3C\uFB3E\uFB40\uFB41\uFB43\uFB44\uFB46-\uFBB1\uFBD3-\uFD3D\uFD50-\uFD8F\uFD92-\uFDC7\uFDF0-\uFDFB\uFE70-\uFE74\uFE76-\uFEFC\uFF21-\uFF3A\uFF41-\uFF5A\uFF66-\uFFBE\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC]|\uD800[\uDC00-\uDC0B\uDC0D-\uDC26\uDC28-\uDC3A\uDC3C\uDC3D\uDC3F-\uDC4D\uDC50-\uDC5D\uDC80-\uDCFA\uDD40-\uDD74\uDE80-\uDE9C\uDEA0-\uDED0\uDF00-\uDF1F\uDF2D-\uDF4A\uDF50-\uDF75\uDF80-\uDF9D\uDFA0-\uDFC3\uDFC8-\uDFCF\uDFD1-\uDFD5]|\uD801[\uDC00-\uDC9D\uDCB0-\uDCD3\uDCD8-\uDCFB\uDD00-\uDD27\uDD30-\uDD63\uDE00-\uDF36\uDF40-\uDF55\uDF60-\uDF67]|\uD802[\uDC00-\uDC05\uDC08\uDC0A-\uDC35\uDC37\uDC38\uDC3C\uDC3F-\uDC55\uDC60-\uDC76\uDC80-\uDC9E\uDCE0-\uDCF2\uDCF4\uDCF5\uDD00-\uDD15\uDD20-\uDD39\uDD80-\uDDB7\uDDBE\uDDBF\uDE00\uDE10-\uDE13\uDE15-\uDE17\uDE19-\uDE33\uDE60-\uDE7C\uDE80-\uDE9C\uDEC0-\uDEC7\uDEC9-\uDEE4\uDF00-\uDF35\uDF40-\uDF55\uDF60-\uDF72\uDF80-\uDF91]|\uD803[\uDC00-\uDC48\uDC80-\uDCB2\uDCC0-\uDCF2]|\uD804[\uDC03-\uDC37\uDC83-\uDCAF\uDCD0-\uDCE8\uDD03-\uDD26\uDD50-\uDD72\uDD76\uDD83-\uDDB2\uDDC1-\uDDC4\uDDDA\uDDDC\uDE00-\uDE11\uDE13-\uDE2B\uDE80-\uDE86\uDE88\uDE8A-\uDE8D\uDE8F-\uDE9D\uDE9F-\uDEA8\uDEB0-\uDEDE\uDF05-\uDF0C\uDF0F\uDF10\uDF13-\uDF28\uDF2A-\uDF30\uDF32\uDF33\uDF35-\uDF39\uDF3D\uDF50\uDF5D-\uDF61]|\uD805[\uDC00-\uDC34\uDC47-\uDC4A\uDC80-\uDCAF\uDCC4\uDCC5\uDCC7\uDD80-\uDDAE\uDDD8-\uDDDB\uDE00-\uDE2F\uDE44\uDE80-\uDEAA\uDF00-\uDF19]|\uD806[\uDCA0-\uDCDF\uDCFF\uDE00\uDE0B-\uDE32\uDE3A\uDE50\uDE5C-\uDE83\uDE86-\uDE89\uDEC0-\uDEF8]|\uD807[\uDC00-\uDC08\uDC0A-\uDC2E\uDC40\uDC72-\uDC8F\uDD00-\uDD06\uDD08\uDD09\uDD0B-\uDD30\uDD46]|\uD808[\uDC00-\uDF99]|\uD809[\uDC00-\uDC6E\uDC80-\uDD43]|[\uD80C\uD81C-\uD820\uD840-\uD868\uD86A-\uD86C\uD86F-\uD872\uD874-\uD879][\uDC00-\uDFFF]|\uD80D[\uDC00-\uDC2E]|\uD811[\uDC00-\uDE46]|\uD81A[\uDC00-\uDE38\uDE40-\uDE5E\uDED0-\uDEED\uDF00-\uDF2F\uDF40-\uDF43\uDF63-\uDF77\uDF7D-\uDF8F]|\uD81B[\uDF00-\uDF44\uDF50\uDF93-\uDF9F\uDFE0\uDFE1]|\uD821[\uDC00-\uDFEC]|\uD822[\uDC00-\uDEF2]|\uD82C[\uDC00-\uDD1E\uDD70-\uDEFB]|\uD82F[\uDC00-\uDC6A\uDC70-\uDC7C\uDC80-\uDC88\uDC90-\uDC99]|\uD835[\uDC00-\uDC54\uDC56-\uDC9C\uDC9E\uDC9F\uDCA2\uDCA5\uDCA6\uDCA9-\uDCAC\uDCAE-\uDCB9\uDCBB\uDCBD-\uDCC3\uDCC5-\uDD05\uDD07-\uDD0A\uDD0D-\uDD14\uDD16-\uDD1C\uDD1E-\uDD39\uDD3B-\uDD3E\uDD40-\uDD44\uDD46\uDD4A-\uDD50\uDD52-\uDEA5\uDEA8-\uDEC0\uDEC2-\uDEDA\uDEDC-\uDEFA\uDEFC-\uDF14\uDF16-\uDF34\uDF36-\uDF4E\uDF50-\uDF6E\uDF70-\uDF88\uDF8A-\uDFA8\uDFAA-\uDFC2\uDFC4-\uDFCB]|\uD83A[\uDC00-\uDCC4\uDD00-\uDD43]|\uD83B[\uDE00-\uDE03\uDE05-\uDE1F\uDE21\uDE22\uDE24\uDE27\uDE29-\uDE32\uDE34-\uDE37\uDE39\uDE3B\uDE42\uDE47\uDE49\uDE4B\uDE4D-\uDE4F\uDE51\uDE52\uDE54\uDE57\uDE59\uDE5B\uDE5D\uDE5F\uDE61\uDE62\uDE64\uDE67-\uDE6A\uDE6C-\uDE72\uDE74-\uDE77\uDE79-\uDE7C\uDE7E\uDE80-\uDE89\uDE8B-\uDE9B\uDEA1-\uDEA3\uDEA5-\uDEA9\uDEAB-\uDEBB]|\uD869[\uDC00-\uDED6\uDF00-\uDFFF]|\uD86D[\uDC00-\uDF34\uDF40-\uDFFF]|\uD86E[\uDC00-\uDC1D\uDC20-\uDFFF]|\uD873[\uDC00-\uDEA1\uDEB0-\uDFFF]|\uD87A[\uDC00-\uDFE0]|\uD87E[\uDC00-\uDE1D]/;
+	var ID_Continue = /[\xAA\xB5\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02C1\u02C6-\u02D1\u02E0-\u02E4\u02EC\u02EE\u0300-\u0374\u0376\u0377\u037A-\u037D\u037F\u0386\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03F5\u03F7-\u0481\u0483-\u0487\u048A-\u052F\u0531-\u0556\u0559\u0561-\u0587\u0591-\u05BD\u05BF\u05C1\u05C2\u05C4\u05C5\u05C7\u05D0-\u05EA\u05F0-\u05F2\u0610-\u061A\u0620-\u0669\u066E-\u06D3\u06D5-\u06DC\u06DF-\u06E8\u06EA-\u06FC\u06FF\u0710-\u074A\u074D-\u07B1\u07C0-\u07F5\u07FA\u0800-\u082D\u0840-\u085B\u0860-\u086A\u08A0-\u08B4\u08B6-\u08BD\u08D4-\u08E1\u08E3-\u0963\u0966-\u096F\u0971-\u0983\u0985-\u098C\u098F\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09BC-\u09C4\u09C7\u09C8\u09CB-\u09CE\u09D7\u09DC\u09DD\u09DF-\u09E3\u09E6-\u09F1\u09FC\u0A01-\u0A03\u0A05-\u0A0A\u0A0F\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32\u0A33\u0A35\u0A36\u0A38\u0A39\u0A3C\u0A3E-\u0A42\u0A47\u0A48\u0A4B-\u0A4D\u0A51\u0A59-\u0A5C\u0A5E\u0A66-\u0A75\u0A81-\u0A83\u0A85-\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2\u0AB3\u0AB5-\u0AB9\u0ABC-\u0AC5\u0AC7-\u0AC9\u0ACB-\u0ACD\u0AD0\u0AE0-\u0AE3\u0AE6-\u0AEF\u0AF9-\u0AFF\u0B01-\u0B03\u0B05-\u0B0C\u0B0F\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32\u0B33\u0B35-\u0B39\u0B3C-\u0B44\u0B47\u0B48\u0B4B-\u0B4D\u0B56\u0B57\u0B5C\u0B5D\u0B5F-\u0B63\u0B66-\u0B6F\u0B71\u0B82\u0B83\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99\u0B9A\u0B9C\u0B9E\u0B9F\u0BA3\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB9\u0BBE-\u0BC2\u0BC6-\u0BC8\u0BCA-\u0BCD\u0BD0\u0BD7\u0BE6-\u0BEF\u0C00-\u0C03\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C39\u0C3D-\u0C44\u0C46-\u0C48\u0C4A-\u0C4D\u0C55\u0C56\u0C58-\u0C5A\u0C60-\u0C63\u0C66-\u0C6F\u0C80-\u0C83\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CBC-\u0CC4\u0CC6-\u0CC8\u0CCA-\u0CCD\u0CD5\u0CD6\u0CDE\u0CE0-\u0CE3\u0CE6-\u0CEF\u0CF1\u0CF2\u0D00-\u0D03\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D44\u0D46-\u0D48\u0D4A-\u0D4E\u0D54-\u0D57\u0D5F-\u0D63\u0D66-\u0D6F\u0D7A-\u0D7F\u0D82\u0D83\u0D85-\u0D96\u0D9A-\u0DB1\u0DB3-\u0DBB\u0DBD\u0DC0-\u0DC6\u0DCA\u0DCF-\u0DD4\u0DD6\u0DD8-\u0DDF\u0DE6-\u0DEF\u0DF2\u0DF3\u0E01-\u0E3A\u0E40-\u0E4E\u0E50-\u0E59\u0E81\u0E82\u0E84\u0E87\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA\u0EAB\u0EAD-\u0EB9\u0EBB-\u0EBD\u0EC0-\u0EC4\u0EC6\u0EC8-\u0ECD\u0ED0-\u0ED9\u0EDC-\u0EDF\u0F00\u0F18\u0F19\u0F20-\u0F29\u0F35\u0F37\u0F39\u0F3E-\u0F47\u0F49-\u0F6C\u0F71-\u0F84\u0F86-\u0F97\u0F99-\u0FBC\u0FC6\u1000-\u1049\u1050-\u109D\u10A0-\u10C5\u10C7\u10CD\u10D0-\u10FA\u10FC-\u1248\u124A-\u124D\u1250-\u1256\u1258\u125A-\u125D\u1260-\u1288\u128A-\u128D\u1290-\u12B0\u12B2-\u12B5\u12B8-\u12BE\u12C0\u12C2-\u12C5\u12C8-\u12D6\u12D8-\u1310\u1312-\u1315\u1318-\u135A\u135D-\u135F\u1380-\u138F\u13A0-\u13F5\u13F8-\u13FD\u1401-\u166C\u166F-\u167F\u1681-\u169A\u16A0-\u16EA\u16EE-\u16F8\u1700-\u170C\u170E-\u1714\u1720-\u1734\u1740-\u1753\u1760-\u176C\u176E-\u1770\u1772\u1773\u1780-\u17D3\u17D7\u17DC\u17DD\u17E0-\u17E9\u180B-\u180D\u1810-\u1819\u1820-\u1877\u1880-\u18AA\u18B0-\u18F5\u1900-\u191E\u1920-\u192B\u1930-\u193B\u1946-\u196D\u1970-\u1974\u1980-\u19AB\u19B0-\u19C9\u19D0-\u19D9\u1A00-\u1A1B\u1A20-\u1A5E\u1A60-\u1A7C\u1A7F-\u1A89\u1A90-\u1A99\u1AA7\u1AB0-\u1ABD\u1B00-\u1B4B\u1B50-\u1B59\u1B6B-\u1B73\u1B80-\u1BF3\u1C00-\u1C37\u1C40-\u1C49\u1C4D-\u1C7D\u1C80-\u1C88\u1CD0-\u1CD2\u1CD4-\u1CF9\u1D00-\u1DF9\u1DFB-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u203F\u2040\u2054\u2071\u207F\u2090-\u209C\u20D0-\u20DC\u20E1\u20E5-\u20F0\u2102\u2107\u210A-\u2113\u2115\u2119-\u211D\u2124\u2126\u2128\u212A-\u212D\u212F-\u2139\u213C-\u213F\u2145-\u2149\u214E\u2160-\u2188\u2C00-\u2C2E\u2C30-\u2C5E\u2C60-\u2CE4\u2CEB-\u2CF3\u2D00-\u2D25\u2D27\u2D2D\u2D30-\u2D67\u2D6F\u2D7F-\u2D96\u2DA0-\u2DA6\u2DA8-\u2DAE\u2DB0-\u2DB6\u2DB8-\u2DBE\u2DC0-\u2DC6\u2DC8-\u2DCE\u2DD0-\u2DD6\u2DD8-\u2DDE\u2DE0-\u2DFF\u2E2F\u3005-\u3007\u3021-\u302F\u3031-\u3035\u3038-\u303C\u3041-\u3096\u3099\u309A\u309D-\u309F\u30A1-\u30FA\u30FC-\u30FF\u3105-\u312E\u3131-\u318E\u31A0-\u31BA\u31F0-\u31FF\u3400-\u4DB5\u4E00-\u9FEA\uA000-\uA48C\uA4D0-\uA4FD\uA500-\uA60C\uA610-\uA62B\uA640-\uA66F\uA674-\uA67D\uA67F-\uA6F1\uA717-\uA71F\uA722-\uA788\uA78B-\uA7AE\uA7B0-\uA7B7\uA7F7-\uA827\uA840-\uA873\uA880-\uA8C5\uA8D0-\uA8D9\uA8E0-\uA8F7\uA8FB\uA8FD\uA900-\uA92D\uA930-\uA953\uA960-\uA97C\uA980-\uA9C0\uA9CF-\uA9D9\uA9E0-\uA9FE\uAA00-\uAA36\uAA40-\uAA4D\uAA50-\uAA59\uAA60-\uAA76\uAA7A-\uAAC2\uAADB-\uAADD\uAAE0-\uAAEF\uAAF2-\uAAF6\uAB01-\uAB06\uAB09-\uAB0E\uAB11-\uAB16\uAB20-\uAB26\uAB28-\uAB2E\uAB30-\uAB5A\uAB5C-\uAB65\uAB70-\uABEA\uABEC\uABED\uABF0-\uABF9\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFA6D\uFA70-\uFAD9\uFB00-\uFB06\uFB13-\uFB17\uFB1D-\uFB28\uFB2A-\uFB36\uFB38-\uFB3C\uFB3E\uFB40\uFB41\uFB43\uFB44\uFB46-\uFBB1\uFBD3-\uFD3D\uFD50-\uFD8F\uFD92-\uFDC7\uFDF0-\uFDFB\uFE00-\uFE0F\uFE20-\uFE2F\uFE33\uFE34\uFE4D-\uFE4F\uFE70-\uFE74\uFE76-\uFEFC\uFF10-\uFF19\uFF21-\uFF3A\uFF3F\uFF41-\uFF5A\uFF66-\uFFBE\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC]|\uD800[\uDC00-\uDC0B\uDC0D-\uDC26\uDC28-\uDC3A\uDC3C\uDC3D\uDC3F-\uDC4D\uDC50-\uDC5D\uDC80-\uDCFA\uDD40-\uDD74\uDDFD\uDE80-\uDE9C\uDEA0-\uDED0\uDEE0\uDF00-\uDF1F\uDF2D-\uDF4A\uDF50-\uDF7A\uDF80-\uDF9D\uDFA0-\uDFC3\uDFC8-\uDFCF\uDFD1-\uDFD5]|\uD801[\uDC00-\uDC9D\uDCA0-\uDCA9\uDCB0-\uDCD3\uDCD8-\uDCFB\uDD00-\uDD27\uDD30-\uDD63\uDE00-\uDF36\uDF40-\uDF55\uDF60-\uDF67]|\uD802[\uDC00-\uDC05\uDC08\uDC0A-\uDC35\uDC37\uDC38\uDC3C\uDC3F-\uDC55\uDC60-\uDC76\uDC80-\uDC9E\uDCE0-\uDCF2\uDCF4\uDCF5\uDD00-\uDD15\uDD20-\uDD39\uDD80-\uDDB7\uDDBE\uDDBF\uDE00-\uDE03\uDE05\uDE06\uDE0C-\uDE13\uDE15-\uDE17\uDE19-\uDE33\uDE38-\uDE3A\uDE3F\uDE60-\uDE7C\uDE80-\uDE9C\uDEC0-\uDEC7\uDEC9-\uDEE6\uDF00-\uDF35\uDF40-\uDF55\uDF60-\uDF72\uDF80-\uDF91]|\uD803[\uDC00-\uDC48\uDC80-\uDCB2\uDCC0-\uDCF2]|\uD804[\uDC00-\uDC46\uDC66-\uDC6F\uDC7F-\uDCBA\uDCD0-\uDCE8\uDCF0-\uDCF9\uDD00-\uDD34\uDD36-\uDD3F\uDD50-\uDD73\uDD76\uDD80-\uDDC4\uDDCA-\uDDCC\uDDD0-\uDDDA\uDDDC\uDE00-\uDE11\uDE13-\uDE37\uDE3E\uDE80-\uDE86\uDE88\uDE8A-\uDE8D\uDE8F-\uDE9D\uDE9F-\uDEA8\uDEB0-\uDEEA\uDEF0-\uDEF9\uDF00-\uDF03\uDF05-\uDF0C\uDF0F\uDF10\uDF13-\uDF28\uDF2A-\uDF30\uDF32\uDF33\uDF35-\uDF39\uDF3C-\uDF44\uDF47\uDF48\uDF4B-\uDF4D\uDF50\uDF57\uDF5D-\uDF63\uDF66-\uDF6C\uDF70-\uDF74]|\uD805[\uDC00-\uDC4A\uDC50-\uDC59\uDC80-\uDCC5\uDCC7\uDCD0-\uDCD9\uDD80-\uDDB5\uDDB8-\uDDC0\uDDD8-\uDDDD\uDE00-\uDE40\uDE44\uDE50-\uDE59\uDE80-\uDEB7\uDEC0-\uDEC9\uDF00-\uDF19\uDF1D-\uDF2B\uDF30-\uDF39]|\uD806[\uDCA0-\uDCE9\uDCFF\uDE00-\uDE3E\uDE47\uDE50-\uDE83\uDE86-\uDE99\uDEC0-\uDEF8]|\uD807[\uDC00-\uDC08\uDC0A-\uDC36\uDC38-\uDC40\uDC50-\uDC59\uDC72-\uDC8F\uDC92-\uDCA7\uDCA9-\uDCB6\uDD00-\uDD06\uDD08\uDD09\uDD0B-\uDD36\uDD3A\uDD3C\uDD3D\uDD3F-\uDD47\uDD50-\uDD59]|\uD808[\uDC00-\uDF99]|\uD809[\uDC00-\uDC6E\uDC80-\uDD43]|[\uD80C\uD81C-\uD820\uD840-\uD868\uD86A-\uD86C\uD86F-\uD872\uD874-\uD879][\uDC00-\uDFFF]|\uD80D[\uDC00-\uDC2E]|\uD811[\uDC00-\uDE46]|\uD81A[\uDC00-\uDE38\uDE40-\uDE5E\uDE60-\uDE69\uDED0-\uDEED\uDEF0-\uDEF4\uDF00-\uDF36\uDF40-\uDF43\uDF50-\uDF59\uDF63-\uDF77\uDF7D-\uDF8F]|\uD81B[\uDF00-\uDF44\uDF50-\uDF7E\uDF8F-\uDF9F\uDFE0\uDFE1]|\uD821[\uDC00-\uDFEC]|\uD822[\uDC00-\uDEF2]|\uD82C[\uDC00-\uDD1E\uDD70-\uDEFB]|\uD82F[\uDC00-\uDC6A\uDC70-\uDC7C\uDC80-\uDC88\uDC90-\uDC99\uDC9D\uDC9E]|\uD834[\uDD65-\uDD69\uDD6D-\uDD72\uDD7B-\uDD82\uDD85-\uDD8B\uDDAA-\uDDAD\uDE42-\uDE44]|\uD835[\uDC00-\uDC54\uDC56-\uDC9C\uDC9E\uDC9F\uDCA2\uDCA5\uDCA6\uDCA9-\uDCAC\uDCAE-\uDCB9\uDCBB\uDCBD-\uDCC3\uDCC5-\uDD05\uDD07-\uDD0A\uDD0D-\uDD14\uDD16-\uDD1C\uDD1E-\uDD39\uDD3B-\uDD3E\uDD40-\uDD44\uDD46\uDD4A-\uDD50\uDD52-\uDEA5\uDEA8-\uDEC0\uDEC2-\uDEDA\uDEDC-\uDEFA\uDEFC-\uDF14\uDF16-\uDF34\uDF36-\uDF4E\uDF50-\uDF6E\uDF70-\uDF88\uDF8A-\uDFA8\uDFAA-\uDFC2\uDFC4-\uDFCB\uDFCE-\uDFFF]|\uD836[\uDE00-\uDE36\uDE3B-\uDE6C\uDE75\uDE84\uDE9B-\uDE9F\uDEA1-\uDEAF]|\uD838[\uDC00-\uDC06\uDC08-\uDC18\uDC1B-\uDC21\uDC23\uDC24\uDC26-\uDC2A]|\uD83A[\uDC00-\uDCC4\uDCD0-\uDCD6\uDD00-\uDD4A\uDD50-\uDD59]|\uD83B[\uDE00-\uDE03\uDE05-\uDE1F\uDE21\uDE22\uDE24\uDE27\uDE29-\uDE32\uDE34-\uDE37\uDE39\uDE3B\uDE42\uDE47\uDE49\uDE4B\uDE4D-\uDE4F\uDE51\uDE52\uDE54\uDE57\uDE59\uDE5B\uDE5D\uDE5F\uDE61\uDE62\uDE64\uDE67-\uDE6A\uDE6C-\uDE72\uDE74-\uDE77\uDE79-\uDE7C\uDE7E\uDE80-\uDE89\uDE8B-\uDE9B\uDEA1-\uDEA3\uDEA5-\uDEA9\uDEAB-\uDEBB]|\uD869[\uDC00-\uDED6\uDF00-\uDFFF]|\uD86D[\uDC00-\uDF34\uDF40-\uDFFF]|\uD86E[\uDC00-\uDC1D\uDC20-\uDFFF]|\uD873[\uDC00-\uDEA1\uDEB0-\uDFFF]|\uD87A[\uDC00-\uDFE0]|\uD87E[\uDC00-\uDE1D]|\uDB40[\uDD00-\uDDEF]/;
+
+	var unicode = {
+		Space_Separator: Space_Separator,
+		ID_Start: ID_Start,
+		ID_Continue: ID_Continue
+	};
+
+	var util = {
+	    isSpaceSeparator (c) {
+	        return typeof c === 'string' && unicode.Space_Separator.test(c)
+	    },
+
+	    isIdStartChar (c) {
+	        return typeof c === 'string' && (
+	            (c >= 'a' && c <= 'z') ||
+	        (c >= 'A' && c <= 'Z') ||
+	        (c === '$') || (c === '_') ||
+	        unicode.ID_Start.test(c)
+	        )
+	    },
+
+	    isIdContinueChar (c) {
+	        return typeof c === 'string' && (
+	            (c >= 'a' && c <= 'z') ||
+	        (c >= 'A' && c <= 'Z') ||
+	        (c >= '0' && c <= '9') ||
+	        (c === '$') || (c === '_') ||
+	        (c === '\u200C') || (c === '\u200D') ||
+	        unicode.ID_Continue.test(c)
+	        )
+	    },
+
+	    isDigit (c) {
+	        return typeof c === 'string' && /[0-9]/.test(c)
+	    },
+
+	    isHexDigit (c) {
+	        return typeof c === 'string' && /[0-9A-Fa-f]/.test(c)
+	    },
+	};
+
+	let source;
+	let parseState;
+	let stack;
+	let pos;
+	let line;
+	let column;
+	let token;
+	let key;
+	let root;
+
+	var parse = function parse (text, reviver) {
+	    source = String(text);
+	    parseState = 'start';
+	    stack = [];
+	    pos = 0;
+	    line = 1;
+	    column = 0;
+	    token = undefined;
+	    key = undefined;
+	    root = undefined;
+
+	    do {
+	        token = lex();
+
+	        // This code is unreachable.
+	        // if (!parseStates[parseState]) {
+	        //     throw invalidParseState()
+	        // }
+
+	        parseStates[parseState]();
+	    } while (token.type !== 'eof')
+
+	    if (typeof reviver === 'function') {
+	        return internalize({'': root}, '', reviver)
+	    }
+
+	    return root
+	};
+
+	function internalize (holder, name, reviver) {
+	    const value = holder[name];
+	    if (value != null && typeof value === 'object') {
+	        for (const key in value) {
+	            const replacement = internalize(value, key, reviver);
+	            if (replacement === undefined) {
+	                delete value[key];
+	            } else {
+	                value[key] = replacement;
+	            }
+	        }
+	    }
+
+	    return reviver.call(holder, name, value)
+	}
+
+	let lexState;
+	let buffer;
+	let doubleQuote;
+	let sign;
+	let c;
+
+	function lex () {
+	    lexState = 'default';
+	    buffer = '';
+	    doubleQuote = false;
+	    sign = 1;
+
+	    for (;;) {
+	        c = peek();
+
+	        // This code is unreachable.
+	        // if (!lexStates[lexState]) {
+	        //     throw invalidLexState(lexState)
+	        // }
+
+	        const token = lexStates[lexState]();
+	        if (token) {
+	            return token
+	        }
+	    }
+	}
+
+	function peek () {
+	    if (source[pos]) {
+	        return String.fromCodePoint(source.codePointAt(pos))
+	    }
+	}
+
+	function read () {
+	    const c = peek();
+
+	    if (c === '\n') {
+	        line++;
+	        column = 0;
+	    } else if (c) {
+	        column += c.length;
+	    } else {
+	        column++;
+	    }
+
+	    if (c) {
+	        pos += c.length;
+	    }
+
+	    return c
+	}
+
+	const lexStates = {
+	    default () {
+	        switch (c) {
+	        case '\t':
+	        case '\v':
+	        case '\f':
+	        case ' ':
+	        case '\u00A0':
+	        case '\uFEFF':
+	        case '\n':
+	        case '\r':
+	        case '\u2028':
+	        case '\u2029':
+	            read();
+	            return
+
+	        case '/':
+	            read();
+	            lexState = 'comment';
+	            return
+
+	        case undefined:
+	            read();
+	            return newToken('eof')
+	        }
+
+	        if (util.isSpaceSeparator(c)) {
+	            read();
+	            return
+	        }
+
+	        // This code is unreachable.
+	        // if (!lexStates[parseState]) {
+	        //     throw invalidLexState(parseState)
+	        // }
+
+	        return lexStates[parseState]()
+	    },
+
+	    comment () {
+	        switch (c) {
+	        case '*':
+	            read();
+	            lexState = 'multiLineComment';
+	            return
+
+	        case '/':
+	            read();
+	            lexState = 'singleLineComment';
+	            return
+	        }
+
+	        throw invalidChar(read())
+	    },
+
+	    multiLineComment () {
+	        switch (c) {
+	        case '*':
+	            read();
+	            lexState = 'multiLineCommentAsterisk';
+	            return
+
+	        case undefined:
+	            throw invalidChar(read())
+	        }
+
+	        read();
+	    },
+
+	    multiLineCommentAsterisk () {
+	        switch (c) {
+	        case '*':
+	            read();
+	            return
+
+	        case '/':
+	            read();
+	            lexState = 'default';
+	            return
+
+	        case undefined:
+	            throw invalidChar(read())
+	        }
+
+	        read();
+	        lexState = 'multiLineComment';
+	    },
+
+	    singleLineComment () {
+	        switch (c) {
+	        case '\n':
+	        case '\r':
+	        case '\u2028':
+	        case '\u2029':
+	            read();
+	            lexState = 'default';
+	            return
+
+	        case undefined:
+	            read();
+	            return newToken('eof')
+	        }
+
+	        read();
+	    },
+
+	    value () {
+	        switch (c) {
+	        case '{':
+	        case '[':
+	            return newToken('punctuator', read())
+
+	        case 'n':
+	            read();
+	            literal('ull');
+	            return newToken('null', null)
+
+	        case 't':
+	            read();
+	            literal('rue');
+	            return newToken('boolean', true)
+
+	        case 'f':
+	            read();
+	            literal('alse');
+	            return newToken('boolean', false)
+
+	        case '-':
+	        case '+':
+	            if (read() === '-') {
+	                sign = -1;
+	            }
+
+	            lexState = 'sign';
+	            return
+
+	        case '.':
+	            buffer = read();
+	            lexState = 'decimalPointLeading';
+	            return
+
+	        case '0':
+	            buffer = read();
+	            lexState = 'zero';
+	            return
+
+	        case '1':
+	        case '2':
+	        case '3':
+	        case '4':
+	        case '5':
+	        case '6':
+	        case '7':
+	        case '8':
+	        case '9':
+	            buffer = read();
+	            lexState = 'decimalInteger';
+	            return
+
+	        case 'I':
+	            read();
+	            literal('nfinity');
+	            return newToken('numeric', Infinity)
+
+	        case 'N':
+	            read();
+	            literal('aN');
+	            return newToken('numeric', NaN)
+
+	        case '"':
+	        case "'":
+	            doubleQuote = (read() === '"');
+	            buffer = '';
+	            lexState = 'string';
+	            return
+	        }
+
+	        throw invalidChar(read())
+	    },
+
+	    identifierNameStartEscape () {
+	        if (c !== 'u') {
+	            throw invalidChar(read())
+	        }
+
+	        read();
+	        const u = unicodeEscape();
+	        switch (u) {
+	        case '$':
+	        case '_':
+	            break
+
+	        default:
+	            if (!util.isIdStartChar(u)) {
+	                throw invalidIdentifier()
+	            }
+
+	            break
+	        }
+
+	        buffer += u;
+	        lexState = 'identifierName';
+	    },
+
+	    identifierName () {
+	        switch (c) {
+	        case '$':
+	        case '_':
+	        case '\u200C':
+	        case '\u200D':
+	            buffer += read();
+	            return
+
+	        case '\\':
+	            read();
+	            lexState = 'identifierNameEscape';
+	            return
+	        }
+
+	        if (util.isIdContinueChar(c)) {
+	            buffer += read();
+	            return
+	        }
+
+	        return newToken('identifier', buffer)
+	    },
+
+	    identifierNameEscape () {
+	        if (c !== 'u') {
+	            throw invalidChar(read())
+	        }
+
+	        read();
+	        const u = unicodeEscape();
+	        switch (u) {
+	        case '$':
+	        case '_':
+	        case '\u200C':
+	        case '\u200D':
+	            break
+
+	        default:
+	            if (!util.isIdContinueChar(u)) {
+	                throw invalidIdentifier()
+	            }
+
+	            break
+	        }
+
+	        buffer += u;
+	        lexState = 'identifierName';
+	    },
+
+	    sign () {
+	        switch (c) {
+	        case '.':
+	            buffer = read();
+	            lexState = 'decimalPointLeading';
+	            return
+
+	        case '0':
+	            buffer = read();
+	            lexState = 'zero';
+	            return
+
+	        case '1':
+	        case '2':
+	        case '3':
+	        case '4':
+	        case '5':
+	        case '6':
+	        case '7':
+	        case '8':
+	        case '9':
+	            buffer = read();
+	            lexState = 'decimalInteger';
+	            return
+
+	        case 'I':
+	            read();
+	            literal('nfinity');
+	            return newToken('numeric', sign * Infinity)
+
+	        case 'N':
+	            read();
+	            literal('aN');
+	            return newToken('numeric', NaN)
+	        }
+
+	        throw invalidChar(read())
+	    },
+
+	    zero () {
+	        switch (c) {
+	        case '.':
+	            buffer += read();
+	            lexState = 'decimalPoint';
+	            return
+
+	        case 'e':
+	        case 'E':
+	            buffer += read();
+	            lexState = 'decimalExponent';
+	            return
+
+	        case 'x':
+	        case 'X':
+	            buffer += read();
+	            lexState = 'hexadecimal';
+	            return
+	        }
+
+	        return newToken('numeric', sign * 0)
+	    },
+
+	    decimalInteger () {
+	        switch (c) {
+	        case '.':
+	            buffer += read();
+	            lexState = 'decimalPoint';
+	            return
+
+	        case 'e':
+	        case 'E':
+	            buffer += read();
+	            lexState = 'decimalExponent';
+	            return
+	        }
+
+	        if (util.isDigit(c)) {
+	            buffer += read();
+	            return
+	        }
+
+	        return newToken('numeric', sign * Number(buffer))
+	    },
+
+	    decimalPointLeading () {
+	        if (util.isDigit(c)) {
+	            buffer += read();
+	            lexState = 'decimalFraction';
+	            return
+	        }
+
+	        throw invalidChar(read())
+	    },
+
+	    decimalPoint () {
+	        switch (c) {
+	        case 'e':
+	        case 'E':
+	            buffer += read();
+	            lexState = 'decimalExponent';
+	            return
+	        }
+
+	        if (util.isDigit(c)) {
+	            buffer += read();
+	            lexState = 'decimalFraction';
+	            return
+	        }
+
+	        return newToken('numeric', sign * Number(buffer))
+	    },
+
+	    decimalFraction () {
+	        switch (c) {
+	        case 'e':
+	        case 'E':
+	            buffer += read();
+	            lexState = 'decimalExponent';
+	            return
+	        }
+
+	        if (util.isDigit(c)) {
+	            buffer += read();
+	            return
+	        }
+
+	        return newToken('numeric', sign * Number(buffer))
+	    },
+
+	    decimalExponent () {
+	        switch (c) {
+	        case '+':
+	        case '-':
+	            buffer += read();
+	            lexState = 'decimalExponentSign';
+	            return
+	        }
+
+	        if (util.isDigit(c)) {
+	            buffer += read();
+	            lexState = 'decimalExponentInteger';
+	            return
+	        }
+
+	        throw invalidChar(read())
+	    },
+
+	    decimalExponentSign () {
+	        if (util.isDigit(c)) {
+	            buffer += read();
+	            lexState = 'decimalExponentInteger';
+	            return
+	        }
+
+	        throw invalidChar(read())
+	    },
+
+	    decimalExponentInteger () {
+	        if (util.isDigit(c)) {
+	            buffer += read();
+	            return
+	        }
+
+	        return newToken('numeric', sign * Number(buffer))
+	    },
+
+	    hexadecimal () {
+	        if (util.isHexDigit(c)) {
+	            buffer += read();
+	            lexState = 'hexadecimalInteger';
+	            return
+	        }
+
+	        throw invalidChar(read())
+	    },
+
+	    hexadecimalInteger () {
+	        if (util.isHexDigit(c)) {
+	            buffer += read();
+	            return
+	        }
+
+	        return newToken('numeric', sign * Number(buffer))
+	    },
+
+	    string () {
+	        switch (c) {
+	        case '\\':
+	            read();
+	            buffer += escape();
+	            return
+
+	        case '"':
+	            if (doubleQuote) {
+	                read();
+	                return newToken('string', buffer)
+	            }
+
+	            buffer += read();
+	            return
+
+	        case "'":
+	            if (!doubleQuote) {
+	                read();
+	                return newToken('string', buffer)
+	            }
+
+	            buffer += read();
+	            return
+
+	        case '\n':
+	        case '\r':
+	            throw invalidChar(read())
+
+	        case '\u2028':
+	        case '\u2029':
+	            separatorChar(c);
+	            break
+
+	        case undefined:
+	            throw invalidChar(read())
+	        }
+
+	        buffer += read();
+	    },
+
+	    start () {
+	        switch (c) {
+	        case '{':
+	        case '[':
+	            return newToken('punctuator', read())
+
+	        // This code is unreachable since the default lexState handles eof.
+	        // case undefined:
+	        //     return newToken('eof')
+	        }
+
+	        lexState = 'value';
+	    },
+
+	    beforePropertyName () {
+	        switch (c) {
+	        case '$':
+	        case '_':
+	            buffer = read();
+	            lexState = 'identifierName';
+	            return
+
+	        case '\\':
+	            read();
+	            lexState = 'identifierNameStartEscape';
+	            return
+
+	        case '}':
+	            return newToken('punctuator', read())
+
+	        case '"':
+	        case "'":
+	            doubleQuote = (read() === '"');
+	            lexState = 'string';
+	            return
+	        }
+
+	        if (util.isIdStartChar(c)) {
+	            buffer += read();
+	            lexState = 'identifierName';
+	            return
+	        }
+
+	        throw invalidChar(read())
+	    },
+
+	    afterPropertyName () {
+	        if (c === ':') {
+	            return newToken('punctuator', read())
+	        }
+
+	        throw invalidChar(read())
+	    },
+
+	    beforePropertyValue () {
+	        lexState = 'value';
+	    },
+
+	    afterPropertyValue () {
+	        switch (c) {
+	        case ',':
+	        case '}':
+	            return newToken('punctuator', read())
+	        }
+
+	        throw invalidChar(read())
+	    },
+
+	    beforeArrayValue () {
+	        if (c === ']') {
+	            return newToken('punctuator', read())
+	        }
+
+	        lexState = 'value';
+	    },
+
+	    afterArrayValue () {
+	        switch (c) {
+	        case ',':
+	        case ']':
+	            return newToken('punctuator', read())
+	        }
+
+	        throw invalidChar(read())
+	    },
+
+	    end () {
+	        // This code is unreachable since it's handled by the default lexState.
+	        // if (c === undefined) {
+	        //     read()
+	        //     return newToken('eof')
+	        // }
+
+	        throw invalidChar(read())
+	    },
+	};
+
+	function newToken (type, value) {
+	    return {
+	        type,
+	        value,
+	        line,
+	        column,
+	    }
+	}
+
+	function literal (s) {
+	    for (const c of s) {
+	        const p = peek();
+
+	        if (p !== c) {
+	            throw invalidChar(read())
+	        }
+
+	        read();
+	    }
+	}
+
+	function escape () {
+	    const c = peek();
+	    switch (c) {
+	    case 'b':
+	        read();
+	        return '\b'
+
+	    case 'f':
+	        read();
+	        return '\f'
+
+	    case 'n':
+	        read();
+	        return '\n'
+
+	    case 'r':
+	        read();
+	        return '\r'
+
+	    case 't':
+	        read();
+	        return '\t'
+
+	    case 'v':
+	        read();
+	        return '\v'
+
+	    case '0':
+	        read();
+	        if (util.isDigit(peek())) {
+	            throw invalidChar(read())
+	        }
+
+	        return '\0'
+
+	    case 'x':
+	        read();
+	        return hexEscape()
+
+	    case 'u':
+	        read();
+	        return unicodeEscape()
+
+	    case '\n':
+	    case '\u2028':
+	    case '\u2029':
+	        read();
+	        return ''
+
+	    case '\r':
+	        read();
+	        if (peek() === '\n') {
+	            read();
+	        }
+
+	        return ''
+
+	    case '1':
+	    case '2':
+	    case '3':
+	    case '4':
+	    case '5':
+	    case '6':
+	    case '7':
+	    case '8':
+	    case '9':
+	        throw invalidChar(read())
+
+	    case undefined:
+	        throw invalidChar(read())
+	    }
+
+	    return read()
+	}
+
+	function hexEscape () {
+	    let buffer = '';
+	    let c = peek();
+
+	    if (!util.isHexDigit(c)) {
+	        throw invalidChar(read())
+	    }
+
+	    buffer += read();
+
+	    c = peek();
+	    if (!util.isHexDigit(c)) {
+	        throw invalidChar(read())
+	    }
+
+	    buffer += read();
+
+	    return String.fromCodePoint(parseInt(buffer, 16))
+	}
+
+	function unicodeEscape () {
+	    let buffer = '';
+	    let count = 4;
+
+	    while (count-- > 0) {
+	        const c = peek();
+	        if (!util.isHexDigit(c)) {
+	            throw invalidChar(read())
+	        }
+
+	        buffer += read();
+	    }
+
+	    return String.fromCodePoint(parseInt(buffer, 16))
+	}
+
+	const parseStates = {
+	    start () {
+	        if (token.type === 'eof') {
+	            throw invalidEOF()
+	        }
+
+	        push();
+	    },
+
+	    beforePropertyName () {
+	        switch (token.type) {
+	        case 'identifier':
+	        case 'string':
+	            key = token.value;
+	            parseState = 'afterPropertyName';
+	            return
+
+	        case 'punctuator':
+	            // This code is unreachable since it's handled by the lexState.
+	            // if (token.value !== '}') {
+	            //     throw invalidToken()
+	            // }
+
+	            pop();
+	            return
+
+	        case 'eof':
+	            throw invalidEOF()
+	        }
+
+	        // This code is unreachable since it's handled by the lexState.
+	        // throw invalidToken()
+	    },
+
+	    afterPropertyName () {
+	        // This code is unreachable since it's handled by the lexState.
+	        // if (token.type !== 'punctuator' || token.value !== ':') {
+	        //     throw invalidToken()
+	        // }
+
+	        if (token.type === 'eof') {
+	            throw invalidEOF()
+	        }
+
+	        parseState = 'beforePropertyValue';
+	    },
+
+	    beforePropertyValue () {
+	        if (token.type === 'eof') {
+	            throw invalidEOF()
+	        }
+
+	        push();
+	    },
+
+	    beforeArrayValue () {
+	        if (token.type === 'eof') {
+	            throw invalidEOF()
+	        }
+
+	        if (token.type === 'punctuator' && token.value === ']') {
+	            pop();
+	            return
+	        }
+
+	        push();
+	    },
+
+	    afterPropertyValue () {
+	        // This code is unreachable since it's handled by the lexState.
+	        // if (token.type !== 'punctuator') {
+	        //     throw invalidToken()
+	        // }
+
+	        if (token.type === 'eof') {
+	            throw invalidEOF()
+	        }
+
+	        switch (token.value) {
+	        case ',':
+	            parseState = 'beforePropertyName';
+	            return
+
+	        case '}':
+	            pop();
+	        }
+
+	        // This code is unreachable since it's handled by the lexState.
+	        // throw invalidToken()
+	    },
+
+	    afterArrayValue () {
+	        // This code is unreachable since it's handled by the lexState.
+	        // if (token.type !== 'punctuator') {
+	        //     throw invalidToken()
+	        // }
+
+	        if (token.type === 'eof') {
+	            throw invalidEOF()
+	        }
+
+	        switch (token.value) {
+	        case ',':
+	            parseState = 'beforeArrayValue';
+	            return
+
+	        case ']':
+	            pop();
+	        }
+
+	        // This code is unreachable since it's handled by the lexState.
+	        // throw invalidToken()
+	    },
+
+	    end () {
+	        // This code is unreachable since it's handled by the lexState.
+	        // if (token.type !== 'eof') {
+	        //     throw invalidToken()
+	        // }
+	    },
+	};
+
+	function push () {
+	    let value;
+
+	    switch (token.type) {
+	    case 'punctuator':
+	        switch (token.value) {
+	        case '{':
+	            value = {};
+	            break
+
+	        case '[':
+	            value = [];
+	            break
+	        }
+
+	        break
+
+	    case 'null':
+	    case 'boolean':
+	    case 'numeric':
+	    case 'string':
+	        value = token.value;
+	        break
+
+	    // This code is unreachable.
+	    // default:
+	    //     throw invalidToken()
+	    }
+
+	    if (root === undefined) {
+	        root = value;
+	    } else {
+	        const parent = stack[stack.length - 1];
+	        if (Array.isArray(parent)) {
+	            parent.push(value);
+	        } else {
+	            parent[key] = value;
+	        }
+	    }
+
+	    if (value !== null && typeof value === 'object') {
+	        stack.push(value);
+
+	        if (Array.isArray(value)) {
+	            parseState = 'beforeArrayValue';
+	        } else {
+	            parseState = 'beforePropertyName';
+	        }
+	    } else {
+	        const current = stack[stack.length - 1];
+	        if (current == null) {
+	            parseState = 'end';
+	        } else if (Array.isArray(current)) {
+	            parseState = 'afterArrayValue';
+	        } else {
+	            parseState = 'afterPropertyValue';
+	        }
+	    }
+	}
+
+	function pop () {
+	    stack.pop();
+
+	    const current = stack[stack.length - 1];
+	    if (current == null) {
+	        parseState = 'end';
+	    } else if (Array.isArray(current)) {
+	        parseState = 'afterArrayValue';
+	    } else {
+	        parseState = 'afterPropertyValue';
+	    }
+	}
+
+	// This code is unreachable.
+	// function invalidParseState () {
+	//     return new Error(`JSON5: invalid parse state '${parseState}'`)
+	// }
+
+	// This code is unreachable.
+	// function invalidLexState (state) {
+	//     return new Error(`JSON5: invalid lex state '${state}'`)
+	// }
+
+	function invalidChar (c) {
+	    if (c === undefined) {
+	        return syntaxError(`JSON5: invalid end of input at ${line}:${column}`)
+	    }
+
+	    return syntaxError(`JSON5: invalid character '${formatChar(c)}' at ${line}:${column}`)
+	}
+
+	function invalidEOF () {
+	    return syntaxError(`JSON5: invalid end of input at ${line}:${column}`)
+	}
+
+	// This code is unreachable.
+	// function invalidToken () {
+	//     if (token.type === 'eof') {
+	//         return syntaxError(`JSON5: invalid end of input at ${line}:${column}`)
+	//     }
+
+	//     const c = String.fromCodePoint(token.value.codePointAt(0))
+	//     return syntaxError(`JSON5: invalid character '${formatChar(c)}' at ${line}:${column}`)
+	// }
+
+	function invalidIdentifier () {
+	    column -= 5;
+	    return syntaxError(`JSON5: invalid identifier character at ${line}:${column}`)
+	}
+
+	function separatorChar (c) {
+	    console.warn(`JSON5: '${formatChar(c)}' in strings is not valid ECMAScript; consider escaping`);
+	}
+
+	function formatChar (c) {
+	    const replacements = {
+	        "'": "\\'",
+	        '"': '\\"',
+	        '\\': '\\\\',
+	        '\b': '\\b',
+	        '\f': '\\f',
+	        '\n': '\\n',
+	        '\r': '\\r',
+	        '\t': '\\t',
+	        '\v': '\\v',
+	        '\0': '\\0',
+	        '\u2028': '\\u2028',
+	        '\u2029': '\\u2029',
+	    };
+
+	    if (replacements[c]) {
+	        return replacements[c]
+	    }
+
+	    if (c < ' ') {
+	        const hexString = c.charCodeAt(0).toString(16);
+	        return '\\x' + ('00' + hexString).substring(hexString.length)
+	    }
+
+	    return c
+	}
+
+	function syntaxError (message) {
+	    const err = new SyntaxError(message);
+	    err.lineNumber = line;
+	    err.columnNumber = column;
+	    return err
+	}
+
+	var stringify = function stringify (value, replacer, space) {
+	    const stack = [];
+	    let indent = '';
+	    let propertyList;
+	    let replacerFunc;
+	    let gap = '';
+	    let quote;
+
+	    if (
+	        replacer != null &&
+	        typeof replacer === 'object' &&
+	        !Array.isArray(replacer)
+	    ) {
+	        space = replacer.space;
+	        quote = replacer.quote;
+	        replacer = replacer.replacer;
+	    }
+
+	    if (typeof replacer === 'function') {
+	        replacerFunc = replacer;
+	    } else if (Array.isArray(replacer)) {
+	        propertyList = [];
+	        for (const v of replacer) {
+	            let item;
+
+	            if (typeof v === 'string') {
+	                item = v;
+	            } else if (
+	                typeof v === 'number' ||
+	                v instanceof String ||
+	                v instanceof Number
+	            ) {
+	                item = String(v);
+	            }
+
+	            if (item !== undefined && propertyList.indexOf(item) < 0) {
+	                propertyList.push(item);
+	            }
+	        }
+	    }
+
+	    if (space instanceof Number) {
+	        space = Number(space);
+	    } else if (space instanceof String) {
+	        space = String(space);
+	    }
+
+	    if (typeof space === 'number') {
+	        if (space > 0) {
+	            space = Math.min(10, Math.floor(space));
+	            gap = '          '.substr(0, space);
+	        }
+	    } else if (typeof space === 'string') {
+	        gap = space.substr(0, 10);
+	    }
+
+	    return serializeProperty('', {'': value})
+
+	    function serializeProperty (key, holder) {
+	        let value = holder[key];
+	        if (value != null) {
+	            if (typeof value.toJSON5 === 'function') {
+	                value = value.toJSON5(key);
+	            } else if (typeof value.toJSON === 'function') {
+	                value = value.toJSON(key);
+	            }
+	        }
+
+	        if (replacerFunc) {
+	            value = replacerFunc.call(holder, key, value);
+	        }
+
+	        if (value instanceof Number) {
+	            value = Number(value);
+	        } else if (value instanceof String) {
+	            value = String(value);
+	        } else if (value instanceof Boolean) {
+	            value = value.valueOf();
+	        }
+
+	        switch (value) {
+	        case null: return 'null'
+	        case true: return 'true'
+	        case false: return 'false'
+	        }
+
+	        if (typeof value === 'string') {
+	            return quoteString(value, false)
+	        }
+
+	        if (typeof value === 'number') {
+	            return String(value)
+	        }
+
+	        if (typeof value === 'object') {
+	            return Array.isArray(value) ? serializeArray(value) : serializeObject(value)
+	        }
+
+	        return undefined
+	    }
+
+	    function quoteString (value) {
+	        const quotes = {
+	            "'": 0.1,
+	            '"': 0.2,
+	        };
+
+	        const replacements = {
+	            "'": "\\'",
+	            '"': '\\"',
+	            '\\': '\\\\',
+	            '\b': '\\b',
+	            '\f': '\\f',
+	            '\n': '\\n',
+	            '\r': '\\r',
+	            '\t': '\\t',
+	            '\v': '\\v',
+	            '\0': '\\0',
+	            '\u2028': '\\u2028',
+	            '\u2029': '\\u2029',
+	        };
+
+	        let product = '';
+
+	        for (let i = 0; i < value.length; i++) {
+	            const c = value[i];
+	            switch (c) {
+	            case "'":
+	            case '"':
+	                quotes[c]++;
+	                product += c;
+	                continue
+
+	            case '\0':
+	                if (util.isDigit(value[i + 1])) {
+	                    product += '\\x00';
+	                    continue
+	                }
+	            }
+
+	            if (replacements[c]) {
+	                product += replacements[c];
+	                continue
+	            }
+
+	            if (c < ' ') {
+	                let hexString = c.charCodeAt(0).toString(16);
+	                product += '\\x' + ('00' + hexString).substring(hexString.length);
+	                continue
+	            }
+
+	            product += c;
+	        }
+
+	        const quoteChar = quote || Object.keys(quotes).reduce((a, b) => (quotes[a] < quotes[b]) ? a : b);
+
+	        product = product.replace(new RegExp(quoteChar, 'g'), replacements[quoteChar]);
+
+	        return quoteChar + product + quoteChar
+	    }
+
+	    function serializeObject (value) {
+	        if (stack.indexOf(value) >= 0) {
+	            throw TypeError('Converting circular structure to JSON5')
+	        }
+
+	        stack.push(value);
+
+	        let stepback = indent;
+	        indent = indent + gap;
+
+	        let keys = propertyList || Object.keys(value);
+	        let partial = [];
+	        for (const key of keys) {
+	            const propertyString = serializeProperty(key, value);
+	            if (propertyString !== undefined) {
+	                let member = serializeKey(key) + ':';
+	                if (gap !== '') {
+	                    member += ' ';
+	                }
+	                member += propertyString;
+	                partial.push(member);
+	            }
+	        }
+
+	        let final;
+	        if (partial.length === 0) {
+	            final = '{}';
+	        } else {
+	            let properties;
+	            if (gap === '') {
+	                properties = partial.join(',');
+	                final = '{' + properties + '}';
+	            } else {
+	                let separator = ',\n' + indent;
+	                properties = partial.join(separator);
+	                final = '{\n' + indent + properties + ',\n' + stepback + '}';
+	            }
+	        }
+
+	        stack.pop();
+	        indent = stepback;
+	        return final
+	    }
+
+	    function serializeKey (key) {
+	        if (key.length === 0) {
+	            return quoteString(key, true)
+	        }
+
+	        const firstChar = String.fromCodePoint(key.codePointAt(0));
+	        if (!util.isIdStartChar(firstChar)) {
+	            return quoteString(key, true)
+	        }
+
+	        for (let i = firstChar.length; i < key.length; i++) {
+	            if (!util.isIdContinueChar(String.fromCodePoint(key.codePointAt(i)))) {
+	                return quoteString(key, true)
+	            }
+	        }
+
+	        return key
+	    }
+
+	    function serializeArray (value) {
+	        if (stack.indexOf(value) >= 0) {
+	            throw TypeError('Converting circular structure to JSON5')
+	        }
+
+	        stack.push(value);
+
+	        let stepback = indent;
+	        indent = indent + gap;
+
+	        let partial = [];
+	        for (let i = 0; i < value.length; i++) {
+	            const propertyString = serializeProperty(String(i), value);
+	            partial.push((propertyString !== undefined) ? propertyString : 'null');
+	        }
+
+	        let final;
+	        if (partial.length === 0) {
+	            final = '[]';
+	        } else {
+	            if (gap === '') {
+	                let properties = partial.join(',');
+	                final = '[' + properties + ']';
+	            } else {
+	                let separator = ',\n' + indent;
+	                let properties = partial.join(separator);
+	                final = '[\n' + indent + properties + ',\n' + stepback + ']';
+	            }
+	        }
+
+	        stack.pop();
+	        indent = stepback;
+	        return final
+	    }
+	};
+
+	const JSON5 = {
+	    parse,
+	    stringify,
+	};
+
+	var lib = JSON5;
+
 	class Sidebar{
 
 		constructor(viewer){
@@ -23854,7 +26932,7 @@ ENDSEC
 				Export: <br>
 				<a href="#" download="measure.json"><img name="geojson_export_button" src="${geoJSONIcon}" class="button-icon" style="height: 24px" /></a>
 				<a href="#" download="measure.dxf"><img name="dxf_export_button" src="${dxfIcon}" class="button-icon" style="height: 24px" /></a>
-				<a href="#" download="potree.json"><img name="potree_export_button" src="${potreeIcon}" class="button-icon" style="height: 24px" /></a>
+				<a href="#" download="potree.json5"><img name="potree_export_button" src="${potreeIcon}" class="button-icon" style="height: 24px" /></a>
 			`);
 
 				let elDownloadJSON = elExport.find("img[name=geojson_export_button]").parent();
@@ -23893,7 +26971,7 @@ ENDSEC
 				elDownloadPotree.click( (event) => {
 
 					let data = Potree.saveProject(this.viewer);
-					let dataString = JSON.stringify(data, null, "\t");
+					let dataString = lib.stringify(data, null, "\t");
 
 					let url = window.URL.createObjectURL(new Blob([dataString], {type: 'data:application/octet-stream'}));
 					elDownloadPotree.attr('href', url);
@@ -24068,6 +27146,8 @@ ENDSEC
 					// 	node.boundingBox = box;
 					// 	this.viewer.zoomTo(node, 1, 500);
 					// }
+				}else if(object instanceof Images360){
+					// TODO
 				}else if(object instanceof Geopackage){
 					// TODO
 				}
@@ -24168,6 +27248,21 @@ ENDSEC
 				});
 			};
 
+			let onImages360Added = (e) => {
+				const images = e.images;
+
+				const imagesIcon = `${Potree.resourcePath}/icons/picture.svg`;
+				const node = createNode(imagesID, "360° images", imagesIcon, images);
+
+				images.addEventListener("visibility_changed", () => {
+					if(images.visible){
+						tree.jstree('check_node', node);
+					}else {
+						tree.jstree('uncheck_node', node);
+					}
+				});
+			};
+
 			const onGeopackageAdded = (e) => {
 				const geopackage = e.geopackage;
 
@@ -24196,6 +27291,7 @@ ENDSEC
 			this.viewer.scene.addEventListener("volume_added", onVolumeAdded);
 			this.viewer.scene.addEventListener("camera_animation_added", onCameraAnimationAdded);
 			this.viewer.scene.addEventListener("oriented_images_added", onOrientedImagesAdded);
+			this.viewer.scene.addEventListener("360_images_added", onImages360Added);
 			this.viewer.scene.addEventListener("geopackage_added", onGeopackageAdded);
 			this.viewer.scene.addEventListener("polygon_clip_volume_added", onVolumeAdded);
 			this.viewer.scene.annotations.addEventListener("annotation_added", onAnnotationAdded);
@@ -24263,6 +27359,10 @@ ENDSEC
 
 			for(let images of scene.orientedImages){
 				onOrientedImagesAdded({images: images});
+			}
+
+			for(let images of scene.images360){
+				onImages360Added({images: images});
 			}
 
 			for(const geopackage of scene.geopackages){
@@ -24840,6 +27940,10 @@ ENDSEC
 			this.viewer.addEventListener('fov_changed', (event) => {
 				$('#lblFOV')[0].innerHTML = parseInt(this.viewer.getFOV());
 				$('#sldFOV').slider({value: this.viewer.getFOV()});
+			});
+
+			this.viewer.addEventListener('use_edl_changed', (event) => {
+				$('#chkEDLEnabled')[0].checked = this.viewer.getEDLEnabled();
 			});
 
 			this.viewer.addEventListener('edl_radius_changed', (event) => {
@@ -26044,6 +29148,8 @@ ENDSEC
 			this.panDelta = new THREE.Vector2(0, 0);
 			this.radiusDelta = 0;
 
+			this.doubleClockZoomEnabled = true;
+
 			this.tweens = [];
 
 			let drag = (e) => {
@@ -26088,7 +29194,9 @@ ENDSEC
 			};
 
 			let dblclick = (e) => {
-				this.zoomToLocation(e.mouse);
+				if(this.doubleClockZoomEnabled){
+					this.zoomToLocation(e.mouse);
+				}
 			};
 
 			let previousTouch = null;
@@ -27827,7 +30935,8 @@ ENDSEC
 
 			const response = await fetch(url);
 		
-			const json = await response.json();
+			const text = await response.text();
+			const json = lib.parse(text);
 			// const json = JSON.parse(text);
 
 			if(json.type === "Potree"){
@@ -29145,1366 +32254,6 @@ ENDSEC
 		}
 	};
 
-	class OrientedImageControls extends EventDispatcher{
-		
-		constructor(viewer){
-			super();
-			
-			this.viewer = viewer;
-			this.renderer = viewer.renderer;
-
-			this.originalCam = viewer.scene.getActiveCamera();
-			this.shearCam = viewer.scene.getActiveCamera().clone();
-			this.shearCam.rotation.set(this.originalCam.rotation.toArray());
-			this.shearCam.updateProjectionMatrix();
-			this.shearCam.updateProjectionMatrix = () => {
-				return this.shearCam.projectionMatrix;
-			};
-
-			this.image = null;
-
-			this.fadeFactor = 20;
-			this.fovDelta = 0;
-
-			this.fovMin = 5;
-			this.fovMax = 120;
-
-			this.shear = [0, 0];
-
-			// const style = ``;
-			this.elUp =    $(`<input type="button" value="🡅" style="position: absolute; top: 10px; left: calc(50%); z-index: 1000" />`);
-			this.elRight = $(`<input type="button" value="🡆" style="position: absolute; top: calc(50%); right: 10px; z-index: 1000" />`);
-			this.elDown =  $(`<input type="button" value="🡇" style="position: absolute; bottom: 10px; left: calc(50%); z-index: 1000" />`);
-			this.elLeft =  $(`<input type="button" value="🡄" style="position: absolute; top: calc(50%); left: 10px; z-index: 1000" />`);
-			this.elExit = $(`<input type="button" value="Back to 3D view" style="position: absolute; bottom: 10px; right: 10px; z-index: 1000" />`);
-
-			this.elExit.click( () => {
-				this.release();
-			});
-
-			this.elUp.click(() => {
-				const fovY = viewer.getFOV();
-				const top = Math.tan(THREE.Math.degToRad(fovY / 2));
-				this.shear[1] += 0.1 * top;
-			});
-
-			this.elRight.click(() => {
-				const fovY = viewer.getFOV();
-				const top = Math.tan(THREE.Math.degToRad(fovY / 2));
-				this.shear[0] += 0.1 * top;
-			});
-
-			this.elDown.click(() => {
-				const fovY = viewer.getFOV();
-				const top = Math.tan(THREE.Math.degToRad(fovY / 2));
-				this.shear[1] -= 0.1 * top;
-			});
-
-			this.elLeft.click(() => {
-				const fovY = viewer.getFOV();
-				const top = Math.tan(THREE.Math.degToRad(fovY / 2));
-				this.shear[0] -= 0.1 * top;
-			});
-
-			this.scene = null;
-			this.sceneControls = new THREE.Scene();
-
-			let scroll = (e) => {
-				this.fovDelta += -e.delta * 1.0;
-			};
-
-			this.addEventListener('mousewheel', scroll);
-			//this.addEventListener("mousemove", onMove);
-		}
-
-		hasSomethingCaptured(){
-			return this.image !== null;
-		}
-
-		capture(image){
-			if(this.hasSomethingCaptured()){
-				return;
-			}
-
-			this.image = image;
-
-			this.originalFOV = this.viewer.getFOV();
-			this.originalControls = this.viewer.getControls();
-
-			this.viewer.setControls(this);
-			this.viewer.scene.overrideCamera = this.shearCam;
-
-			const elCanvas = this.viewer.renderer.domElement;
-			const elRoot = $(elCanvas.parentElement);
-
-			this.shear = [0, 0];
-
-
-			elRoot.append(this.elUp);
-			elRoot.append(this.elRight);
-			elRoot.append(this.elDown);
-			elRoot.append(this.elLeft);
-			elRoot.append(this.elExit);
-		}
-
-		release(){
-			this.image = null;
-
-			this.viewer.scene.overrideCamera = null;
-
-			this.elUp.detach();
-			this.elRight.detach();
-			this.elDown.detach();
-			this.elLeft.detach();
-			this.elExit.detach();
-
-			this.viewer.setFOV(this.originalFOV);
-			this.viewer.setControls(this.originalControls);
-		}
-
-		setScene (scene) {
-			this.scene = scene;
-		}
-
-		update (delta) {
-			// const view = this.scene.view;
-
-			// let prevTotal = this.shearCam.projectionMatrix.elements.reduce( (a, i) => a + i, 0);
-
-			//const progression = Math.min(1, this.fadeFactor * delta);
-			//const attenuation = Math.max(0, 1 - this.fadeFactor * delta);
-			const progression = 1;
-			const attenuation = 0;
-
-			const oldFov = this.viewer.getFOV();
-			let fovProgression =  progression * this.fovDelta;
-			let newFov = oldFov * ((1 + fovProgression / 10));
-
-			newFov = Math.max(this.fovMin, newFov);
-			newFov = Math.min(this.fovMax, newFov);
-
-			let diff = newFov / oldFov;
-
-			const mouse = this.viewer.inputHandler.mouse;
-			const canvasSize = this.viewer.renderer.getSize(new THREE.Vector2());
-			const uv = [
-				(mouse.x / canvasSize.x),
-				((canvasSize.y - mouse.y) / canvasSize.y)
-			];
-
-			const fovY = newFov;
-			const aspect = canvasSize.x / canvasSize.y;
-			const top = Math.tan(THREE.Math.degToRad(fovY / 2));
-			const height = 2 * top;
-			const width = aspect * height;
-
-			const shearRangeX = [
-				this.shear[0] - 0.5 * width,
-				this.shear[0] + 0.5 * width,
-			];
-
-			const shearRangeY = [
-				this.shear[1] - 0.5 * height,
-				this.shear[1] + 0.5 * height,
-			];
-
-			const shx = (1 - uv[0]) * shearRangeX[0] + uv[0] * shearRangeX[1];
-			const shy = (1 - uv[1]) * shearRangeY[0] + uv[1] * shearRangeY[1];
-
-			const shu = (1 - diff);
-
-			const newShear =  [
-				(1 - shu) * this.shear[0] + shu * shx,
-				(1 - shu) * this.shear[1] + shu * shy,
-			];
-			
-			this.shear = newShear;
-			this.viewer.setFOV(newFov);
-			
-			const {originalCam, shearCam} = this;
-
-			originalCam.fov = newFov;
-			originalCam.updateMatrixWorld();
-			originalCam.updateProjectionMatrix();
-			shearCam.copy(originalCam);
-			shearCam.rotation.set(...originalCam.rotation.toArray());
-
-			shearCam.updateMatrixWorld();
-			shearCam.projectionMatrix.copy(originalCam.projectionMatrix);
-
-			const [sx, sy] = this.shear;
-			const mShear = new THREE.Matrix4().set(
-				1, 0, sx, 0,
-				0, 1, sy, 0,
-				0, 0, 1, 0,
-				0, 0, 0, 1,
-			);
-
-			const proj = shearCam.projectionMatrix;
-			proj.multiply(mShear);
-			shearCam.projectionMatrixInverse.getInverse( proj );
-
-			let total = shearCam.projectionMatrix.elements.reduce( (a, i) => a + i, 0);
-
-			this.fovDelta *= attenuation;
-		}
-	};
-
-	// https://support.pix4d.com/hc/en-us/articles/205675256-How-are-yaw-pitch-roll-defined
-	// https://support.pix4d.com/hc/en-us/articles/202558969-How-are-omega-phi-kappa-defined
-
-	function createMaterial(){
-
-		let vertexShader = `
-	uniform float uNear;
-	varying vec2 vUV;
-	varying vec4 vDebug;
-	
-	void main(){
-		vDebug = vec4(0.0, 1.0, 0.0, 1.0);
-		vec4 modelViewPosition = modelViewMatrix * vec4(position, 1.0);
-		// make sure that this mesh is at least in front of the near plane
-		modelViewPosition.xyz += normalize(modelViewPosition.xyz) * uNear;
-		gl_Position = projectionMatrix * modelViewPosition;
-		vUV = uv;
-	}
-	`;
-
-		let fragmentShader = `
-	uniform sampler2D tColor;
-	uniform float uOpacity;
-	varying vec2 vUV;
-	varying vec4 vDebug;
-	void main(){
-		vec4 color = texture2D(tColor, vUV);
-		gl_FragColor = color;
-		gl_FragColor.a = uOpacity;
-	}
-	`;
-		const material = new THREE.ShaderMaterial( {
-			uniforms: {
-				// time: { value: 1.0 },
-				// resolution: { value: new THREE.Vector2() }
-				tColor: {value: new THREE.Texture() },
-				uNear: {value: 0.0},
-				uOpacity: {value: 1.0},
-			},
-			vertexShader: vertexShader,
-			fragmentShader: fragmentShader,
-			side: THREE.DoubleSide,
-		} );
-
-		material.side = THREE.DoubleSide;
-
-		return material;
-	}
-
-	const planeGeometry = new THREE.PlaneGeometry(1, 1);
-	const lineGeometry = new THREE.Geometry();
-
-	lineGeometry.vertices.push(
-		new THREE.Vector3(-0.5, -0.5, 0),
-		new THREE.Vector3( 0.5, -0.5, 0),
-		new THREE.Vector3( 0.5,  0.5, 0),
-		new THREE.Vector3(-0.5,  0.5, 0),
-		new THREE.Vector3(-0.5, -0.5, 0),
-	);
-
-	class OrientedImage$1{
-
-		constructor(id){
-
-			this.id = id;
-			this.fov = 1.0;
-			this.position = new THREE.Vector3();
-			this.rotation = new THREE.Vector3();
-			this.width = 0;
-			this.height = 0;
-			this.fov = 1.0;
-
-			const material = createMaterial();
-			const lineMaterial = new THREE.LineBasicMaterial( { color: 0x00ff00 } );
-			this.mesh = new THREE.Mesh(planeGeometry, material);
-			this.line = new THREE.Line(lineGeometry, lineMaterial);
-			this.texture = null;
-
-			this.mesh.orientedImage = this;
-		}
-
-		set(position, rotation, dimension, fov){
-
-			let radians = rotation.map(THREE.Math.degToRad);
-
-			this.position.set(...position);
-			this.mesh.position.set(...position);
-
-			this.rotation.set(...radians);
-			this.mesh.rotation.set(...radians);
-
-			[this.width, this.height] = dimension;
-			this.mesh.scale.set(this.width / this.height, 1, 1);
-
-			this.fov = fov;
-
-			this.updateTransform();
-		}
-
-		updateTransform(){
-			let {mesh, line, fov} = this;
-
-			mesh.updateMatrixWorld();
-			const dir = mesh.getWorldDirection();
-			const alpha = THREE.Math.degToRad(fov / 2);
-			const d = -0.5 / Math.tan(alpha);
-			const move = dir.clone().multiplyScalar(d);
-			mesh.position.add(move);
-
-			line.position.copy(mesh.position);
-			line.scale.copy(mesh.scale);
-			line.rotation.copy(mesh.rotation);
-		}
-
-	};
-
-	class OrientedImages extends EventDispatcher{
-
-		constructor(){
-			super();
-
-			this.node = null;
-			this.cameraParams = null;
-			this.imageParams = null;
-			this.images = null;
-			this._visible = true;
-		}
-
-		set visible(visible){
-			if(this._visible === visible){
-				return;
-			}
-
-			for(const image of this.images){
-				image.mesh.visible = visible;
-				image.line.visible = visible;
-			}
-
-			this._visible = visible;
-			this.dispatchEvent({
-				type: "visibility_changed",
-				images: this,
-			});
-		}
-
-		get visible(){
-			return this._visible;
-		}
-
-
-	};
-
-	class OrientedImageLoader{
-
-		static async loadCameraParams(path){
-			const res = await fetch(path);
-			const text = await res.text();
-
-			const parser = new DOMParser();
-			const doc = parser.parseFromString(text, "application/xml");
-
-			const width = parseInt(doc.getElementsByTagName("width")[0].textContent);
-			const height = parseInt(doc.getElementsByTagName("height")[0].textContent);
-			const f = parseFloat(doc.getElementsByTagName("f")[0].textContent);
-
-			let a = (height / 2)  / f;
-			let fov = 2 * THREE.Math.radToDeg(Math.atan(a));
-
-			const params = {
-				path: path,
-				width: width,
-				height: height,
-				f: f,
-				fov: fov,
-			};
-
-			return params;
-		}
-
-		static async loadImageParams(path){
-
-			const response = await fetch(path);
-			if(!response.ok){
-				console.error(`failed to load ${path}`);
-				return;
-			}
-
-			const content = await response.text();
-			const lines = content.split(/\r?\n/);
-			const imageParams = [];
-
-			for(let i = 1; i < lines.length; i++){
-				const line = lines[i];
-
-				if(line.startsWith("#")){
-					continue;
-				}
-
-				const tokens = line.split(/\s+/);
-
-				if(tokens.length < 6){
-					continue;
-				}
-
-				const params = {
-					id: tokens[0],
-					x: Number.parseFloat(tokens[1]),
-					y: Number.parseFloat(tokens[2]),
-					z: Number.parseFloat(tokens[3]),
-					omega: Number.parseFloat(tokens[4]),
-					phi: Number.parseFloat(tokens[5]),
-					kappa: Number.parseFloat(tokens[6]),
-				};
-
-				// const whitelist = ["47518.jpg"];
-				// if(whitelist.includes(params.id)){
-				// 	imageParams.push(params);
-				// }
-				imageParams.push(params);
-			}
-
-			// debug
-			//return [imageParams[50]];
-
-			return imageParams;
-		}
-
-		static async load(cameraParamsPath, imageParamsPath, viewer){
-
-			const tStart = performance.now();
-
-			const [cameraParams, imageParams] = await Promise.all([
-				OrientedImageLoader.loadCameraParams(cameraParamsPath),
-				OrientedImageLoader.loadImageParams(imageParamsPath),
-			]);
-
-			const orientedImageControls = new OrientedImageControls(viewer);
-			const raycaster = new THREE.Raycaster();
-
-			const tEnd = performance.now();
-			console.log(tEnd - tStart);
-
-			// const sp = new THREE.PlaneGeometry(1, 1);
-			// const lg = new THREE.Geometry();
-
-			// lg.vertices.push(
-			// 	new THREE.Vector3(-0.5, -0.5, 0),
-			// 	new THREE.Vector3( 0.5, -0.5, 0),
-			// 	new THREE.Vector3( 0.5,  0.5, 0),
-			// 	new THREE.Vector3(-0.5,  0.5, 0),
-			// 	new THREE.Vector3(-0.5, -0.5, 0),
-			// );
-
-			const {width, height} = cameraParams;
-			const orientedImages = [];
-			const sceneNode = new THREE.Object3D();
-			sceneNode.name = "oriented_images";
-
-			for(const params of imageParams){
-
-				// const material = createMaterial();
-				// const lm = new THREE.LineBasicMaterial( { color: 0x00ff00 } );
-				// const mesh = new THREE.Mesh(sp, material);
-
-				const {x, y, z, omega, phi, kappa} = params;
-				// const [rx, ry, rz] = [omega, phi, kappa]
-				// 	.map(THREE.Math.degToRad);
-				
-				// mesh.position.set(x, y, z);
-				// mesh.scale.set(width / height, 1, 1);
-				// mesh.rotation.set(rx, ry, rz);
-				// {
-				// 	mesh.updateMatrixWorld();
-				// 	const dir = mesh.getWorldDirection();
-				// 	const alpha = THREE.Math.degToRad(cameraParams.fov / 2);
-				// 	const d = -0.5 / Math.tan(alpha);
-				// 	const move = dir.clone().multiplyScalar(d);
-				// 	mesh.position.add(move);
-				// }
-				// sceneNode.add(mesh);
-
-				// const line = new THREE.Line(lg, lm);
-				// line.position.copy(mesh.position);
-				// line.scale.copy(mesh.scale);
-				// line.rotation.copy(mesh.rotation);
-				// sceneNode.add(line);
-
-				let orientedImage = new OrientedImage$1(params.id);
-				// orientedImage.setPosition(x, y, z);
-				// orientedImage.setRotation(omega, phi, kappa);
-				// orientedImage.setDimension(width, height);
-				let position = [x, y, z];
-				let rotation = [omega, phi, kappa];
-				let dimension = [width, height];
-				orientedImage.set(position, rotation, dimension, cameraParams.fov);
-
-				sceneNode.add(orientedImage.mesh);
-				sceneNode.add(orientedImage.line);
-				
-				orientedImages.push(orientedImage);
-			}
-
-			let hoveredElement = null;
-			let clipVolume = null;
-
-			const onMouseMove = (evt) => {
-				const tStart = performance.now();
-				if(hoveredElement){
-					hoveredElement.line.material.color.setRGB(0, 1, 0);
-				}
-				evt.preventDefault();
-
-				//var array = getMousePosition( container, evt.clientX, evt.clientY );
-				const rect = viewer.renderer.domElement.getBoundingClientRect();
-				const [x, y] = [evt.clientX, evt.clientY];
-				const array = [ 
-					( x - rect.left ) / rect.width, 
-					( y - rect.top ) / rect.height 
-				];
-				const onClickPosition = new THREE.Vector2(...array);
-				//const intersects = getIntersects(onClickPosition, scene.children);
-				const camera = viewer.scene.getActiveCamera();
-				const mouse = new THREE.Vector3(
-					+ ( onClickPosition.x * 2 ) - 1, 
-					- ( onClickPosition.y * 2 ) + 1 );
-				const objects = orientedImages.map(i => i.mesh);
-				raycaster.setFromCamera( mouse, camera );
-				const intersects = raycaster.intersectObjects( objects );
-				let selectionChanged = false;
-
-				if ( intersects.length > 0){
-					//console.log(intersects);
-					const intersection = intersects[0];
-					const orientedImage = intersection.object.orientedImage;
-					orientedImage.line.material.color.setRGB(1, 0, 0);
-					selectionChanged = hoveredElement !== orientedImage;
-					hoveredElement = orientedImage;
-				}else {
-					hoveredElement = null;
-				}
-
-				let shouldRemoveClipVolume = clipVolume !== null && hoveredElement === null;
-				let shouldAddClipVolume = clipVolume === null && hoveredElement !== null;
-
-				if(clipVolume !== null && (hoveredElement === null || selectionChanged)){
-					// remove existing
-					viewer.scene.removePolygonClipVolume(clipVolume);
-					clipVolume = null;
-				}
-				
-				if(shouldAddClipVolume || selectionChanged){
-					const img = hoveredElement;
-					const fov = cameraParams.fov;
-					const aspect  = cameraParams.width / cameraParams.height;
-					const near = 1.0;
-					const far = 1000 * 1000;
-					const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-					camera.rotation.order = viewer.scene.getActiveCamera().rotation.order;
-					camera.rotation.copy(img.mesh.rotation);
-					{
-						const mesh = img.mesh;
-						const dir = mesh.getWorldDirection();
-						const pos = mesh.position;
-						const alpha = THREE.Math.degToRad(fov / 2);
-						const d = 0.5 / Math.tan(alpha);
-						const newCamPos = pos.clone().add(dir.clone().multiplyScalar(d));
-						const newCamDir = pos.clone().sub(newCamPos);
-						const newCamTarget = new THREE.Vector3().addVectors(
-							newCamPos,
-							newCamDir.clone().multiplyScalar(viewer.getMoveSpeed()));
-						camera.position.copy(newCamPos);
-					}
-					let volume = new Potree.PolygonClipVolume(camera);
-					let m0 = new THREE.Mesh();
-					let m1 = new THREE.Mesh();
-					let m2 = new THREE.Mesh();
-					let m3 = new THREE.Mesh();
-					m0.position.set(-1, -1, 0);
-					m1.position.set( 1, -1, 0);
-					m2.position.set( 1,  1, 0);
-					m3.position.set(-1,  1, 0);
-					volume.markers.push(m0, m1, m2, m3);
-					volume.initialized = true;
-					
-					viewer.scene.addPolygonClipVolume(volume);
-					clipVolume = volume;
-				}
-				const tEnd = performance.now();
-				//console.log(tEnd - tStart);
-			};
-
-			const moveToImage = (image) => {
-				console.log("move to image " + image.id);
-
-				const mesh = image.mesh;
-				const newCamPos = image.position.clone();
-				const newCamTarget = mesh.position.clone();
-
-				viewer.scene.view.setView(newCamPos, newCamTarget, 500, () => {
-					orientedImageControls.capture(image);
-				});
-
-				if(image.texture === null){
-
-					const target = image;
-
-					const tmpImagePath = `${Potree.resourcePath}/images/loading.jpg`;
-					new THREE.TextureLoader().load(tmpImagePath,
-						(texture) => {
-							if(target.texture === null){
-								target.texture = texture;
-								target.mesh.material.uniforms.tColor.value = texture;
-								mesh.material.needsUpdate = true;
-							}
-						}
-					);
-
-					const imagePath = `${imageParamsPath}/../${target.id}`;
-					new THREE.TextureLoader().load(imagePath,
-						(texture) => {
-							target.texture = texture;
-							target.mesh.material.uniforms.tColor.value = texture;
-							mesh.material.needsUpdate = true;
-						}
-					);
-					
-
-				}
-			};
-
-			const onMouseClick = (evt) => {
-
-				if(orientedImageControls.hasSomethingCaptured()){
-					return;
-				}
-
-				if(hoveredElement){
-					moveToImage(hoveredElement);
-				}
-			};
-			viewer.renderer.domElement.addEventListener( 'mousemove', onMouseMove, false );
-			viewer.renderer.domElement.addEventListener( 'mousedown', onMouseClick, false );
-
-			viewer.addEventListener("update", () => {
-
-				for(const image of orientedImages){
-					const world = image.mesh.matrixWorld;
-					const {width, height} = image;
-					const aspect = width / height;
-
-					const camera = viewer.scene.getActiveCamera();
-
-					const imgPos = image.mesh.getWorldPosition(new THREE.Vector3());
-					const camPos = camera.position;
-					const d = camPos.distanceTo(imgPos);
-
-					const minSize = 1; // in degrees of fov
-					const a = THREE.Math.degToRad(minSize);
-					let r = d * Math.tan(a);
-					r = Math.max(r, 1);
-
-
-					image.mesh.scale.set(r * aspect, r, 1);
-					image.line.scale.set(r * aspect, r, 1);
-
-					image.mesh.material.uniforms.uNear.value = camera.near;
-
-				}
-
-			});
-
-			const images = new OrientedImages();
-			images.node = sceneNode;
-			images.cameraParamsPath = cameraParamsPath;
-			images.imageParamsPath = imageParamsPath;
-			images.cameraParams = cameraParams;
-			images.imageParams = imageParams;
-			images.images = orientedImages;
-
-			Potree.debug.moveToImage = moveToImage;
-
-			return images;
-		}
-	}
-
-	let sg = new THREE.SphereGeometry(1, 8, 8);
-	let sgHigh = new THREE.SphereGeometry(1, 128, 128);
-
-	let sm = new THREE.MeshBasicMaterial({side: THREE.BackSide});
-	let smHovered = new THREE.MeshBasicMaterial({side: THREE.BackSide, color: 0xff0000});
-
-	let raycaster = new THREE.Raycaster();
-	let currentlyHovered = null;
-
-	// let label = new TextSprite("...");
-	// label.visible = false;
-
-	// window.dbg = label;
-
-	class Image360{
-
-		constructor(file, time, longitude, latitude, altitude, course, pitch, roll){
-			this.file = file;
-			this.time = time;
-			this.longitude = longitude;
-			this.latitude = latitude;
-			this.altitude = altitude;
-			this.course = course;
-			this.pitch = pitch;
-			this.roll = roll;
-			this.mesh = null;
-		}
-	};
-
-	class Images360 extends EventDispatcher{
-
-		constructor(viewer){
-			super();
-
-			this.viewer = viewer;
-
-			this.selectingEnabled = true;
-
-			this.images = [];
-			this.node = new THREE.Object3D();
-
-			this.sphere = new THREE.Mesh(sgHigh, sm);
-			this.sphere.visible = false;
-			this.sphere.scale.set(1000, 1000, 1000);
-			this.node.add(this.sphere);
-			// this.node.add(label);
-
-			this.focusedImage = null;
-
-			let elUnfocus = document.createElement("input");
-			elUnfocus.type = "button";
-			elUnfocus.value = "unfocus";
-			elUnfocus.style.position = "absolute";
-			elUnfocus.style.right = "10px";
-			elUnfocus.style.bottom = "10px";
-			elUnfocus.style.zIndex = "10000";
-			elUnfocus.style.fontSize = "2em";
-			elUnfocus.addEventListener("click", () => this.unfocus());
-			this.elUnfocus = elUnfocus;
-
-			this.domRoot = viewer.renderer.domElement.parentElement;
-			this.domRoot.appendChild(elUnfocus);
-			this.elUnfocus.style.display = "none";
-
-			viewer.addEventListener("update", () => {
-				this.update(viewer);
-			});
-			viewer.inputHandler.addInputListener(this);
-
-			this.addEventListener("mousedown", () => {
-				if(currentlyHovered){
-					this.focus(currentlyHovered.image360);
-				}
-			});
-			
-		};
-
-		focus(image360){
-			if(this.focusedImage !== null){
-				this.unfocus();
-			}
-
-			for(let image of this.images){
-				image.mesh.visible = false;
-			}
-
-			this.selectingEnabled = false;
-
-			this.sphere.visible = false;
-
-			this.load(image360).then( () => {
-				this.sphere.visible = true;
-				this.sphere.material.map = image360.texture;
-				this.sphere.material.needsUpdate = true;
-			});
-
-			{ // orientation
-				let {course, pitch, roll} = image360;
-				this.sphere.rotation.set(
-					THREE.Math.degToRad(+roll + 90),
-					THREE.Math.degToRad(-pitch),
-					THREE.Math.degToRad(-course + 90),
-					"ZYX"
-				);
-			}
-
-			this.sphere.position.set(...image360.position);
-
-			let target = new THREE.Vector3(...image360.position);
-			let dir = target.clone().sub(viewer.scene.view.position).normalize();
-			let move = dir.multiplyScalar(0.00001);
-			let newCamPos = target.clone().sub(move);
-
-			viewer.scene.view.setView(
-				newCamPos, 
-				target,
-				500
-			);
-
-			this.focusedImage = image360;
-
-			this.elUnfocus.style.display = "";
-		}
-
-		unfocus(){
-			this.selectingEnabled = true;
-
-			for(let image of this.images){
-				image.mesh.visible = true;
-			}
-
-			let image = this.focusedImage;
-
-			if(image === null){
-				return;
-			}
-
-
-			this.sphere.material.map = null;
-			this.sphere.material.needsUpdate = true;
-			this.sphere.visible = false;
-
-			let pos = viewer.scene.view.position;
-			let target = viewer.scene.view.getPivot();
-			let dir = target.clone().sub(pos).normalize();
-			let move = dir.multiplyScalar(10);
-			let newCamPos = target.clone().sub(move);
-
-			viewer.scene.view.setView(
-				newCamPos, 
-				target,
-				500
-			);
-
-
-			this.focusedImage = null;
-
-			this.elUnfocus.style.display = "none";
-		}
-
-		load(image360){
-
-			return new Promise(resolve => {
-				let texture = new THREE.TextureLoader().load(image360.file, resolve);
-				texture.wrapS = THREE.RepeatWrapping;
-				texture.repeat.x = -1;
-
-				image360.texture = texture;
-			});
-
-		}
-
-		handleHovering(){
-			let mouse = viewer.inputHandler.mouse;
-			let camera = viewer.scene.getActiveCamera();
-			let domElement = viewer.renderer.domElement;
-
-			let ray = Potree.Utils.mouseToRay(mouse, camera, domElement.clientWidth, domElement.clientHeight);
-
-			// let tStart = performance.now();
-			raycaster.ray.copy(ray);
-			let intersections = raycaster.intersectObjects(this.node.children);
-
-			if(intersections.length === 0){
-				// label.visible = false;
-
-				return;
-			}
-
-			let intersection = intersections[0];
-			currentlyHovered = intersection.object;
-			currentlyHovered.material = smHovered;
-
-			//label.visible = true;
-			//label.setText(currentlyHovered.image360.file);
-			//currentlyHovered.getWorldPosition(label.position);
-		}
-
-		update(){
-
-			let {viewer} = this;
-
-			if(currentlyHovered){
-				currentlyHovered.material = sm;
-				currentlyHovered = null;
-			}
-
-			if(this.selectingEnabled){
-				this.handleHovering();
-			}
-
-		}
-
-	};
-
-
-	class Images360Loader{
-
-		static async load(url, viewer, params = {}){
-
-			if(!params.transform){
-				params.transform = {
-					forward: a => a,
-				};
-			}
-			
-			let response = await fetch(`${url}/coordinates.txt`);
-			let text = await response.text();
-
-			let lines = text.split(/\r?\n/);
-			let coordinateLines = lines.slice(1);
-
-			let images360 = new Images360(viewer);
-
-			for(let line of coordinateLines){
-				let tokens = line.split(/\t/);
-
-				let [filename, time, long, lat, alt, course, pitch, roll] = tokens;
-				time = parseFloat(time);
-				long = parseFloat(long);
-				lat = parseFloat(lat);
-				alt = parseFloat(alt);
-				course = parseFloat(course);
-				pitch = parseFloat(pitch);
-				roll = parseFloat(roll);
-
-				filename = filename.replace(/"/g, "");
-				let file = `${url}/${filename}`;
-
-				let image360 = new Image360(file, time, long, lat, alt, course, pitch, roll);
-
-				let xy = params.transform.forward([long, lat]);
-				let position = [...xy, alt];
-				image360.position = position;
-
-				images360.images.push(image360);
-			}
-
-			Images360Loader.createSceneNodes(images360, params.transform);
-
-			return images360;
-
-		}
-
-		static createSceneNodes(images360, transform){
-
-			for(let image360 of images360.images){
-				let {longitude, latitude, altitude} = image360;
-				let xy = transform.forward([longitude, latitude]);
-
-				let mesh = new THREE.Mesh(sg, sm);
-				mesh.position.set(...xy, altitude);
-				mesh.scale.set(1, 1, 1);
-				mesh.material.transparent = true;
-				mesh.material.opacity = 0.75;
-				mesh.image360 = image360;
-
-				{ // orientation
-					var {course, pitch, roll} = image360;
-					mesh.rotation.set(
-						THREE.Math.degToRad(+roll + 90),
-						THREE.Math.degToRad(-pitch),
-						THREE.Math.degToRad(-course + 90),
-						"ZYX"
-					);
-				}
-
-				images360.node.add(mesh);
-
-				image360.mesh = mesh;
-			}
-		}
-
-		
-
-	};
-
-	class OctreeGeometry{
-
-		constructor(){
-			this.url = null;
-			this.spacing = 0;
-			this.boundingBox = null;
-			this.root = null;
-			this.pointAttributes = null;
-			this.loader = null;
-		}
-
-	};
-
-	class OctreeGeometryNode{
-
-		constructor(name, octreeGeometry, boundingBox){
-			this.id = OctreeGeometryNode.IDCount++;
-			this.name = name;
-			this.index = parseInt(name.charAt(name.length - 1));
-			this.octreeGeometry = octreeGeometry;
-			this.boundingBox = boundingBox;
-			this.boundingSphere = boundingBox.getBoundingSphere(new THREE.Sphere());
-			this.children = {};
-			this.numPoints = 0;
-			this.level = null;
-			this.oneTimeDisposeHandlers = [];
-		}
-
-		isGeometryNode(){
-			return true;
-		}
-
-		getLevel(){
-			return this.level;
-		}
-
-		isTreeNode(){
-			return false;
-		}
-
-		isLoaded(){
-			return this.loaded;
-		}
-
-		getBoundingSphere(){
-			return this.boundingSphere;
-		}
-
-		getBoundingBox(){
-			return this.boundingBox;
-		}
-
-		getChildren(){
-			let children = [];
-
-			for (let i = 0; i < 8; i++) {
-				if (this.children[i]) {
-					children.push(this.children[i]);
-				}
-			}
-
-			return children;
-		}
-
-		getBoundingBox(){
-			return this.boundingBox;
-		}
-
-		loadPoints(){
-			this.octreeGeometry.loader.load(this);
-		}
-
-		load(){
-			if (this.loading === true || this.loaded === true || Potree.numNodesLoading >= Potree.maxNodesLoading) {
-				return;
-			}
-
-			this.loading = true;
-
-			Potree.numNodesLoading++;
-
-			this.loadPoints();
-		}
-
-		getNumPoints(){
-			return this.numPoints;
-		}
-
-		dispose(){
-			if (this.geometry && this.parent != null) {
-				this.geometry.dispose();
-				this.geometry = null;
-				this.loaded = false;
-
-				// this.dispatchEvent( { type: 'dispose' } );
-				for (let i = 0; i < this.oneTimeDisposeHandlers.length; i++) {
-					let handler = this.oneTimeDisposeHandlers[i];
-					handler();
-				}
-				this.oneTimeDisposeHandlers = [];
-			}
-		}
-
-	};
-
-	OctreeGeometryNode.IDCount = 0;
-
-	class NodeLoader{
-
-		constructor(url){
-			this.url = url;
-		}
-
-		async load(node){
-
-			if(node.loaded){
-				return;
-			}
-
-			let byteOffset = node.byteOffset;
-			let byteSize = node.byteSize;
-
-			try{
-				let response = await fetch(this.url, {
-					headers: {
-						'content-type': 'multipart/byteranges',
-						'Range': `bytes=${byteOffset}-${byteOffset + byteSize}`,
-					},
-				});
-
-				let workerPath = Potree.scriptPath + '/workers/OctreeDecoderWorker.js';
-				let worker = Potree.workerPool.getWorker(workerPath);
-
-				worker.onmessage = function (e) {
-
-					let data = e.data;
-					let buffers = data.attributeBuffers;
-
-					Potree.workerPool.returnWorker(workerPath, worker);
-
-
-					let geometry = new THREE.BufferGeometry();
-					
-					for(let property in buffers){
-
-						let buffer = buffers[property].buffer;
-
-						if(property === "POSITION_CARTESIAN"){
-							geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(buffer), 3));
-						}else if(property === "RGBA"){
-							geometry.addAttribute('rgba', new THREE.BufferAttribute(new Uint8Array(buffer), 4, true));
-						}else if (property === "INDICES") {
-							let bufferAttribute = new THREE.BufferAttribute(new Uint8Array(buffer), 4);
-							bufferAttribute.normalized = true;
-							geometry.addAttribute('indices', bufferAttribute);
-						} 
-
-					}
-					// indices ??
-
-					node.geometry = geometry;
-					node.loaded = true;
-					node.loading = false;
-					Potree.numNodesLoading--;
-				};
-
-				let buffer = await response.arrayBuffer();
-
-				let pointAttributes = node.octreeGeometry.pointAttributes;
-				let scale = node.octreeGeometry.scale;
-
-				let min = node.octreeGeometry.offset.clone().add(node.boundingBox.min);
-
-				let message = {
-					buffer: buffer,
-					pointAttributes: pointAttributes,
-					scale: scale,
-					min: min,
-					//min: node.boundingBox.min,
-				};
-
-				worker.postMessage(message, [message.buffer]);
-			}catch(e){
-				node.loaded = false;
-				node.loading = false;
-
-				console.log(`failed to load ${node.name}`);
-				console.log(`trying again!`);
-			}
-		}
-
-	}
-
-	function createChildAABB(aabb, index){
-		let min = aabb.min.clone();
-		let max = aabb.max.clone();
-		let size = new THREE.Vector3().subVectors(max, min);
-
-		if ((index & 0b0001) > 0) {
-			min.z += size.z / 2;
-		} else {
-			max.z -= size.z / 2;
-		}
-
-		if ((index & 0b0010) > 0) {
-			min.y += size.y / 2;
-		} else {
-			max.y -= size.y / 2;
-		}
-		
-		if ((index & 0b0100) > 0) {
-			min.x += size.x / 2;
-		} else {
-			max.x -= size.x / 2;
-		}
-
-		return new THREE.Box3(min, max);
-	}
-
-	class OctreeLoader_1_8{
-
-		static parseAttributes(aJson){
-
-			let attributes = new PointAttributes();
-
-			attributes.add(PointAttribute.POSITION_CARTESIAN);
-			attributes.add(new PointAttribute("RGBA", PointAttributeTypes.DATA_TYPE_UINT8, 4));
-
-			return attributes;
-		}
-
-		static async loadHierarchy(url, root){
-
-			let hierarchyPath = `${url}/../hierarchy.bin`;
-			let response = await fetch(hierarchyPath);
-			let buffer = await response.arrayBuffer();
-			let view = new DataView(buffer);
-
-			let bytesPerNode = 21;
-			let numNodes = buffer.byteLength / bytesPerNode;
-
-			let octree = root.octreeGeometry;
-			let nodes = [root];
-
-			for(let i = 0; i < numNodes; i++){
-
-				let node = nodes[i];
-
-				let childMask = view.getUint8(i * bytesPerNode);
-				let numPoints = view.getUint32(i * bytesPerNode + 1, true);
-				let byteOffset = view.getBigInt64(i * bytesPerNode + 5, true);
-				let byteSize = view.getBigInt64(i * bytesPerNode + 13, true);
-
-				node.byteOffset = byteOffset;
-				node.byteSize = byteSize;
-				node.numPoints = numPoints;
-
-				for(let childIndex = 0; childIndex < 8; childIndex++){
-					let childExists = ((1 << childIndex) & childMask) !== 0;
-
-					if(!childExists){
-						continue;
-					}
-
-					let childName = node.name + childIndex;
-
-					let childAABB = createChildAABB(node.boundingBox, childIndex);
-					let child = new OctreeGeometryNode(childName, octree, childAABB);
-					child.spacing = node.spacing / 2;
-					child.level = node.level + 1;
-					node.hasChildren = true;
-
-					node.children[childIndex] = child;
-					child.parent = node;
-
-					if(nodes.length > numNodes){
-						debugger;
-					}
-
-					nodes.push(child);
-				}
-
-				
-			}
-
-			console.log("lala");
-		}
-
-		static async load(url){
-
-			let cloudJsPath = url;
-			// let hierarchyPath = `${url}/../hierarchy.json`;
-			let dataPath = `${url}/../octree.bin`;
-
-			let cloudJsResponse = fetch(cloudJsPath);
-			// let hierarchyResponse = fetch(hierarchyPath);
-
-			let json = await (await cloudJsResponse).json();
-			// let hierarchy = await (await hierarchyResponse).json();
-
-			let octree = new OctreeGeometry();
-			octree.url = url;
-			octree.spacing = json.spacing;
-			octree.scale = json.scale;
-
-			let min = new THREE.Vector3(...json.boundingBox.min);
-			let max = new THREE.Vector3(...json.boundingBox.max);
-			let boundingBox = new THREE.Box3(min, max);
-
-			let offset = min.clone();
-			boundingBox.min.sub(offset);
-			boundingBox.max.sub(offset);
-
-			octree.projection = json.projection;
-			octree.boundingBox = boundingBox;
-			octree.tightBoundingBox = boundingBox.clone();
-			octree.boundingSphere = boundingBox.getBoundingSphere(new THREE.Sphere());
-			octree.tightBoundingSphere = boundingBox.getBoundingSphere(new THREE.Sphere());
-			octree.offset = offset;
-			octree.pointAttributes = OctreeLoader_1_8.parseAttributes(json.attributes);
-			octree.loader = new NodeLoader(dataPath);
-
-			let root = new OctreeGeometryNode("r", octree, boundingBox);
-			root.level = 0;
-			root.hasChildren = false;
-			root.spacing = octree.spacing;
-			root.byteOffset = 0;
-			// root.byteSize = 1000 * 16;
-			// root.numPoints = 1000;
-
-			octree.root = root;
-
-			await OctreeLoader_1_8.loadHierarchy(url, root);
-
-			// let traverse = (node, nodeJson) => {
-			// 	node.numPoints = nodeJson.numPoints;
-
-			// 	// node.spacing = node.spacing / 2;
-			// 	node.byteOffset = nodeJson.byteOffset;
-			// 	node.byteSize = nodeJson.byteSize;
-			// 	node.numPoints = nodeJson.numPoints;
-
-			// 	for(let childJson of nodeJson.children){
-					
-			// 		let index = childJson.name.charAt(childJson.name.length - 1);
-
-			// 		let childAABB = createChildAABB(node.boundingBox, index);
-			// 		let child = new OctreeGeometryNode(childJson.name, octree, childAABB);
-			// 		child.spacing = node.spacing / 2;
-			// 		child.level = node.level + 1;
-			// 		node.hasChildren = true;
-
-					
-			// 		node.children[index] = child;
-			// 		child.parent = node;
-
-			// 		traverse(child, childJson);
-			// 	}
-			// };
-
-			// traverse(root, hierarchy.hierarchy);
-
-
-			let result = {
-				geometry: octree,
-			};
-
-			return result;
-
-		}
-
-	};
-
 	class VRControlls{
 
 		constructor(viewer){
@@ -31223,47 +32972,93 @@ ENDSEC
 
 
 	function loadPointCloud$1(path, name, callback){
-		let loaded = function(pointcloud){
-			pointcloud.name = name;
-			callback({type: 'pointcloud_loaded', pointcloud: pointcloud});
+		let loaded = function(e){
+			e.pointcloud.name = name;
+			callback(e);
 		};
 
-		// load pointcloud
-		if (!path){
-			// TODO: callback? comment? Hello? Bueller? Anyone?
-		} else if (path.indexOf('ept.json') > 0) {
-			EptLoader.load(path, function(geometry) {
-				if (!geometry) {
-					console.error(new Error(`failed to load point cloud from URL: ${path}`));
-				}
-				else {
-					let pointcloud = new PointCloudOctree(geometry);
-					loaded(pointcloud);
-				}
+		let promise = new Promise( resolve => {
+
+			// load pointcloud
+			if (!path){
+				// TODO: callback? comment? Hello? Bueller? Anyone?
+			} else if (path.indexOf('ept.json') > 0) {
+				EptLoader.load(path, function(geometry) {
+					if (!geometry) {
+						console.error(new Error(`failed to load point cloud from URL: ${path}`));
+					}
+					else {
+						let pointcloud = new PointCloudOctree(geometry);
+						//loaded(pointcloud);
+						resolve({type: 'pointcloud_loaded', pointcloud: pointcloud});
+					}
+				});
+			} else if (path.indexOf('cloud.js') > 0) {
+				POCLoader.load(path, function (geometry) {
+					if (!geometry) {
+						//callback({type: 'loading_failed'});
+						console.error(new Error(`failed to load point cloud from URL: ${path}`));
+					} else {
+						let pointcloud = new PointCloudOctree(geometry);
+						// loaded(pointcloud);
+						resolve({type: 'pointcloud_loaded', pointcloud: pointcloud});
+					}
+				});
+			} else if (path.indexOf('metadata.json') > 0) {
+				Potree.OctreeLoader_1_8.load(path).then(e => {
+					let geometry = e.geometry;
+
+					if(!geometry){
+						console.error(new Error(`failed to load point cloud from URL: ${path}`));
+					}else {
+						let pointcloud = new PointCloudOctree(geometry);
+
+						let aPosition = pointcloud.getAttribute("position");
+
+						let material = pointcloud.material;
+						material.elevationRange = [
+							aPosition.range[0][2],
+							aPosition.range[1][2],
+						];
+
+						// loaded(pointcloud);
+						resolve({type: 'pointcloud_loaded', pointcloud: pointcloud});
+					}
+				});
+
+				OctreeLoader_1_8.load(path, function (geometry) {
+					if (!geometry) {
+						//callback({type: 'loading_failed'});
+						console.error(new Error(`failed to load point cloud from URL: ${path}`));
+					} else {
+						let pointcloud = new PointCloudOctree(geometry);
+						// loaded(pointcloud);
+						resolve({type: 'pointcloud_loaded', pointcloud: pointcloud});
+					}
+				});
+			} else if (path.indexOf('.vpc') > 0) {
+				PointCloudArena4DGeometry.load(path, function (geometry) {
+					if (!geometry) {
+						//callback({type: 'loading_failed'});
+						console.error(new Error(`failed to load point cloud from URL: ${path}`));
+					} else {
+						let pointcloud = new PointCloudArena4D(geometry);
+						// loaded(pointcloud);
+						resolve({type: 'pointcloud_loaded', pointcloud: pointcloud});
+					}
+				});
+			} else {
+				//callback({'type': 'loading_failed'});
+				console.error(new Error(`failed to load point cloud from URL: ${path}`));
+			}
+		});
+
+		if(callback){
+			promise.then(pointcloud => {
+				loaded(pointcloud);
 			});
-		} else if (path.indexOf('cloud.js') > 0) {
-			POCLoader.load(path, function (geometry) {
-				if (!geometry) {
-					//callback({type: 'loading_failed'});
-					console.error(new Error(`failed to load point cloud from URL: ${path}`));
-				} else {
-					let pointcloud = new PointCloudOctree(geometry);
-					loaded(pointcloud);
-				}
-			});
-		} else if (path.indexOf('.vpc') > 0) {
-			PointCloudArena4DGeometry.load(path, function (geometry) {
-				if (!geometry) {
-					//callback({type: 'loading_failed'});
-					console.error(new Error(`failed to load point cloud from URL: ${path}`));
-				} else {
-					let pointcloud = new PointCloudArena4D(geometry);
-					loaded(pointcloud);
-				}
-			});
-		} else {
-			//callback({'type': 'loading_failed'});
-			console.error(new Error(`failed to load point cloud from URL: ${path}`));
+		}else {
+			return promise;
 		}
 	};
 
@@ -31391,7 +33186,7 @@ ENDSEC
 	exports.NormalizationMaterial = NormalizationMaterial;
 	exports.OctreeLoader_1_8 = OctreeLoader_1_8;
 	exports.OrbitControls = OrbitControls;
-	exports.OrientedImage = OrientedImage$1;
+	exports.OrientedImage = OrientedImage;
 	exports.OrientedImageLoader = OrientedImageLoader;
 	exports.OrientedImages = OrientedImages;
 	exports.POCLoader = POCLoader;
