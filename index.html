@@ -46,7 +46,13 @@
 			top: 50%;
 			-webkit-transform: translate(-50%, -50%);
 			transform: translate(-50%, -50%);
-			pointer-events: none;
+			/* pointer-events: none; */
+		}
+
+		.center{
+			left: 50%;
+			-webkit-transform: translate(-50%, -0%);
+			transform: translate(-50%, -0%);
 		}
 
 		.dropzone_title{
@@ -66,12 +72,58 @@
 
 		#drop * {pointer-events: none;}
 
+		#converter_panel{
+			position: absolute; margin: auto; z-index: 2000000;
+			background: white;
+			border: 0.2em solid black;
+			border-radius: 1em;
+			padding: 1em;
+		}
+
+		#converter_panel .title{
+			font-size: 3em;
+			font-family: Arial;
+			font-weight: bold;
+		}
+
+		#converter_panel .h2{
+			text-align: center !important; 
+			font-weight: bold;
+			font-family: arial;
+			font-size: 1.5em;
+		}
+
+		.converter_panel_button{
+			width: 100%;
+			padding: 0.4em 0.1em;
+			margin: 0px; 
+			border-radius: 4px 0px 0px 4px; 
+			border-top: 1px solid black; 
+			border-right: 1px solid black; 
+			border-bottom: 1px solid black;
+			border-left: none; 
+			border-image: initial;
+		}
+
+		.converter_panel_button:hover{
+			background: red;
+		}
+
+		.converter_panel_button:active{
+			background: green;
+		}
+
+		.converter_panel_button:focus{
+			background: yellow;
+		}
+
+
 	</style>
 </head>
 
 <body>
 
-	<span id="pointcloud_file_dropzone" style="position: absolute; width:100%; height: 100%; z-index: 1000" class="droproot">
+	<span id="pointcloud_file_dropzone" style="position: absolute; width:100%; height: 100%; z-index: 1000000" class="droproot">
 		<span style="position:absolute; left: 0px; right: 0px; top: 0px; bottom: 0px" class="dropzone">
 			
 			<span class="middle">
@@ -85,6 +137,49 @@
 			</span>
 
 		</span>
+	</span>
+
+	<span id="converter_panel" class="middle">
+		<p class="title">Convert</p>
+
+		<p>
+			Files:
+		</p>
+		<div>
+			<ul>
+				<li>file 1</li>
+				<li>file 2</li>
+				<li>file 3</li>
+			</ul>
+		</div>
+
+		<!-- <span style="display: flex">
+
+			<span style="flex-grow: 1; display: inherit">
+				<label for="converter_choice_1.7" class="converter_panel_button" >PotreeConverter 1.7</label>
+				<input type="radio" name="converter_choice" id="converter_choice_1.7" value="standard" style="display: none">
+			</span>
+			<span style="flex-grow: 1; display: inherit">
+				<label for="converter_choice_2.0" class="converter_panel_button">PotreeConverter 2.0</label>
+				<input type="radio" name="converter_choice" class="converter_panel_button" id="converter_choice_2.0" value="hq" style="display: block" checked>
+			</span>
+		</span> -->
+
+		<selectgroup id="converter_choice">
+			<option id="converter_choice_1.7" value="standard">
+				<h2>PotreeConverter 1.7</h2>
+				<ul>
+					<li>Free</li>
+				</ul>
+			</option>
+			<option id="converter_choice_2.0" value="hq">
+				<h2>PotreeConverter 2.0</h2>
+				<ul>
+					<li>Free for non-commercial and non-government</li>
+				</ul>
+			</option>
+		</selectgroup>
+
 	</span>
 
 	<script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
@@ -104,6 +199,19 @@
 	<script src="./libs/potree/potree.js"></script>
 	<script src="./libs/plasio/js/laslaz.js"></script>
 
+		<script>
+		let elSplatQuality = $("#converter_choice");
+		elSplatQuality.selectgroup({title: "Converter Choice"});
+
+		elSplatQuality.find("input").click( (e) => {
+			console.log(e.target.value);
+			// if(e.target.value === "standard"){
+			// 	this.viewer.useHQ = false;
+			// }else if(e.target.value === "hq"){
+			// 	this.viewer.useHQ = true;
+			// }
+		});
+	</script>
 	
 	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0px; top: 0px; ">
 		<div id="potree_render_area"></div>
@@ -194,57 +302,23 @@
 			return placeholder;
 		}
 
-		async function doConversion(inputPaths){
+		async function doConversion(inputPaths, suggestedDirectory, suggestedName){
 
 			const fs = require("fs");
 			const npath = require("path");
 			const fsp = fs.promises;
 
-			const whitelist = [".las", ".laz"];
-			const lasLazFiles = [];
-			const metadataJsonFiles = [];
-			const cloudJsFiles = [];
+			console.log("starting conversion");
+			console.log(inputPaths);
+			console.log(suggestedDirectory);
+			console.log(suggestedName);
 
-			let suggestedDirectory = null;
-			let suggestedName = null;
+			// let suggestedDirectory = null;
+			// let suggestedName = null;
 
-			for(const path of inputPaths){
-				const stat = await fs.promises.lstat(path);
 
-				if(suggestedName === null){
-					suggestedDirectory = npath.normalize(`${path}/..`);
-					suggestedName = npath.basename(path, npath.extname(path)) + "_converted";
-				}
-
-				if(stat.isFile()){
-					const extension = npath.extname(path).toLowerCase();
-
-					if(whitelist.includes(extension)){
-						lasLazFiles.push(path);
-					}
-				}else if(stat.isDirectory()){
-					const files = await fsp.readdir(path);
-
-					for(const file of files){
-						const extension = npath.extname(file).toLowerCase();
-
-						if(whitelist.includes(extension)){
-							lasLazFiles.push(`${path}/${file}`);
-						}else if(file.toLowerCase().endsWith("cloud.js")){
-							//cloudJsFiles.push(`${path}/${file}`);
-						}else if(file.toLowerCase().endsWith("metadata.json")){
-							//metadataJsonFiles.push(`${path}/${file}`);
-						}
-
-					};
-				}
-			}
-
-			let suggestedPath = `${suggestedDirectory}/${suggestedName}`;
+			// let suggestedPath = `${suggestedDirectory}/${suggestedName}`;
 			//let suggestedPath = npath.normalize(`${first}/../${suggestedName}`);
-
-			
-
 
 			return;
 
@@ -421,6 +495,9 @@
 			const cloudJsFiles = [];
 			const lasLazFiles = [];
 
+			let suggestedDirectory = null;
+			let suggestedName = null;
+
 			for(let i = 0; i < event.dataTransfer.items.length; i++){
 				let item = event.dataTransfer.items[i];
 
@@ -435,6 +512,8 @@
 				const fsp = fs.promises;
 				const np = require('path');
 
+				const whitelist = [".las", ".laz"];
+
 				let isFile = fs.lstatSync(path).isFile();
 
 				if(isFile && path.indexOf("cloud.js") >= 0){
@@ -443,17 +522,40 @@
 					cloudJsFiles.push(file.path);
 				}else if(isFile){
 					const extension = np.extname(path).toLowerCase();
-					const whitelist = [".las", ".laz"];
 
-					const isOkay = whitelist.includes(extension);
-
-					if(isOkay){
+					if(whitelist.includes(extension)){
 						lasLazFiles.push(file.path);
+
+						if(suggestedDirectory == null){
+							suggestedDirectory = np.normalize(`${path}/..`);
+							suggestedName = np.basename(path, np.extname(path)) + "_converted";
+						}
 					}
 				}else if(fs.lstatSync(path).isDirectory()){
 					// handle directory
 
-					lasLazFiles.push(path);
+					const files = await fsp.readdir(path);
+
+					for(const file of files){
+						const extension = np.extname(file).toLowerCase();
+
+						if(whitelist.includes(extension)){
+							lasLazFiles.push(`${path}/${file}`);
+
+							if(suggestedDirectory == null){
+								suggestedDirectory = np.normalize(`${path}/..`);
+								suggestedName = np.basename(path, np.extname(path)) + "_converted";
+							}
+
+						}else if(file.toLowerCase().endsWith("cloud.js")){
+							cloudJsFiles.push(`${path}/${file}`);
+						}else if(file.toLowerCase().endsWith("metadata.json")){
+							cloudJsFiles.push(`${path}/${file}`);
+						}
+
+					};
+
+					// lasLazFiles.push(path);
 
 				}
 			}
@@ -462,7 +564,7 @@
 			console.log(lasLazFiles);
 
 			if(lasLazFiles.length > 0){
-				doConversion(lasLazFiles);
+				doConversion(lasLazFiles, suggestedDirectory, suggestedName);
 			}
 
 			for(const cloudjs of cloudJsFiles){
