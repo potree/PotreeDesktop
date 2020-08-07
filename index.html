@@ -18,16 +18,13 @@
 		.droproot{
 			display: none;
 			pointer-events: none;
+			opacity: 0.7;
 		}
 
 		.dropzone{
 			border: 1em solid black;
 			background: white;
 		}
-
-		/* .dropzone:drop{
-			opacity: 0.8;
-		} */
 
 		.dropzone:before{
 			 display: block;
@@ -75,29 +72,18 @@
 <body>
 
 	<span id="pointcloud_file_dropzone" style="position: absolute; width:100%; height: 100%; z-index: 1000" class="droproot">
-		<span id="dropzone_1.7" style="position:absolute; left: 0px; right: 50%; top: 0px; bottom: 0px" class="dropzone">
+		<span style="position:absolute; left: 0px; right: 0px; top: 0px; bottom: 0px" class="dropzone">
 			
 			<span class="middle">
-				<p class="dropzone_title">PotreeConverter 1.7</p>
+				<p class="dropzone_title">Convert and/or Load point clouds</p>
 
 				<ul class="dropzone_text">
-					<li>Free for anyone.</li>
+					<li>Drop LAS/LAZ files to convert and load them.</li>
+					<li>Drop folders to convert and load all files inside.</li>
+					<li>Drop previously converted cloud.js, metadata.json or containing directy to load.</li>
 				</ul>
 			</span>
 
-		</span>
-		<span id="dropzone_2.0" style="position:absolute; left: 50%; right: 0px; top: 0px; bottom: 0px" class="dropzone">
-
-			<span class="middle">
-				<p class="dropzone_title">PotreeConverter 2.0</p>
-
-				<ul class="dropzone_text">
-					<li>Free for non-commercial and non-government users</li>
-					<li>Three month trial for commercial and government users.</li>
-					<li>https://github.com/potree/PotreeConverter</li>
-				</ul>
-			</span>
-			
 		</span>
 	</span>
 
@@ -216,6 +202,8 @@
 
 			const whitelist = [".las", ".laz"];
 			const lasLazFiles = [];
+			const metadataJsonFiles = [];
+			const cloudJsFiles = [];
 
 			let suggestedDirectory = null;
 			let suggestedName = null;
@@ -232,7 +220,6 @@
 					const extension = npath.extname(path).toLowerCase();
 
 					if(whitelist.includes(extension)){
-						//lasLazFiles.push(`${path}/${file}`);
 						lasLazFiles.push(path);
 					}
 				}else if(stat.isDirectory()){
@@ -243,6 +230,10 @@
 
 						if(whitelist.includes(extension)){
 							lasLazFiles.push(`${path}/${file}`);
+						}else if(file.toLowerCase().endsWith("cloud.js")){
+							//cloudJsFiles.push(`${path}/${file}`);
+						}else if(file.toLowerCase().endsWith("metadata.json")){
+							//metadataJsonFiles.push(`${path}/${file}`);
 						}
 
 					};
@@ -251,6 +242,11 @@
 
 			let suggestedPath = `${suggestedDirectory}/${suggestedName}`;
 			//let suggestedPath = npath.normalize(`${first}/../${suggestedName}`);
+
+			
+
+
+			return;
 
 			let i = 1; 
 			while(fs.existsSync(suggestedPath)){
@@ -400,20 +396,6 @@
 
 		function dragOver(e){
 			showDropzones();
-
-			let u = e.clientX / document.body.clientWidth;
-
-			let elLeft = document.getElementById("dropzone_1.7");
-			let elRight = document.getElementById("dropzone_2.0");
-
-			if(u < 0.5){
-				elLeft.style.opacity = 0.9;
-				elRight.style.opacity = 0.2;
-			}else{
-				elLeft.style.opacity = 0.2;
-				elRight.style.opacity = 0.9;
-			}
-
 		}
 
 		function dragLeave(e){
