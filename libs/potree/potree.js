@@ -30150,7 +30150,12 @@ ENDSEC
 
 			this.initThree();
 			this.prepareVR();
-			this.initDragAndDrop();
+
+			if(args.noDragAndDrop){
+				
+			}else {
+				this.initDragAndDrop();
+			}
 
 			if(typeof Stats !== "undefined"){
 				this.stats = new Stats();

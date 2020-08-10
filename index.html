@@ -19,6 +19,10 @@
 			display: none;
 			pointer-events: none;
 			opacity: 0.7;
+			position: absolute; 
+			width:100%; 
+			height: 100%; 
+			z-index: 1000000;
 		}
 
 		.dropzone{
@@ -78,12 +82,7 @@
 			border: 0.2em solid black;
 			border-radius: 1em;
 			padding: 1em;
-		}
-
-		#converter_panel .title{
-			font-size: 3em;
-			font-family: Arial;
-			font-weight: bold;
+			display: none;
 		}
 
 		#converter_panel .h2{
@@ -93,28 +92,89 @@
 			font-size: 1.5em;
 		}
 
-		.converter_panel_button{
-			width: 100%;
-			padding: 0.4em 0.1em;
-			margin: 0px; 
-			border-radius: 4px 0px 0px 4px; 
-			border-top: 1px solid black; 
-			border-right: 1px solid black; 
-			border-bottom: 1px solid black;
-			border-left: none; 
-			border-image: initial;
+		.converter_panel_list{
+			max-height: 100px;
+			overflow: auto;
+			border: 1px solid black;
 		}
 
-		.converter_panel_button:hover{
-			background: red;
+
+		#converter_panel a:link{
+			color: blue;
 		}
 
-		.converter_panel_button:active{
-			background: green;
+		#converter_panel a:visited{
+			color: blueviolet;
 		}
 
-		.converter_panel_button:focus{
-			background: yellow;
+		#converter_panel a:hover a:focus{
+			color: blue;
+		}
+
+		#converter_panel a:active{
+			color: blue;
+		}
+
+
+
+
+		.selection_buttons{
+			display: flex;
+		}
+
+		.selection_buttons label {
+			flex: 1;
+			display: block;
+			position: relative;
+			margin: 0;
+			padding: 1em;
+			cursor: pointer;
+			background-color: #ccc;
+			border: 1px solid black;
+			opacity: 0.3;
+
+		}
+
+		.selection_buttons input[type="radio"] {
+			display: none;
+		}
+
+		.selection_buttons input[type="radio"]:hover+label {
+			opacity: 0.5;
+			z-index: 1000;
+			box-shadow: 0 0 0 1pt black;
+		}
+
+		.selection_buttons input[type="radio"]:checked+label {
+			opacity: 1.0;
+			box-shadow: 0 0 0 1pt black;
+		}
+
+		.selection_buttons li{
+			font-family: Arial;
+			font-size: 1em;
+		}
+
+		.selection_buttons .title {
+			font-family: Arial;
+			font-weight: bold;
+			font-size: 1.5em;
+			width:100%;
+			text-align: center;
+			left: 50%;
+			transform: translateX(-50%);
+		}
+
+		.selection_buttons .left{
+			border-radius: 1em 0em 0em 1em;
+		}
+
+		.selection_buttons .right{
+			border-radius: 0em 1em 1em 0em;
+		}
+
+		.converter_panel_widget{
+			margin: 10px 0px;
 		}
 
 
@@ -123,7 +183,7 @@
 
 <body>
 
-	<span id="pointcloud_file_dropzone" style="position: absolute; width:100%; height: 100%; z-index: 1000000" class="droproot">
+	<span id="pointcloud_file_dropzone" class="droproot">
 		<span style="position:absolute; left: 0px; right: 0px; top: 0px; bottom: 0px" class="dropzone">
 			
 			<span class="middle">
@@ -140,45 +200,71 @@
 	</span>
 
 	<span id="converter_panel" class="middle">
-		<p class="title">Convert</p>
 
-		<p>
-			Files:
-		</p>
-		<div>
-			<ul>
-				<li>file 1</li>
-				<li>file 2</li>
-				<li>file 3</li>
-			</ul>
+		<div class="converter_panel_widget">
+			Target Directory: <br>
+			<span style="display: flex">
+				<input id="converter_panel_target_directory" type="textfield" style="flex-grow: 1">
+				<!-- <span style="width: 0.2em"></span>
+				<input id="converter_panel_pick_target_directory" type="button" value="..."> -->
+			</span>
+			<div id="converter_panel_target_directory_warning" style="color: red">
+				&nbsp;
+			</div>
 		</div>
 
-		<!-- <span style="display: flex">
+		<div class="converter_panel_widget">
+			Input Files:
+			<div id="converter_panel_files" class="converter_panel_list">
+				<div>file 1</div>
+				<div>file 2</div>
+				<div>file 3</div>
+				<div>file 4</div>
+				<div>file 5</div>
+				<div>file 6</div>
+				<div>file 7</div>
+				<div>file 8</div>
+			</div>
+		</div>
 
-			<span style="flex-grow: 1; display: inherit">
-				<label for="converter_choice_1.7" class="converter_panel_button" >PotreeConverter 1.7</label>
-				<input type="radio" name="converter_choice" id="converter_choice_1.7" value="standard" style="display: none">
-			</span>
-			<span style="flex-grow: 1; display: inherit">
-				<label for="converter_choice_2.0" class="converter_panel_button">PotreeConverter 2.0</label>
-				<input type="radio" name="converter_choice" class="converter_panel_button" id="converter_choice_2.0" value="hq" style="display: block" checked>
-			</span>
-		</span> -->
+		<br>
 
-		<selectgroup id="converter_choice">
-			<option id="converter_choice_1.7" value="standard">
-				<h2>PotreeConverter 1.7</h2>
-				<ul>
-					<li>Free</li>
-				</ul>
-			</option>
-			<option id="converter_choice_2.0" value="hq">
-				<h2>PotreeConverter 2.0</h2>
-				<ul>
-					<li>Free for non-commercial and non-government</li>
-				</ul>
-			</option>
-		</selectgroup>
+		<div class="converter_panel_widget">
+			Choose a Converter:
+			<div class="selection_buttons">
+
+				<input type="radio" id="selection_converter_version_1_7" 
+					name="selection_converter_version" value="all">
+				<label for="selection_converter_version_1_7" class="left">
+					<span class="title">PotreeConverter 1.7</span>
+					<ul>
+						<li>Free</li>
+					</ul>
+				</label>
+
+				<input type="radio" id="selection_converter_version_2_0" 
+					name="selection_converter_version" value="false" checked>
+				<label for="selection_converter_version_2_0" class="right" >
+					<span class="title">PotreeConverter 2.0</span>
+					<ul>
+						<li>Free for non-commercial and non-government</li>
+						<li>Three month trial period</li>
+						<li>See <a href="https://github.com/potree/PotreeConverter" target="_blank">PotreeConverter at GitHub</a></li>
+					</ul>
+				</label>
+
+			</div>
+		</div>
+
+		<p>
+			<span style="display: flex">
+				<span style="flex-grow: 1"></span>
+				<input type="button" value="Start Conversion" id="converter_panel_start"/>
+				<span style="width:1em"></span>
+				<input type="button" value="Cancel" id="converter_panel_cancel"/>
+			</span>
+			
+		</p>
 
 	</span>
 
@@ -302,46 +388,97 @@
 			return placeholder;
 		}
 
-		async function doConversion(inputPaths, suggestedDirectory, suggestedName){
+		function convert_17(inputPaths, chosenPath, pointcloudName){
+			let message = `Starting conversion.<br>
+			input: ${inputPaths}<br>
+			output: ${chosenPath}`;
+			viewer.postMessage(message, {duration: 15000});
 
-			const fs = require("fs");
-			const npath = require("path");
-			const fsp = fs.promises;
+			const { spawn } = require('child_process');
+			const converter = spawn('./libs/PotreeConverter/PotreeConverter.exe', [
+				...inputPaths,
+				"-o", chosenPath,
+				"--overwrite"
+			]);
 
-			console.log("starting conversion");
-			console.log(inputPaths);
-			console.log(suggestedDirectory);
-			console.log(suggestedName);
+			let placeholder = null;
+			converter.stdout.on('data', (data) => {
+				console.log("==");
+				console.log(`stdout: ${data}`);
 
-			// let suggestedDirectory = null;
-			// let suggestedName = null;
+				const string = new TextDecoder("utf-8").decode(data);
 
+				if(!placeholder){ // match for AABB
+					const regexp = /(.*AABB): ({[.\s\S]*?})/g;
+					const matches = string.matchAll(regexp);
+						
+					for (const match of matches) {
+						try{
+							const name = match[1];
+							const value = match[2];
+							const aabb = JSON.parse(match[2]);
+							console.log(aabb);
 
-			// let suggestedPath = `${suggestedDirectory}/${suggestedName}`;
-			//let suggestedPath = npath.normalize(`${first}/../${suggestedName}`);
+							if(name === "cubicAABB"){
+								placeholder = createPlaceholder(aabb);
+							}
+						}catch(e){
+							console.error(match[0]);
+							console.error(e);
+						}
+					}
+				}
 
-			return;
+				window.placeholder = placeholder;
 
-			let i = 1; 
-			while(fs.existsSync(suggestedPath)){
-				suggestedPath = `${suggestedDirectory}/${suggestedName}_${i}`;
-				//suggestedPath = npath.normalize(`${first}/../${suggestedName}_${i}`);
-				i++;
-			}
+				if(placeholder){ // match for progress
+					const regexp = /INDEXING: ([\w\.]*) of ([\w\.]*) processed/g;
+					const matches = string.matchAll(regexp);
 
-			const dialog = require('electron').remote.dialog;
-			const chosenPath = dialog.showSaveDialogSync(null, {
-				title: "Chose Conversion Directory",
-				defaultPath: suggestedPath,
-				buttonLabel: "start conversion",
+					for(const match of matches){
+
+						const processed = parseInt(match[1].replace(/\D/g,''));
+						const total = parseInt(match[2].replace(/\D/g,''));
+						const percent = parseInt(100 * (processed / total));
+						
+						const text = `${percent}%`;
+						placeholder.text.setText(text);
+					}
+				}
+
 			});
 
-			if(chosenPath === undefined){
-				console.log("no path was chosen. aborting converison.");
+			converter.stderr.on('data', (data) => {
+				console.log("==");
+				console.error(`stderr: ${data}`);
+			});
 
-				return;
-			}
+			converter.on('close', (code) => {
+				console.log(`child process exited with code ${code}`);
 
+				const cloudJS = `${chosenPath}/cloud.js`;
+				console.log("now loading point cloud: " + cloudJS);
+
+				if(placeholder){
+					placeholder.remove();
+				}
+
+				let message = `conversion finished, now loading ${cloudJS}`;
+				viewer.postMessage(message, {duration: 15000});
+
+				Potree.loadPointCloud(cloudJS, pointcloudName, function(e){
+					viewer.scene.addPointCloud(e.pointcloud);
+
+					let material = e.pointcloud.material;
+					material.size = 1;
+					material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+
+					//viewer.zoomTo(e.pointcloud);
+				});
+			});
+		}
+
+		function convert_20(inputPaths, chosenPath, pointcloudName){
 			let message = `Starting conversion.<br>
 			input: ${inputPaths}<br>
 			output: ${chosenPath}`;
@@ -422,7 +559,7 @@
 					let pointcloud = e.pointcloud;
 					let material = pointcloud.material;
 
-					pointcloud.name = suggestedName;
+					pointcloud.name = pointcloudName;
 
 					let hasRGBA = pointcloud.getAttributes().attributes.find(a => a.name === "rgba") !== undefined
 					if(hasRGBA){
@@ -440,6 +577,107 @@
 				});
 
 			});
+		}
+
+		async function doConversion(inputPaths, suggestedDirectory, suggestedName){
+
+			const fs = require("fs");
+			const npath = require("path");
+			const fsp = fs.promises;
+
+			console.log("Open converter panel");
+			console.log("input paths: ", inputPaths);
+			console.log("suggested directory: ", suggestedDirectory);
+			console.log("suggested name: ", suggestedName);
+
+			let i = 1; 
+			let suggestedPath = `${suggestedDirectory}/${suggestedName}`;
+			while(fs.existsSync(suggestedPath)){
+				suggestedPath = `${suggestedDirectory}/${suggestedName}_${i}`;
+				i++;
+			}
+
+
+			let elPanel = document.getElementById("converter_panel");
+			let elFiles = document.getElementById("converter_panel_files");
+			let elTargetDir = document.getElementById("converter_panel_target_directory");
+			let elTargetDirWarning = document.getElementById("converter_panel_target_directory_warning");
+			// let elPickTargetDir = document.getElementById("converter_panel_pick_target_directory");
+			let elCancel = document.getElementById("converter_panel_cancel");
+			let elStart = document.getElementById("converter_panel_start");
+
+			elPanel.style.display = "block";
+
+			elTargetDir.value = suggestedPath;
+			elFiles.innerHTML = inputPaths.map(file => `<div>${file}</div>`).join("\n");
+
+			let checkTarget = () => {
+				let targetDir = elTargetDir.value;
+
+				try{
+					let stat = fs.lstatSync(targetDir);
+
+					if(stat.isDirectory()){
+						let msg = `WARNING: the target folder already exists. Contents may be overriden.`;
+						elTargetDirWarning.innerHTML = msg;
+					}else{
+						elTargetDirWarning.innerHTML = "&nbsp;";
+					}
+				}catch(e){
+					elTargetDirWarning.innerHTML = "&nbsp;";
+				}
+			};
+
+			elTargetDir.oninput = () => {
+				checkTarget();
+			};
+
+			// elPickTargetDir.onclick = () => {
+			// 	const dialog = require('electron').remote.dialog;
+			// 	const chosenPath = dialog.showSaveDialogSync(null, {
+			// 		title: "Chose Conversion Directory",
+			// 		defaultPath: suggestedPath,
+			// 		buttonLabel: "Select",
+			// 		filters: [],
+			// 		properties: ["openDirectory ", "promptToCreate", "createDirectory"],
+			// 	});
+
+			// 	if(chosenPath === undefined){
+			// 		// keep old path
+			// 	}else{
+			// 		elTargetDir.value = chosenPath;
+			// 	}
+
+			// 	checkTarget();
+			// };
+
+			elCancel.onclick = () => {
+				elPanel.style.display = "none";
+			};
+
+			elStart.onclick = () => {
+				console.log("start conversion!!");
+
+				let el_1_7 = document.getElementById("selection_converter_version_1_7");
+				let el_2_0 = document.getElementById("selection_converter_version_2_0");
+
+				let targetDirectory = elTargetDir.value;
+
+				console.log("targetDirectory", targetDirectory);
+				console.log("inputPaths", inputPaths);
+
+				elPanel.style.display = "none";
+
+				if(el_1_7.checked){
+					console.log("convert 1.7");
+					convert_17(inputPaths, targetDirectory, suggestedName);
+				}else if(el_2_0.checked){
+					// console.log("convert 2.0");
+					convert_20(inputPaths, targetDirectory, suggestedName);
+				}
+
+
+			};
 		}
 
 		function showDropzones(){
@@ -460,7 +698,6 @@
 			e.preventDefault();
 			e.stopPropagation();
 
-			// this.style.opacity = "0.8";
 			console.log("enter");
 
 			showDropzones();
@@ -469,7 +706,12 @@
 		}
 
 		function dragOver(e){
+			e.preventDefault();
+			e.stopPropagation();
+
 			showDropzones();
+
+			return false;
 		}
 
 		function dragLeave(e){
@@ -483,8 +725,9 @@
 		}
 
 		async function dropHandler(event){
-			console.log(event);
+			// console.log(event);
 			event.preventDefault();
+			event.stopPropagation();
 
 			hideDropzones();
 
@@ -534,7 +777,10 @@
 				}else if(fs.lstatSync(path).isDirectory()){
 					// handle directory
 
+					console.log("start readdir!");
 					const files = await fsp.readdir(path);
+
+					console.log("readdir done!");
 
 					for(const file of files){
 						const extension = np.extname(file).toLowerCase();
@@ -560,8 +806,8 @@
 				}
 			}
 
-			console.log(cloudJsFiles);
-			console.log(lasLazFiles);
+			// console.log(cloudJsFiles);
+			// console.log(lasLazFiles);
 
 			if(lasLazFiles.length > 0){
 				doConversion(lasLazFiles, suggestedDirectory, suggestedName);
@@ -570,18 +816,22 @@
 			for(const cloudjs of cloudJsFiles){
 				loadDroppedPointcloud(cloudjs);
 			}
-		}
+
+			return false;
+		};
 
 		let elBody = document.body;
-		//let elBody = document.getElementById("dropzone_2.0");
 
-		elBody.addEventListener("dragenter", dragEnter);
-		elBody.addEventListener("dragover", dragOver);
-		elBody.addEventListener("dragleave", dragLeave);
-		elBody.addEventListener("drop", dropHandler);
-		// elBody.addEventListener("dragover", dragEnter);
+		elBody.addEventListener("dragenter", dragEnter, false);
+		elBody.addEventListener("dragover", dragOver, false);
+		elBody.addEventListener("dragleave", dragLeave, false);
+		elBody.addEventListener("drop", dropHandler, false);
 	
-		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
+		let elRenderArea = document.getElementById("potree_render_area");
+		let viewerArgs = {
+			noDragAndDrop: true,
+		};
+		window.viewer = new Potree.Viewer(elRenderArea, viewerArgs);
 		
 		viewer.setEDLEnabled(true);
 		viewer.setFOV(60);
