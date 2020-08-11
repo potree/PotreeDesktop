@@ -18,17 +18,19 @@ function createWindow () {
 		width: 1600, 
 		height: 1200,
 		webPreferences: {
-			nodeIntegration: true
+			nodeIntegration: true,
+			backgroundThrottling: false,
 		}
  
 	})
 
 	// and load the index.html of the app.
-	mainWindow.loadURL(url.format({
-		pathname: path.join(__dirname, 'index.html'),
-		protocol: 'file:',
-		slashes: true
-	}));
+	// mainWindow.loadURL(url.format({
+	// 	pathname: path.join(__dirname, 'index.html'),
+	// 	protocol: 'file:',
+	// 	slashes: true
+	// }));
+	mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
 
 	//let menu = new Menu();
@@ -56,13 +58,38 @@ function createWindow () {
 
 	let menu = Menu.buildFromTemplate(template);
 	mainWindow.setMenu(menu);
-	//mainWindow.setMenu(null);
 
-	//mainWindow.webContents.on('new-window', function(event, url){
-	//	event.preventDefault();
-	//	open(url);
-	//});
 
+	{
+		const { ipcMain } = require('electron');
+
+		ipcMain.on('asynchronous-message', (event, arg) => {
+			console.log(arg) // prints "ping"
+			event.reply('asynchronous-reply', 'pong')
+		})
+
+		ipcMain.on('synchronous-message', (event, arg) => {
+			console.log(arg) // prints "ping"
+			event.returnValue = 'pong'
+		})
+	}
+
+	// {
+	// 	const { spawn, fork, execFile } = require('child_process');
+	// 	let inputPaths = ["D:/dev/pointclouds/bunny_20M.las"];
+	// 	let chosenPath = "D:/dev/pointclouds/bunny_20M.las_converted";
+
+	// 	const process = spawn('./libs/PotreeConverter2/Converter.exe', [
+	// 		...inputPaths,
+	// 		"-o", chosenPath
+	// 	], {
+
+	// 	});
+
+	// 	process.stdout.on('data', (data) => {
+	// 		console.log(`stdout: ${data}`);
+	// 	});
+	// }
 	
 
 

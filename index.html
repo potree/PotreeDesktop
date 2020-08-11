@@ -395,22 +395,28 @@
 			viewer.postMessage(message, {duration: 15000});
 
 			const { spawn } = require('child_process');
-			const converter = spawn('./libs/PotreeConverter/PotreeConverter.exe', [
+
+			let exe = './libs/PotreeConverter/PotreeConverter.exe';
+			let parameters = [
 				...inputPaths,
 				"-o", chosenPath,
 				"--overwrite"
-			]);
+			];
+
+			const converter = spawn(exe, parameters);
 
 			let placeholder = null;
+			let outputBuffer = "";
 			converter.stdout.on('data', (data) => {
-				console.log("==");
-				console.log(`stdout: ${data}`);
-
 				const string = new TextDecoder("utf-8").decode(data);
 
-				if(!placeholder){ // match for AABB
+				console.log("stdout", string);
+				outputBuffer += string;
+
+				if(!placeholder){ 
+					// match for AABB
 					const regexp = /(.*AABB): ({[.\s\S]*?})/g;
-					const matches = string.matchAll(regexp);
+					const matches = outputBuffer.matchAll(regexp);
 						
 					for (const match of matches) {
 						try{
@@ -421,19 +427,18 @@
 
 							if(name === "cubicAABB"){
 								placeholder = createPlaceholder(aabb);
+
+								outputBuffer = "";
 							}
 						}catch(e){
 							console.error(match[0]);
 							console.error(e);
 						}
 					}
-				}
-
-				window.placeholder = placeholder;
-
-				if(placeholder){ // match for progress
+				}else{ 
+					// match for progress
 					const regexp = /INDEXING: ([\w\.]*) of ([\w\.]*) processed/g;
-					const matches = string.matchAll(regexp);
+					const matches = outputBuffer.matchAll(regexp);
 
 					for(const match of matches){
 
@@ -443,6 +448,8 @@
 						
 						const text = `${percent}%`;
 						placeholder.text.setText(text);
+
+						outputBuffer = "";
 					}
 				}
 
@@ -484,22 +491,28 @@
 			output: ${chosenPath}`;
 			viewer.postMessage(message, {duration: 15000});
 
-			const { spawn } = require('child_process');
-			const converter = spawn('./libs/PotreeConverter2/Converter.exe', [
+			const { spawn, fork, execFile } = require('child_process');
+
+			let exe = './libs/PotreeConverter2/Converter.exe';
+			let parameters = [
 				...inputPaths,
 				"-o", chosenPath
-			]);
+			];
+
+			const converter = spawn(exe, parameters);
 
 			let placeholder = null;
+			let outputBuffer = "";
 			converter.stdout.on('data', (data) => {
-				console.log("==");
-				console.log(`stdout: ${data}`);
 
 				const string = new TextDecoder("utf-8").decode(data);
+				console.log("stdout", string);
+				outputBuffer += string;
 
-				if(!placeholder){ // match for AABB
+				if(!placeholder){ 
+					// match for AABB
 					const regexp = /(.*AABB): ({[.\s\S]*?})/g;
-					const matches = string.matchAll(regexp);
+					const matches = outputBuffer.matchAll(regexp);
 						
 					for (const match of matches) {
 						try{
@@ -510,27 +523,29 @@
 
 							if(name === "cubicAABB"){
 								placeholder = createPlaceholder(aabb);
+								placeholder.text.setText("0%");
+
+								outputBuffer = "";
 							}
 						}catch(e){
 							console.error(match[0]);
 							console.error(e);
 						}
 					}
-				}
-
-				window.placeholder = placeholder;
-
-				if(placeholder){ // match for progress
+				}else{ 
+					// match for progress
 
 					let regexp = /\[(\d+)%,/g;
 
-					const matches = string.replace(/'/g, "").matchAll(regexp);
+					const matches = outputBuffer.replace(/'/g, "").matchAll(regexp);
 
 					for(const match of matches){
 						const percent = parseInt(match[1].replace(/\D/g,''));
 						
 						const text = `${percent}%`;
 						placeholder.text.setText(text);
+
+						outputBuffer = "";
 					}
 
 				}
@@ -542,7 +557,7 @@
 				console.error(`stderr: ${data}`);
 			});
 
-			converter.on('close', (code) => {
+			converter.on('exit', (code) => {
 				console.log(`child process exited with code ${code}`);
 
 				const cloudJS = `${chosenPath}/metadata.json`;
