@@ -32943,7 +32943,7 @@ ENDSEC
 	const version = {
 		major: 1,
 		minor: 7,
-		suffix: 'beta'
+		suffix: ''
 	};
 
 	let lru = new LRU();
