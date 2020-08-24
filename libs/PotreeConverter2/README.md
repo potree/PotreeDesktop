@@ -23,9 +23,22 @@ To fund the future development of this project, PotreeConverter 2.0 will be avai
 
 1. Download windows binaries or
     * Download source code
-    * Open Visual Studio 2019 Project ./Converter/Converter.sln
-    * Compile in release mode
-2. run ```Converter.exe <input> -o <outputDir>```
+	* Install [CMake](https://cmake.org/) 3.16 or later
+	* Create and jump into folder "build"
+	    ```
+	    mkdir build
+	    cd build
+	    ```
+	* run 
+	    ```
+	    cmake ../
+	    ```
+	* On linux, run: ```make```
+	* On windows, open Visual Studio 2019 Project ./Converter/Converter.sln and compile it in release mode
+2. run ```PotreeConverter.exe <input> -o <outputDir>```
+    * Optionally specify the sampling strategy:
+	* Poisson-disk sampling (default): ```PotreeConverter.exe <input> -o <outputDir> -m poisson```
+	* Random sampling: ```PotreeConverter.exe <input> -o <outputDir> -m random```
 
 In Potree, modify one of the examples with following load command:
 
@@ -121,6 +134,6 @@ You can evaluate PotreeConverter for free for three months before you need to pu
 
 Licenses can be purchased with following options:
 
-* Paypal
-* Github Sponsorship over https://github.com/potree
-* Via invoice and wire transfer - contact licensing@potree.org
+* [Paypal](http://potree.org/licensing.html) (with volume licenses)
+* Github Sponsorship, see "Sponsor" button at the top. (monthly single license)
+* Via invoice and wire transfer - contact licensing@potree.org 

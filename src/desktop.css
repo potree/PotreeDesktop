@@ -1,0 +1,161 @@
+.droproot{
+	display: none;
+	pointer-events: none;
+	opacity: 0.7;
+	position: absolute; 
+	width:100%; 
+	height: 100%; 
+	z-index: 1000000;
+}
+
+.dropzone{
+	border: 1em solid black;
+	background: white;
+}
+
+.dropzone:before{
+		display: block;
+	position: absolute;
+	border: 0.4em solid red;
+	border-style: dashed;
+	background: white;
+	opacity: 0.8;
+	content: " ";
+	top: 1em;
+	left: 1em;
+	right: 1em;
+	bottom: 1em;
+}
+
+.middle {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	-webkit-transform: translate(-50%, -50%);
+	transform: translate(-50%, -50%);
+	/* pointer-events: none; */
+}
+
+.center{
+	left: 50%;
+	-webkit-transform: translate(-50%, -0%);
+	transform: translate(-50%, -0%);
+}
+
+.dropzone_title{
+	font-size: 3vw;
+	font-family: Arial;
+	font-weight: bold;
+	white-space: nowrap;
+	text-align: center;
+}
+
+.dropzone_text{
+	font-size: 1.4vw;
+	font-family: Arial;
+	font-weight: bold;
+	white-space: nowrap;
+}
+
+#drop * {pointer-events: none;}
+
+#converter_panel{
+	position: absolute; margin: auto; z-index: 2000000;
+	background: white;
+	border: 0.2em solid black;
+	border-radius: 1em;
+	padding: 1em;
+	display: none;
+}
+
+#converter_panel .h2{
+	text-align: center !important; 
+	font-weight: bold;
+	font-family: arial;
+	font-size: 1.5em;
+}
+
+.converter_panel_list{
+	max-height: 100px;
+	overflow: auto;
+	border: 1px solid black;
+}
+
+
+#converter_panel a:link{
+	color: blue;
+}
+
+#converter_panel a:visited{
+	color: blueviolet;
+}
+
+#converter_panel a:hover a:focus{
+	color: blue;
+}
+
+#converter_panel a:active{
+	color: blue;
+}
+
+
+
+
+.selection_buttons{
+	display: flex;
+}
+
+.selection_buttons label {
+	flex: 1;
+	display: block;
+	position: relative;
+	margin: 0;
+	padding: 1em;
+	cursor: pointer;
+	background-color: #ccc;
+	border: 1px solid black;
+	opacity: 0.3;
+
+}
+
+.selection_buttons input[type="radio"] {
+	display: none;
+}
+
+.selection_buttons input[type="radio"]:hover+label {
+	opacity: 0.5;
+	z-index: 1000;
+	box-shadow: 0 0 0 1pt black;
+}
+
+.selection_buttons input[type="radio"]:checked+label {
+	opacity: 1.0;
+	box-shadow: 0 0 0 1pt black;
+}
+
+.selection_buttons li{
+	font-family: Arial;
+	font-size: 1em;
+}
+
+.selection_buttons .title {
+	font-family: Arial;
+	font-weight: bold;
+	font-size: 1.5em;
+	width:100%;
+	text-align: center;
+	left: 50%;
+	transform: translateX(-50%);
+}
+
+.selection_buttons .left{
+	border-radius: 1em 0em 0em 1em;
+}
+
+.selection_buttons .right{
+	border-radius: 0em 1em 1em 0em;
+}
+
+.converter_panel_widget{
+	margin: 10px 0px;
+}
