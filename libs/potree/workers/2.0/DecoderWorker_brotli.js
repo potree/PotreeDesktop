@@ -2157,6 +2157,7 @@ onmessage = function (event) {
 	let byteOffset = 0;
 	for (let pointAttribute of pointAttributes.attributes) {
 		
+
 		if(["POSITION_CARTESIAN", "position"].includes(pointAttribute.name)){
 
 			// let tStart = performance.now();
@@ -2164,7 +2165,7 @@ onmessage = function (event) {
 			let buff = new ArrayBuffer(numPoints * 4 * 3);
 			let positions = new Float32Array(buff);
 		
-			for (let j = 0n; j < numPoints; j++) {
+			for (let j = 0; j < numPoints; j++) {
 
 
 				let mc_0 = view.getUint32(byteOffset +  4, true);
@@ -2297,9 +2298,9 @@ onmessage = function (event) {
 					numOccupiedCells++;
 				}
 
-				positions[3n * j + 0n] = x;
-				positions[3n * j + 1n] = y;
-				positions[3n * j + 2n] = z;
+				positions[3 * j + 0] = x;
+				positions[3 * j + 1] = y;
+				positions[3 * j + 2] = z;
 			}
 
 			// let duration = performance.now() - tStart;
@@ -2307,12 +2308,24 @@ onmessage = function (event) {
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
 		}else if(["RGBA", "rgba"].includes(pointAttribute.name)){
+
 			let buff = new ArrayBuffer(numPoints * 4);
 			let colors = new Uint8Array(buff);
 
+			// for (let j = 0; j < numPoints; j++) {
+			// 	let r = view.getUint16(byteOffset + 0, true);
+			// 	let g = view.getUint16(byteOffset + 2, true);
+			// 	let b = view.getUint16(byteOffset + 4, true);
+			// 	byteOffset += 6;
+
+			// 	colors[4 * j + 0] = r > 255 ? r / 256 : r;
+			// 	colors[4 * j + 1] = g > 255 ? g / 256 : g;
+			// 	colors[4 * j + 2] = b > 255 ? b / 256 : b;
+			// }
+
 			// let tStart = performance.now();
 
-			for (let j = 0n; j < numPoints; j++) {
+			for (let j = 0; j < numPoints; j++) {
 
 				let mc_0 = view.getUint32(byteOffset +  4, true);
 				let mc_1 = view.getUint32(byteOffset +  0, true);
@@ -2327,14 +2340,20 @@ onmessage = function (event) {
 				let b = dealign24b((mc_1 & 0x00FFFFFF) >>> 2) 
 						| (dealign24b(((mc_1 >>> 24) | (mc_0 << 8)) >>> 2) << 8);
 
+				// let bits = mask_b0[mc_1 >>> 24];
+				
+				// if(((r >> 8) & 0b11) !== bits){
+				// 	debugger;	
+				// }
+
 				// let r = dealign24b(mc0 >> 0) | (dealign24b(mc1 >> 0) << 8);
 				// let g = dealign24b(mc0 >> 1) | (dealign24b(mc1 >> 1) << 8);
 				// let b = dealign24b(mc0 >> 2) | (dealign24b(mc1 >> 2) << 8);
 
 
-				colors[4n * j + 0n] = r > 255 ? r / 256 : r;
-				colors[4n * j + 1n] = g > 255 ? g / 256 : g;
-				colors[4n * j + 2n] = b > 255 ? b / 256 : b;
+				colors[4 * j + 0] = r > 255 ? r / 256 : r;
+				colors[4 * j + 1] = g > 255 ? g / 256 : g;
+				colors[4 * j + 2] = b > 255 ? b / 256 : b;
 			}
 			// let duration = performance.now() - tStart;
 			// console.log(`rgb: ${duration.toFixed(1)}ms`);
@@ -2446,9 +2465,9 @@ onmessage = function (event) {
 
 	}
 
+
 	let duration = performance.now() - tStart;
-	let pointsPerMs = numPoints / duration;
-	console.log(`duration: ${duration.toFixed(1)}ms, points/ms: ${pointsPerMs.toFixed(1)}`);
+	// console.log(`duration: ${duration.toFixed(1)}ms, #points: ${numPoints}, points/ms: ${pointsPerMs.toFixed(1)}`);
 
 	let message = {
 		buffer: buffer,
