@@ -72,15 +72,26 @@ export function createPlaceholder(aabb){
 
 
 export function convert_17(inputPaths, chosenPath, pointcloudName){
-	let message = `Starting conversion.<br>
+	const message = `Starting conversion.<br>
 	input: ${inputPaths}<br>
 	output: ${chosenPath}`;
 	viewer.postMessage(message, {duration: 15000});
 
 	const { spawn } = require('child_process');
 
-	let exe = './libs/PotreeConverter/PotreeConverter.exe';
-	let parameters = [
+	let exe;
+	switch (process.platform) {
+		case 'linux':
+			exe = './libs/PotreeConverter/PotreeConverter';
+			break;
+		case 'win32':
+			exe = './libs/PotreeConverter/PotreeConverter.exe';
+			break;
+		default:
+			console.error('No PotreeConverter binary for this OS');
+			break;
+	}
+	const parameters = [
 		...inputPaths,
 		"-o", chosenPath,
 		"--overwrite"
