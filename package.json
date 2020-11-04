@@ -15,6 +15,7 @@
 	"author": "Markus Schuetz",
 	"license": "no license available at this time",
 	"dependencies": {
-		"electron": "^10.1.5"
+		"electron": "^10.1.5",
+		"potree": "git://github.com/potree/potree.git#1.7.2"
 	}
 }
