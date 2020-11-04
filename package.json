@@ -1,12 +1,12 @@
 {
 	"name": "potree_desktop",
-	"version": "1.7.0",
+	"version": "1.7.2",
 	"description": "A WebGL Point Cloud Viewer",
 	"main": "main.js",
 	"scripts": {
 		"start": "electron ."
 	},
-	"repository": "https://github.com/potree/potree",
+	"repository": "https://github.com/potree/PotreeDesktop",
 	"keywords": [
 		"Potree",
 		"point cloud viewer",
