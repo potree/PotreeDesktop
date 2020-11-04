@@ -72,15 +72,26 @@ export function createPlaceholder(aabb){
 
 
 export function convert_17(inputPaths, chosenPath, pointcloudName){
-	let message = `Starting conversion.<br>
+	const message = `Starting conversion.<br>
 	input: ${inputPaths}<br>
 	output: ${chosenPath}`;
 	viewer.postMessage(message, {duration: 15000});
 
 	const { spawn } = require('child_process');
 
-	let exe = './libs/PotreeConverter/PotreeConverter.exe';
-	let parameters = [
+	let exe;
+	switch (process.platform) {
+		case 'linux':
+			exe = './libs/PotreeConverter/PotreeConverter';
+			break;
+		case 'win32':
+			exe = './libs/PotreeConverter/PotreeConverter.exe';
+			break;
+		default:
+			console.error('No PotreeConverter binary for this OS');
+			break;
+	}
+	const parameters = [
 		...inputPaths,
 		"-o", chosenPath,
 		"--overwrite"
@@ -105,7 +116,7 @@ export function convert_17(inputPaths, chosenPath, pointcloudName){
 				try{
 					const name = match[1];
 					const value = match[2];
-					const aabb = JSON.parse(match[2]);
+					const aabb = JSON.parse(value);
 					console.log(aabb);
 
 					if(name === "cubicAABB"){
@@ -120,7 +131,7 @@ export function convert_17(inputPaths, chosenPath, pointcloudName){
 			}
 		}else{ 
 			// match for progress
-			const regexp = /INDEXING: ([\w\.]*) of ([\w\.]*) processed/g;
+			const regexp = /INDEXING: ([\w\ ]*) of ([\w\ ]*) processed/g;
 			const matches = outputBuffer.matchAll(regexp);
 
 			for(const match of matches){
@@ -169,15 +180,26 @@ export function convert_17(inputPaths, chosenPath, pointcloudName){
 }
 
 export function convert_20(inputPaths, chosenPath, pointcloudName){
-	let message = `Starting conversion.<br>
+	const message = `Starting conversion.<br>
 	input: ${inputPaths}<br>
 	output: ${chosenPath}`;
 	viewer.postMessage(message, {duration: 15000});
 
-	const { spawn, fork, execFile } = require('child_process');
+	const { spawn } = require('child_process');
 
-	let exe = './libs/PotreeConverter2/PotreeConverter.exe';
-	let parameters = [
+	let exe;
+	switch (process.platform) {
+		case 'linux':
+			exe = './libs/PotreeConverter2/PotreeConverter';
+			break;
+		case 'win32':
+			exe = './libs/PotreeConverter2/PotreeConverter.exe';
+			break;
+		default:
+			console.error('No PotreeConverter2 binary for this OS');
+			break;
+	}
+	const parameters = [
 		...inputPaths,
 		"-o", chosenPath
 	];
@@ -201,7 +223,7 @@ export function convert_20(inputPaths, chosenPath, pointcloudName){
 				try{
 					const name = match[1];
 					const value = match[2];
-					const aabb = JSON.parse(match[2]);
+					const aabb = JSON.parse(value);
 					console.log(aabb);
 
 					if(name === "cubicAABB"){
