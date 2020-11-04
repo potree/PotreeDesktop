@@ -116,7 +116,7 @@ export function convert_17(inputPaths, chosenPath, pointcloudName){
 				try{
 					const name = match[1];
 					const value = match[2];
-					const aabb = JSON.parse(match[2]);
+					const aabb = JSON.parse(value);
 					console.log(aabb);
 
 					if(name === "cubicAABB"){
@@ -131,7 +131,7 @@ export function convert_17(inputPaths, chosenPath, pointcloudName){
 			}
 		}else{ 
 			// match for progress
-			const regexp = /INDEXING: ([\w\.]*) of ([\w\.]*) processed/g;
+			const regexp = /INDEXING: ([\w\ ]*) of ([\w\ ]*) processed/g;
 			const matches = outputBuffer.matchAll(regexp);
 
 			for(const match of matches){
