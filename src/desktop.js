@@ -1,4 +1,6 @@
 
+import * as THREE from "../libs/three.js/build/three.module.js"
+
 export function loadDroppedPointcloud(cloudjsPath){
 	const folderName = cloudjsPath.replace(/\\/g, "/").split("/").reverse()[1];
 

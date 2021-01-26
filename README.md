@@ -13,10 +13,7 @@ In order to reset the viewer, you'll have to click "window->reload".
 
 # LICENSE
 
-* PotreeDesktop is free to use for anyone, except for PotreeConverter 2.0 which is only free for non-commercial and non-government use. 
-* PotreeDesktop lets you pick between PotreeConverter 1.7 (free for all) and 2.0 (free for non-commercial, non-government).
-* Potree, PotreeDesktop and PotreeConverter 1.7 are under the BSD 2-clause license.
-* PotreeConverter 2.0 is under a free for non-commercial and non-government, paid for commercial and government license. [PotreeConverter2.0 at github](https://github.com/potree/PotreeConverter).
+* BSD 2-clause license. (free to use, preservation of copyright notice/attribute when redistributing)
 
 # Getting Started
 
