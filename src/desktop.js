@@ -1,5 +1,6 @@
 
 import * as THREE from "../libs/three.js/build/three.module.js"
+import JSON5 from "../libs/json5-2.1.3/json5.mjs";
 
 export function loadDroppedPointcloud(cloudjsPath){
 	const folderName = cloudjsPath.replace(/\\/g, "/").split("/").reverse()[1];
@@ -459,8 +460,22 @@ export async function dropHandler(event){
 		const whitelist = [".las", ".laz"];
 
 		let isFile = fs.lstatSync(path).isFile();
+		const isJson5 = file.name.toLowerCase().endsWith(".json5");
 
-		if(isFile && path.indexOf("cloud.js") >= 0){
+		if(isJson5){
+			try{
+
+				const text = await file.text();
+				const json = JSON5.parse(text);
+
+				if(json.type === "Potree"){
+					Potree.loadProject(viewer, json);
+				}
+			}catch(e){
+				console.error("failed to parse the dropped file as JSON");
+				console.error(e);
+			}
+		}else if(isFile && path.indexOf("cloud.js") >= 0){
 			cloudJsFiles.push(file.path);
 		}else if(isFile && path.indexOf("metadata.json") >= 0){
 			cloudJsFiles.push(file.path);

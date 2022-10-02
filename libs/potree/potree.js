@@ -56752,17 +56752,6 @@
 			this.vectors.push(vector);
 		}
 
-		hasColors(){
-			for (let name in this.attributes) {
-				let pointAttribute = this.attributes[name];
-				if (pointAttribute.name === PointAttributeNames.COLOR_PACKED) {
-					return true;
-				}
-			}
-
-			return false;
-		};
-
 		hasNormals(){
 			for (let name in this.attributes) {
 				let pointAttribute = this.attributes[name];
@@ -60125,17 +60114,6 @@ void main() {
 			return texture;
 		}
 		
-		static generateMatcapTexture (matcap) {
-		var url = new URL(Potree.resourcePath + "/textures/matcap/" + matcap).href;
-		let texture = new TextureLoader().load( url );
-			texture.magFilter = texture.minFilter = LinearFilter; 
-			texture.needsUpdate = true;
-			// PotreeConverter_1.6_2018_07_29_windows_x64\PotreeConverter.exe autzen_xyzrgbXYZ_ascii.xyz -f xyzrgbXYZ -a RGB NORMAL -o autzen_xyzrgbXYZ_ascii_a -p index --overwrite
-			// Switch matcap texture on the fly : viewer.scene.pointclouds[0].material.matcap = 'matcap1.jpg'; 
-			// For non power of 2, use LinearFilter and dont generate mipmaps, For power of 2, use NearestFilter and generate mipmaps : matcap2.jpg 1 2 8 11 12 13
-			return texture; 
-		}
-
 		static generateMatcapTexture (matcap) {
 		var url = new URL(Potree.resourcePath + "/textures/matcap/" + matcap).href;
 		let texture = new TextureLoader().load( url );
@@ -66371,12 +66349,9 @@ void main() {
 			node.loading = true;
 			Potree.numNodesLoading++;
 
-			// console.log(node.name, node.numPoints);
-
-			// if(loadedNodes.has(node.name)){
-			// 	// debugger;
-			// }
-			// loadedNodes.add(node.name);
+			if(["r24044357", "r24400325"].includes(node.name)){
+				debugger;
+			}
 
 			try{
 				if(node.nodeType === 2){
@@ -66397,6 +66372,7 @@ void main() {
 					buffer = new ArrayBuffer(0);
 					console.warn(`loaded node with 0 bytes: ${node.name}`);
 				}else {
+
 					let response = await fetch(urlOctree, {
 						headers: {
 							'content-type': 'multipart/byteranges',
@@ -66493,6 +66469,7 @@ void main() {
 				node.loading = false;
 				Potree.numNodesLoading--;
 
+				debugger;
 				console.log(`failed to load ${node.name}`);
 				console.log(e);
 				console.log(`trying again!`);
@@ -66513,6 +66490,8 @@ void main() {
 			nodes[0] = node;
 			let nodePos = 1;
 
+			// console.group(node.name);
+
 			for(let i = 0; i < numNodes; i++){
 				let current = nodes[i];
 
@@ -66521,11 +66500,6 @@ void main() {
 				let numPoints = view.getUint32(i * bytesPerNode + 2, true);
 				let byteOffset = view.getBigInt64(i * bytesPerNode + 6, true);
 				let byteSize = view.getBigInt64(i * bytesPerNode + 14, true);
-
-				// if(byteSize === 0n){
-				// 	// debugger;
-				// }
-
 
 				if(current.nodeType === 2){
 					// replace proxy with real node
@@ -66568,6 +66542,8 @@ void main() {
 					current.children[childIndex] = child;
 					child.parent = current;
 
+					// console.log(`parsed: ${child.name}`);
+
 					// nodes.push(child);
 					nodes[nodePos] = child;
 					nodePos++;
@@ -66577,6 +66553,8 @@ void main() {
 				// 	yield;
 				// }
 			}
+
+			// console.groupEnd();
 
 			let duration = (performance.now() - tStart);
 
@@ -68504,13 +68482,13 @@ void main() {
 				if (cancel.removeLastMarker) {
 					measure.removeMarker(measure.points.length - 1);
 				}
-				domElement.removeEventListener('mouseup', insertionCallback, true);
+				domElement.removeEventListener('mouseup', insertionCallback, false);
 				this.viewer.removeEventListener('cancel_insertions', cancel.callback);
 			};
 
 			if (measure.maxMarkers > 1) {
 				this.viewer.addEventListener('cancel_insertions', cancel.callback);
-				domElement.addEventListener('mouseup', insertionCallback, true);
+				domElement.addEventListener('mouseup', insertionCallback, false);
 			}
 
 			measure.addMarker(new Vector3(0, 0, 0));
@@ -68895,12 +68873,12 @@ void main() {
 
 			cancel.callback = e => {
 				profile.removeMarker(profile.points.length - 1);
-				domElement.removeEventListener('mouseup', insertionCallback, true);
+				domElement.removeEventListener('mouseup', insertionCallback, false);
 				this.viewer.removeEventListener('cancel_insertions', cancel.callback);
 			};
 
 			this.viewer.addEventListener('cancel_insertions', cancel.callback);
-			domElement.addEventListener('mouseup', insertionCallback, true);
+			domElement.addEventListener('mouseup', insertionCallback, false);
 
 			profile.addMarker(new Vector3(0, 0, 0));
 			this.viewer.inputHandler.startDragging(
@@ -73304,16 +73282,6 @@ void main() {
 			this.pickSphere = new Mesh(sg, sm);
 			this.scene.add(this.pickSphere);
 
-			{
-				const sg = new SphereGeometry(2);
-				const sm = new MeshNormalMaterial();
-				const s = new Mesh(sg, sm);
-
-				s.position.set(589530.450, 231398.860, 769.735);
-
-				this.scene.add(s);
-			}
-
 			this.viewerPickSphere = new Mesh(sg, sm);
 		}
 
@@ -77370,7 +77338,7 @@ ENDSEC
 			viewer.inputHandler.addInputListener(this);
 
 			this.addEventListener("mousedown", () => {
-				if(currentlyHovered){
+				if(currentlyHovered && currentlyHovered.image360){
 					this.focus(currentlyHovered.image360);
 				}
 			});
@@ -79885,7 +79853,7 @@ ENDSEC
 			{ // REMOVE CLIPPING TOOLS
 				clippingToolBar.append(this.createToolIcon(
 					Potree.resourcePath + "/icons/remove.svg",
-					"[title]tt.remove_all_measurement",
+					"[title]tt.remove_all_clipping_volumes",
 					() => {
 
 						this.viewer.scene.removeAllClipVolumes();
@@ -80255,7 +80223,8 @@ ENDSEC
 				["DE", "de"],
 				["JP", "jp"],
 				["ES", "es"],
-				["SE", "se"]
+				["SE", "se"],
+				["ZH", "zh"]
 			];
 
 			let elLanguages = $('#potree_languages');
@@ -89047,7 +89016,7 @@ ENDSEC
 				i18n.init({
 					lng: 'en',
 					resGetPath: Potree.resourcePath + '/lang/__lng__/__ns__.json',
-					preload: ['en', 'fr', 'de', 'jp', 'se', 'es'],
+					preload: ['en', 'fr', 'de', 'jp', 'se', 'es', 'zh'],
 					getAsync: true,
 					debug: false
 				}, function (t) {
@@ -89127,14 +89096,14 @@ ENDSEC
 
 					const file = item.getAsFile();
 
-					const isJson = file.name.toLowerCase().endsWith(".json");
+					const isJson = file.name.toLowerCase().endsWith(".json5");
 					const isGeoPackage = file.name.toLowerCase().endsWith(".gpkg");
 
 					if(isJson){
 						try{
 
 							const text = await file.text();
-							const json = JSON.parse(text);
+							const json = lib.parse(text);
 
 							if(json.type === "Potree"){
 								Potree.loadProject(viewer, json);
