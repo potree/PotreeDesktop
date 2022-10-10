@@ -57766,9 +57766,11 @@ float getLOD(){
 			// no more visible child nodes at this position
 			//return value.a * 255.0;
 
-			float lodOffset = (255.0 * value.a) / 10.0 - 10.0;
+			// float lodOffset = (255.0 * value.a) / 10.0 - 10.0;
 
-			return depth  + lodOffset;
+			// return depth  + lodOffset;
+
+			return depth;
 		}
 		
 		offset = offset + (vec3(1.0, 1.0, 1.0) * nodeSizeAtLevel * 0.5) * index3d;
@@ -60513,7 +60515,7 @@ void main() {
 
 				let density = node.geometryNode.density;
 				
-				if(typeof density === "number"){
+				if(typeof density === "number" && !Number.isNaN(density)){
 					let lodOffset = Math.log2(density) / 2 - 1.5;
 
 					let offsetUint8 = (lodOffset + 10) * 10;
@@ -66349,9 +66351,12 @@ void main() {
 			node.loading = true;
 			Potree.numNodesLoading++;
 
-			if(["r24044357", "r24400325"].includes(node.name)){
-				debugger;
-			}
+			// console.log(node.name, node.numPoints);
+
+			// if(loadedNodes.has(node.name)){
+			// 	// debugger;
+			// }
+			// loadedNodes.add(node.name);
 
 			try{
 				if(node.nodeType === 2){
@@ -66372,7 +66377,6 @@ void main() {
 					buffer = new ArrayBuffer(0);
 					console.warn(`loaded node with 0 bytes: ${node.name}`);
 				}else {
-
 					let response = await fetch(urlOctree, {
 						headers: {
 							'content-type': 'multipart/byteranges',
@@ -66469,7 +66473,6 @@ void main() {
 				node.loading = false;
 				Potree.numNodesLoading--;
 
-				debugger;
 				console.log(`failed to load ${node.name}`);
 				console.log(e);
 				console.log(`trying again!`);
@@ -66490,8 +66493,6 @@ void main() {
 			nodes[0] = node;
 			let nodePos = 1;
 
-			// console.group(node.name);
-
 			for(let i = 0; i < numNodes; i++){
 				let current = nodes[i];
 
@@ -66500,6 +66501,11 @@ void main() {
 				let numPoints = view.getUint32(i * bytesPerNode + 2, true);
 				let byteOffset = view.getBigInt64(i * bytesPerNode + 6, true);
 				let byteSize = view.getBigInt64(i * bytesPerNode + 14, true);
+
+				// if(byteSize === 0n){
+				// 	// debugger;
+				// }
+
 
 				if(current.nodeType === 2){
 					// replace proxy with real node
@@ -66516,6 +66522,13 @@ void main() {
 					current.byteOffset = byteOffset;
 					current.byteSize = byteSize;
 					current.numPoints = numPoints;
+				}
+
+				if(current.byteSize === 0n){
+					// workaround for issue #1125
+					// some inner nodes erroneously report >0 points even though have 0 points
+					// however, they still report a byteSize of 0, so based on that we now set node.numPoints to 0
+					current.numPoints = 0;
 				}
 				
 				current.nodeType = type;
@@ -66542,8 +66555,6 @@ void main() {
 					current.children[childIndex] = child;
 					child.parent = current;
 
-					// console.log(`parsed: ${child.name}`);
-
 					// nodes.push(child);
 					nodes[nodePos] = child;
 					nodePos++;
@@ -66553,8 +66564,6 @@ void main() {
 				// 	yield;
 				// }
 			}
-
-			// console.groupEnd();
 
 			let duration = (performance.now() - tStart);
 
@@ -89096,10 +89105,10 @@ ENDSEC
 
 					const file = item.getAsFile();
 
-					const isJson = file.name.toLowerCase().endsWith(".json5");
+					const isJson5 = file.name.toLowerCase().endsWith(".json5");
 					const isGeoPackage = file.name.toLowerCase().endsWith(".gpkg");
 
-					if(isJson){
+					if(isJson5){
 						try{
 
 							const text = await file.text();
