@@ -20,6 +20,8 @@ function createWindow () {
 		webPreferences: {
 			nodeIntegration: true,
 			backgroundThrottling: false,
+			contextIsolation: false,
+			enableRemoteModule: true,
 		}
  
 	})
