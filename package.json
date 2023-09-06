@@ -15,6 +15,6 @@
 	"author": "Markus Schuetz",
 	"license": "no license available at this time",
 	"dependencies": {
-		"electron": "21.3.1"
+		"electron": "22.3.21"
 	}
 }
