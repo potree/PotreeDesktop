@@ -54762,13 +54762,12 @@
 		static computeTransformedBoundingBox (box, transform) {
 			let vertices = [
 				new Vector3(box.min.x, box.min.y, box.min.z).applyMatrix4(transform),
-				new Vector3(box.min.x, box.min.y, box.min.z).applyMatrix4(transform),
 				new Vector3(box.max.x, box.min.y, box.min.z).applyMatrix4(transform),
 				new Vector3(box.min.x, box.max.y, box.min.z).applyMatrix4(transform),
-				new Vector3(box.min.x, box.min.y, box.max.z).applyMatrix4(transform),
-				new Vector3(box.min.x, box.max.y, box.max.z).applyMatrix4(transform),
 				new Vector3(box.max.x, box.max.y, box.min.z).applyMatrix4(transform),
+				new Vector3(box.min.x, box.min.y, box.max.z).applyMatrix4(transform),
 				new Vector3(box.max.x, box.min.y, box.max.z).applyMatrix4(transform),
+				new Vector3(box.min.x, box.max.y, box.max.z).applyMatrix4(transform),
 				new Vector3(box.max.x, box.max.y, box.max.z).applyMatrix4(transform)
 			];
 
@@ -56787,187 +56786,175 @@
 		static sphereFrom(b) {
 			return b.getBoundingSphere(new Sphere());
 		}
+
+		static toPotreeName([d, x, y, z]) {
+			var name = 'r';
+
+			for (var i = 0; i < d; ++i) {
+				var shift = d - i - 1;
+				var mask = 1 << shift;
+				var step = 0;
+
+				if (x & mask) step += 4;
+				if (y & mask) step += 2;
+				if (z & mask) step += 1;
+
+				name += step;
+			}
+
+			return name;
+		}
+
+		static maybeSrs(srs) {
+			try { 
+				proj4(srs); 
+				return srs
+			} catch (e) {}
+		}
 	};
 
-	class PointCloudEptGeometry {
-		constructor(url, info) {
-			let version = info.version;
-			let schema = info.schema;
-			let bounds = info.bounds;
-			let boundsConforming = info.boundsConforming;
+	class BaseGeometry {
+		constructor({ 
+			cube,
+			boundsConforming,
+			spacing,
+			srs,
+		}) {
+			this.cube = cube;
 
-			let xyz = [
-				U.findDim(schema, 'X'),
-				U.findDim(schema, 'Y'),
-				U.findDim(schema, 'Z')
-			];
-			let scale = xyz.map((d) => d.scale || 1);
-			let offset = xyz.map((d) => d.offset || 0);
-			this.eptScale = U.toVector3(scale);
-			this.eptOffset = U.toVector3(offset);
-
-			this.url = url;
-			this.info = info;
-			this.type = 'ept';
-
-			this.schema = schema;
-			this.span = info.span || info.ticks;
-			this.boundingBox = U.toBox3(bounds);
+			this.boundingBox = U.toBox3(cube);
 			this.tightBoundingBox = U.toBox3(boundsConforming);
-			this.offset = U.toVector3([0, 0, 0]);
 			this.boundingSphere = U.sphereFrom(this.boundingBox);
 			this.tightBoundingSphere = U.sphereFrom(this.tightBoundingBox);
+			this.offset = U.toVector3([0, 0, 0]);
 			this.version = new Potree.Version('1.7');
 
-			this.projection = null;
-			this.fallbackProjection = null;
+			this.loader = new Potree.CopcLaszipLoader();
 
-			if (info.srs && info.srs.horizontal) {
-				this.projection = info.srs.authority + ':' + info.srs.horizontal;
+			this.spacing = spacing;
+			this.projection = srs || null;
+			try {
+				proj4(this.projection);
+			} catch(e) {
+				this.projection = null;
 			}
 
-			if (info.srs && info.srs.wkt) {
-				if (!this.projection) this.projection = info.srs.wkt;
-				else this.fallbackProjection = info.srs.wkt;
-			}
-
-			{ 
-				// TODO [mschuetz]: named projections that proj4 can't handle seem to cause problems.
-				// remove them for now
-
-				try{
-					proj4(this.projection);
-				}catch(e){
-					this.projection = null;
-				}
-
-			
-
-			}
-
-			
-			{
-				const attributes = new PointAttributes();
-
-				attributes.add(PointAttribute.POSITION_CARTESIAN);
-				attributes.add(new PointAttribute("rgba", PointAttributeTypes.DATA_TYPE_UINT8, 4));
-				attributes.add(new PointAttribute("intensity", PointAttributeTypes.DATA_TYPE_UINT16, 1));
-				attributes.add(new PointAttribute("classification", PointAttributeTypes.DATA_TYPE_UINT8, 1));
-				attributes.add(new PointAttribute("gps-time", PointAttributeTypes.DATA_TYPE_DOUBLE, 1));
-				attributes.add(new PointAttribute("returnNumber", PointAttributeTypes.DATA_TYPE_UINT8, 1));
-				attributes.add(new PointAttribute("number of returns", PointAttributeTypes.DATA_TYPE_UINT8, 1));
-				attributes.add(new PointAttribute("return number", PointAttributeTypes.DATA_TYPE_UINT8, 1));
-				attributes.add(new PointAttribute("source id", PointAttributeTypes.DATA_TYPE_UINT16, 1));
-
-				this.pointAttributes = attributes;
-			}
-
-
-
-			this.spacing =
-				(this.boundingBox.max.x - this.boundingBox.min.x) / this.span;
-
-			let hierarchyType = info.hierarchyType || 'json';
-
-			const dataType = info.dataType;
-			if (dataType == 'laszip') {
-				this.loader = new Potree.EptLaszipLoader();
-			}
-			else if (dataType == 'binary') {
-				this.loader = new Potree.EptBinaryLoader();
-			}
-			else if (dataType == 'zstandard') {
-				this.loader = new Potree.EptZstandardLoader();
-			}
-			else {
-				throw new Error('Could not read data type: ' + dataType);
-			}
-		}
-	};
-
-	class EptKey {
-		constructor(ept, b, d, x, y, z) {
-			this.ept = ept;
-			this.b = b;
-			this.d = d;
-			this.x = x || 0;
-			this.y = y || 0;
-			this.z = z || 0;
-		}
-
-		name() {
-			return this.d + '-' + this.x + '-' + this.y + '-' + this.z;
-		}
-
-		step(a, b, c) {
-			let min = this.b.min.clone();
-			let max = this.b.max.clone();
-			let dst = new Vector3().subVectors(max, min);
-
-			if (a)	min.x += dst.x / 2;
-			else	max.x -= dst.x / 2;
-
-			if (b)	min.y += dst.y / 2;
-			else	max.y -= dst.y / 2;
-
-			if (c)	min.z += dst.z / 2;
-			else	max.z -= dst.z / 2;
-
-			return new Potree.EptKey(
-					this.ept,
-					new Box3(min, max),
-					this.d + 1,
-					this.x * 2 + a,
-					this.y * 2 + b,
-					this.z * 2 + c);
-		}
-
-		children() {
-			var result = [];
-			for (var a = 0; a < 2; ++a) {
-				for (var b = 0; b < 2; ++b) {
-					for (var c = 0; c < 2; ++c) {
-						var add = this.step(a, b, c).name();
-						if (!result.includes(add)) result = result.concat(add);
-					}
-				}
-			}
-			return result;
+			const attributes = new PointAttributes();
+			attributes.add(PointAttribute.POSITION_CARTESIAN);
+			attributes.add(new PointAttribute("rgba", PointAttributeTypes.DATA_TYPE_UINT8, 4));
+			attributes.add(new PointAttribute("intensity", PointAttributeTypes.DATA_TYPE_UINT16, 1));
+			attributes.add(new PointAttribute("classification", PointAttributeTypes.DATA_TYPE_UINT8, 1));
+			attributes.add(new PointAttribute("gps-time", PointAttributeTypes.DATA_TYPE_FLOAT, 1));
+			attributes.add(new PointAttribute("returnNumber", PointAttributeTypes.DATA_TYPE_UINT8, 1));
+			attributes.add(new PointAttribute("number of returns", PointAttributeTypes.DATA_TYPE_UINT8, 1));
+			attributes.add(new PointAttribute("return number", PointAttributeTypes.DATA_TYPE_UINT8, 1));
+			attributes.add(new PointAttribute("source id", PointAttributeTypes.DATA_TYPE_UINT16, 1));
+			this.pointAttributes = attributes;
 		}
 	}
 
-	class PointCloudEptGeometryNode extends PointCloudTreeNode {
-		constructor(ept, b, d, x, y, z) {
+	class PointCloudCopcGeometry extends BaseGeometry {
+		static parse({ header, info, wkt }) {
+			return {
+				cube: info.cube,
+				boundsConforming: [...header.min, ...header.max],
+				spacing: info.spacing,
+				srs: wkt,
+			}
+		}
+
+		constructor(getter, copc) {
+			super(PointCloudCopcGeometry.parse(copc));
+
+			this.type = 'copc';
+			this.getter = getter;
+			this.copc = copc;
+			this.pages = { '0-0-0-0': copc.info.rootHierarchyPage };
+
+			this.loader = new Potree.CopcLaszipLoader();
+		}
+
+		async loadHierarchyPage(key) {
+			const { Copc, Key } = window.Copc;
+			const page = this.pages[Key.toString(key)];
+			return Copc.loadHierarchyPage(this.getter, page)
+		}
+	};
+
+	class PointCloudEptGeometry extends BaseGeometry {
+		static parse(ept) {
+			const { bounds: cube, boundsConforming, span, srs: filesrs } = ept;
+
+			const spacing = (cube[3] - cube[0]) / span;
+
+			let srs;
+			if (filesrs) {
+				const { authority, horizontal, wkt } = filesrs;
+				if (authority && horizontal) {
+					srs = U.maybeSrs(`${authority}:${horizontal}`);
+				}
+				if (!srs && wkt) srs = U.maybeSrs(wkt);
+			}
+
+			return { cube, boundsConforming, spacing, srs }
+		}
+
+		constructor(base, ept) {
+			super(PointCloudEptGeometry.parse(ept));
+
+			this.type = 'ept';
+			this.base = base;
+			this.ept = ept;
+
+			this.loader = (() => {
+				switch (ept.dataType) {
+					case 'laszip': return new Potree.EptLaszipLoader()
+					case 'binary': return new Potree.EptBinaryLoader()
+					case 'zstandard': return new Potree.EptZstandardLoader()
+					default: throw new Error('Invalid data type: ' + ept.dataType)
+				}
+			})();
+		}
+
+		async loadHierarchyPage(key) {
+			const { Ept, Key } = window.Copc;
+
+			const filename = `${this.base}/ept-hierarchy/${Key.toString(key)}.json`;
+			const response = await fetch(filename);
+			const json = await response.json();
+			return Ept.Hierarchy.parse(json)
+		}
+	}
+
+	class PointCloudCopcGeometryNode extends PointCloudTreeNode {
+		constructor(owner, key, bounds) {
 			super();
 
-			this.ept = ept;
-			this.key = new Potree.EptKey(
-					this.ept,
-					b || this.ept.boundingBox,
-					d || 0,
-					x,
-					y,
-					z);
+			const { Key } = Copc;
 
-			this.id = PointCloudEptGeometryNode.IDCount++;
+			this.owner = owner;
+			this.key = key || Key.create(0, 0, 0, 0);
+			this.bounds = bounds || owner.cube;
+
+			this.id = PointCloudCopcGeometryNode.IDCount++;
 			this.geometry = null;
-			this.boundingBox = this.key.b;
+			this.boundingBox = U.toBox3(this.bounds);
 			this.tightBoundingBox = this.boundingBox;
-			this.spacing = this.ept.spacing / Math.pow(2, this.key.d);
+			this.spacing = this.owner.spacing / Math.pow(2, Key.depth(this.key));
 			this.boundingSphere = U.sphereFrom(this.boundingBox);
 
 			// These are set during hierarchy loading.
 			this.hasChildren = false;
 			this.children = { };
+			this.nodeinfo = undefined;
 			this.numPoints = -1;
 
-			this.level = this.key.d;
+			this.level = Key.depth(this.key);
 			this.loaded = false;
 			this.loading = false;
 			this.oneTimeDisposeHandlers = [];
 
-			let k = this.key;
-			this.name = this.toPotreeName(k.d, k.x, k.y, k.z);
+			this.name = U.toPotreeName(this.key);
 			this.index = parseInt(this.name.charAt(this.name.length - 1));
 		}
 
@@ -56977,10 +56964,9 @@
 		isLoaded() { return this.loaded; }
 		getBoundingSphere() { return this.boundingSphere; }
 		getBoundingBox() { return this.boundingBox; }
-		url() { return this.ept.url + 'ept-data/' + this.filename(); }
-		getNumPoints() { return this.numPoints; }
-
-		filename() { return this.key.name(); }
+		getNumPoints() { 
+			return this.nodeinfo ? this.nodeinfo.pointCount : -1; 
+		}
 
 		getChildren() {
 			let children = [];
@@ -56999,69 +56985,73 @@
 			child.parent = this;
 		}
 
-		load() {
+		async load() {
 			if (this.loaded || this.loading) return;
 			if (Potree.numNodesLoading >= Potree.maxNodesLoading) return;
 
 			this.loading = true;
 			++Potree.numNodesLoading;
 
-			if (this.numPoints == -1) this.loadHierarchy();
+			if (!this.nodeinfo) await this.loadHierarchy();
 			this.loadPoints();
 		}
 
 		loadPoints(){
-			this.ept.loader.load(this);
+			this.owner.loader.load(this);
 		}
 
 		async loadHierarchy() {
-			let nodes = { };
-			nodes[this.filename()] = this;
+			const { Bounds, Key } = window.Copc;
+			const ourkeyname = Key.toString(this.key);
+
+			let nodemap = { };
+			nodemap[ourkeyname] = this;
 			this.hasChildren = false;
 
-			let eptHierarchyFile =
-				`${this.ept.url}ept-hierarchy/${this.filename()}.json`;
+			const { nodes, pages } = await this.owner.loadHierarchyPage(this.key);
 
-			let response = await fetch(eptHierarchyFile);
-			let hier = await response.json();
+			// Since we want to traverse top-down, and 10 comes lexicographically 
+			// before 9 (for example), do a deep sort.
+			const keys = Object.keys({ ...nodes, ...pages })
+				.map(Key.create)
+				.sort(Key.compare);
 
-			// Since we want to traverse top-down, and 10 comes
-			// lexicographically before 9 (for example), do a deep sort.
-			var keys = Object.keys(hier).sort((a, b) => {
-				let [da, xa, ya, za] = a.split('-').map((n) => parseInt(n, 10));
-				let [db, xb, yb, zb] = b.split('-').map((n) => parseInt(n, 10));
-				if (da < db) return -1; if (da > db) return 1;
-				if (xa < xb) return -1; if (xa > xb) return 1;
-				if (ya < yb) return -1; if (ya > yb) return 1;
-				if (za < zb) return -1; if (za > zb) return 1;
-				return 0;
-			});
+			keys.forEach((key) => {
+				const keyname = Key.toString(key);
+				if (keyname === ourkeyname) {
+					this.nodeinfo = nodes[keyname];
+					return;
+				}
 
-			keys.forEach((v) => {
-				let [d, x, y, z] = v.split('-').map((n) => parseInt(n, 10));
-				let a = x & 1, b = y & 1, c = z & 1;
-				let parentName =
-					(d - 1) + '-' + (x >> 1) + '-' + (y >> 1) + '-' + (z >> 1);
+				const [_d, x, y, z] = key;
+				const step = [x & 1, y & 1, z & 1];
 
-				let parentNode = nodes[parentName];
+				let parentName = Key.toString(Key.up(key));
+				let parentNode = nodemap[parentName];
 				if (!parentNode) return;
 				parentNode.hasChildren = true;
 
-				let key = parentNode.key.step(a, b, c);
-
-				let node = new Potree.PointCloudEptGeometryNode(
-						this.ept,
-						key.b,
-						key.d,
-						key.x,
-						key.y,
-						key.z);
-
-				node.level = d;
-				node.numPoints = hier[v];
-
+				const bounds = Bounds.step(parentNode.bounds, step);
+				const node = new Potree.PointCloudCopcGeometryNode(
+					this.owner,
+					key, 
+					bounds);
 				parentNode.addChild(node);
-				nodes[key.name()] = node;
+				nodemap[keyname] = node;
+
+				// For data nodes, add their point data offset/point counts.
+				const nodeinfo = nodes[keyname];
+				if (nodeinfo) node.nodeinfo = nodeinfo;
+
+				// And for leaf nodes whose data is in a different hierarchy page, 
+				// store the info for the hierarchy page in our page map.  This is
+				// only applicable for COPC data since we need hierarchy page 
+				// ranges to fetch them - EPT data on the other hand we just need
+				// the node key to fetch the file.
+				const pageinfo = pages[keyname];
+				if (this.owner.pages && pageinfo) {
+					this.owner.pages[keyname] = pageinfo;
+				}
 			});
 		}
 
@@ -57076,26 +57066,8 @@
 			--Potree.numNodesLoading;
 		}
 
-		toPotreeName(d, x, y, z) {
-			var name = 'r';
-
-			for (var i = 0; i < d; ++i) {
-				var shift = d - i - 1;
-				var mask = 1 << shift;
-				var step = 0;
-
-				if (x & mask) step += 4;
-				if (y & mask) step += 2;
-				if (z & mask) step += 1;
-
-				name += step;
-			}
-
-			return name;
-		}
-
 		dispose() {
-			if (this.geometry && this.parent != null) {
+			if (this.geometry && this.parent) {
 				this.geometry.dispose();
 				this.geometry = null;
 				this.loaded = false;
@@ -57110,7 +57082,7 @@
 		}
 	}
 
-	PointCloudEptGeometryNode.IDCount = 0;
+	PointCloudCopcGeometryNode.IDCount = 0;
 
 	class PointCloudOctreeGeometry{
 
@@ -63216,6 +63188,7 @@ void main() {
 
 				const geometry = node.geometryNode.geometry;
 
+				if (!geometry) console.log('Missing geometry', node);
 				if(geometry.attributes["gps-time"]){
 					const bufferAttribute = geometry.attributes["gps-time"];
 					const attGPS = octree.getAttribute("gps-time");
@@ -66784,9 +66757,9 @@ void main() {
 			let response = await fetch(file);
 			let json = await response.json();
 
-			let url = file.substr(0, file.lastIndexOf('ept.json'));
+			let url = file.substr(0, file.lastIndexOf('/ept.json'));
 			let geometry = new Potree.PointCloudEptGeometry(url, json);
-			let root = new Potree.PointCloudEptGeometryNode(geometry);
+			let root = new Potree.PointCloudCopcGeometryNode(geometry);
 
 			geometry.root = root;
 			geometry.root.load();
@@ -66794,6 +66767,24 @@ void main() {
 			callback(geometry);
 		}
 	};
+
+	class CopcLoader {
+		static async load(file, callback) {
+			const { Copc, Getter } = window.Copc;
+
+			const url = file;
+			const getter = Getter.http(url);
+			const copc = await Copc.create(getter);
+
+			let geometry = new Potree.PointCloudCopcGeometry(getter, copc);
+			let root = new Potree.PointCloudCopcGeometryNode(geometry);
+
+			geometry.root = root;
+			geometry.root.load();
+
+			callback(geometry);
+		}
+	}
 
 	class EptBinaryLoader {
 		extension() {
@@ -66905,100 +66896,83 @@ void main() {
 		}
 	};
 
-	/**
-	 * laslaz code taken and adapted from plas.io js-laslaz
-	 *	  http://plas.io/
-	 *	https://github.com/verma/plasio
-	 *
-	 * Thanks to Uday Verma and Howard Butler
-	 *
-	 */
-
 	class EptLaszipLoader {
-		load(node) {
+		async load(node) {
 			if (node.loaded) return;
 
-			let url = node.url() + '.laz';
+			const { Key } = window.Copc;
 
-			let xhr = XHRFactory.createXMLHttpRequest();
-			xhr.open('GET', url, true);
-			xhr.responseType = 'arraybuffer';
-			xhr.overrideMimeType('text/plain; charset=x-user-defined');
-			xhr.onreadystatechange = () => {
-				if (xhr.readyState === 4) {
-					if (xhr.status === 200) {
-						let buffer = xhr.response;
-						this.parse(node, buffer);
-					} else {
-						console.log('Failed ' + url + ': ' + xhr.status);
-					}
-				}
-			};
-
-			xhr.send(null);
+			const url = `${node.owner.base}/ept-data/${Key.toString(node.key)}.laz`;
+			const response = await fetch(url);
+			const buffer = await response.arrayBuffer();
+			this.parse(node, buffer);
 		}
 
-		async parse(node, buffer){
-			let lf = new LASFile(buffer);
+		async parse(node, compressed){
 			let handler = new EptLazBatcher(node);
 
-			try{
-				await lf.open();
+			try {
+				const { Bounds, Las } = Copc;
 
-				lf.isOpen = true;
+				const get = (begin, end) => new Uint8Array(compressed, begin, end - begin);
 
-				const header = await lf.getHeader();
+				const header = Las.Header.parse(new Uint8Array(compressed));
+				const vlrs = await Las.Vlr.walk(get, header);
+				let eb = [];
+				const ebVlr = Las.Vlr.find(vlrs, 'LASF_Spec', 4);
+				if (ebVlr) eb = Las.ExtraBytes.parse(await Las.Vlr.fetch(get, ebVlr));
 
-				{
-					let i = 0;
+				const message = {
+					isFullFile: true,
+					compressed,
+					header,
+					eb,
+					pointCount: header.pointCount,
+					nodemin: Bounds.min(node.bounds),
+				};
+				handler.push(message);
+			} catch (e) {
+				console.log('Failed:', e);
+			}
+		}
+	};
 
-					let toArray = (v) => [v.x, v.y, v.z];
-					let mins = toArray(node.key.b.min);
-					let maxs = toArray(node.key.b.max);
+	class CopcLaszipLoader {
+		async load(node) {
+			if (node.loaded) return;
 
-					let hasMoreData = true;
+			// There are utilities to do all of this in one async call via copc.js,
+			// however we must split things out a bit to accommodate the expensive
+			// calls to go in the worker.  So in this non-worker context, we just
+			// isolate the compressed data buffer, which is passed to the worker.
+			// The time-consuming decompression and extracting the data into 
+			// GPU-compatible buffers happens in the worker.
+			const { pointCount, pointDataOffset, pointDataLength } = node.nodeinfo;
 
-					while(hasMoreData){
-						const data = await lf.readData(1000000, 0, 1);
+			// Note that COPC explicitly allows nodes to exist with no data.  They
+			// may have children, but there is no point cloud data.  Make sure we
+			// don't try to fetch a slice of point data in this case.
+			if (!pointCount) return this.parse(node, new ArrayBuffer())
+			const compressed = await node.owner.getter(
+				pointDataOffset, 
+				pointDataOffset + pointDataLength);
+			this.parse(node, compressed.buffer);
+		}
 
-						let d = new LASDecoder(
-							data.buffer,
-							header.pointsFormatId,
-							header.pointsStructSize,
-							data.count,
-							header.scale,
-							header.offset,
-							mins,
-							maxs);
+		async parse(node, compressed) {
+			let handler = new EptLazBatcher(node);
 
-						d.extraBytes = header.extraBytes;
-						d.pointsFormatId = header.pointsFormatId;
-						handler.push(d);
-
-						i += data.count;
-
-						hasMoreData = data.hasMoreData;
-					}
-
-					header.totalRead = i;
-					header.versionAsString = lf.versionAsString;
-					header.isCompressed = lf.isCompressed;
-
-					await lf.close();
-
-					lf.isOpen = false;
-				}
-
-			}catch(err){
-				console.error('Error reading LAZ:', err);
-				
-				if (lf.isOpen) {
-					await lf.close();
-
-					lf.isOpen = false;
-				}
-				
-				throw err;
+			try {
+				handler.push({
+					isFullFile: false,
+					compressed,
+					header: node.owner.copc.header,
+					eb: node.owner.copc.eb,
+					pointCount: node.nodeinfo.pointCount,
+					nodemin: node.bounds.slice(0, 3),
+				});
+			} catch (e) {
+				console.log('Failed:', e);
 			}
 		}
 	};
@@ -67007,22 +66981,24 @@ void main() {
 		constructor(node) { this.node = node; }
 
 		push(las) {
+			const { isFullFile, compressed, header, eb, pointCount, nodemin } = las;
+
 			let workerPath = Potree.scriptPath +
 				'/workers/EptLaszipDecoderWorker.js';
 			let worker = Potree.workerPool.getWorker(workerPath);
+			const pointAttributes = this.node.owner.pointAttributes;
 
 			worker.onmessage = (e) => {
 				let g = new BufferGeometry();
-				let numPoints = las.pointsCount;
 
 				let positions = new Float32Array(e.data.position);
 				let colors = new Uint8Array(e.data.color);
-
+				
 				let intensities = new Float32Array(e.data.intensity);
 				let classifications = new Uint8Array(e.data.classification);
 				let returnNumbers = new Uint8Array(e.data.returnNumber);
 				let numberOfReturns = new Uint8Array(e.data.numberOfReturns);
-				let pointSourceIDs = new Uint16Array(e.data.pointSourceID);
+				let pointSourceIds = new Uint16Array(e.data.pointSourceId);
 				let indices = new Uint8Array(e.data.indices);
 				let gpsTime = new Float32Array(e.data.gpsTime);
 
@@ -67039,14 +67015,28 @@ void main() {
 				g.setAttribute('number of returns',
 						new BufferAttribute(numberOfReturns, 1));
 				g.setAttribute('source id',
-						new BufferAttribute(pointSourceIDs, 1));
+						new BufferAttribute(pointSourceIds, 1));
 				g.setAttribute('indices',
 						new BufferAttribute(indices, 4));
-				g.setAttribute('gpsTime',
+				g.setAttribute('gps-time',
 						new BufferAttribute(gpsTime, 1));
 				this.node.gpsTime = e.data.gpsMeta;
 
 				g.attributes.indices.normalized = true;
+
+				for (const key in e.data.ranges) {
+					const range = e.data.ranges[key];
+					const attribute = pointAttributes.attributes.find(a => a.name === key);
+					if (attribute) {
+						attribute.range[0] = Math.min(attribute.range[0], range[0]);
+						attribute.range[1] = Math.max(attribute.range[1], range[1]);
+
+						// May not be right, but we need something here or we crash.
+						if (!attribute.initialRange) {
+							attribute.initialRange = attribute.range;
+						}
+					}
+				}
 
 				let tightBoundingBox = new Box3(
 					new Vector3().fromArray(e.data.tightBoundingBox.min),
@@ -67056,24 +67046,15 @@ void main() {
 				this.node.doneLoading(
 					g,
 					tightBoundingBox,
-					numPoints,
+					pointCount,
 					new Vector3(...e.data.mean));
 
 				Potree.workerPool.returnWorker(workerPath, worker);
 			};
 
-			let message = {
-				buffer: las.arrayb,
-				numPoints: las.pointsCount,
-				pointSize: las.pointSize,
-				pointFormatID: las.pointsFormatId,
-				scale: las.scale,
-				offset: las.offset,
-				mins: las.mins,
-				maxs: las.maxs
-			};
+			let message = { isFullFile, compressed, header, eb, pointCount, nodemin };
 
-			worker.postMessage(message, [message.buffer]);
+			worker.postMessage(message, [message.compressed]);
 		};
 	};
 
@@ -75855,9 +75836,19 @@ ENDSEC
 
 					<li><span data-i18n="appearance.extra_range"></span>: <span id="lblExtraRange"></span> <div id="sldExtraRange"></div></li>
 
-					<li>Gamma: <span id="lblExtraGamma"></span> <div id="sldExtraGamma"></div></li>
-					<li>Brightness: <span id="lblExtraBrightness"></span> <div id="sldExtraBrightness"></div></li>
-					<li>Contrast: <span id="lblExtraContrast"></span> <div id="sldExtraContrast"></div></li>
+					<li>
+						<selectgroup id="extra_gradient_repeat_option">
+							<option id="extra_gradient_repeat_clamp" value="CLAMP">Clamp</option>
+							<option id="extra_gradient_repeat_repeat" value="REPEAT">Repeat</option>
+							<option id="extra_gradient_repeat_mirrored_repeat" value="MIRRORED_REPEAT">Mirrored Repeat</option>
+						</selectgroup>
+					</li>
+
+					<li>
+						<span>Gradient Scheme:</span>
+						<div id="extra_gradient_scheme_selection" class="gradient_scheme" style="display: flex; padding: 1em 0em">
+						</div>
+					</li>
 				</div>
 				
 				<div id="materials.matcap_container">
@@ -75896,7 +75887,7 @@ ENDSEC
 
 					<li>
 						<span>Gradient Scheme:</span>
-						<div id="elevation_gradient_scheme_selection" style="display: flex; padding: 1em 0em">
+						<div id="elevation_gradient_scheme_selection" class="gradient_scheme" style="display: flex; padding: 1em 0em">
 						</div>
 					</li>
 				</div>
@@ -76240,24 +76231,26 @@ ENDSEC
 			{
 				const schemes = Object.keys(Potree.Gradients).map(name => ({name: name, values: Gradients[name]}));
 
-				let elSchemeContainer = panel.find("#elevation_gradient_scheme_selection");
+				let elSchemeContainers = panel.find("div.gradient_scheme");
 
 				for(let scheme of schemes){
-					let elScheme = $(`
-					<span style="flex-grow: 1;">
-					</span>
-				`);
+					elSchemeContainers.each(function(index, container){
+						let elScheme = $(`
+						<span style="flex-grow: 1;">
+						</span>
+					`);
 
-					const svg = Potree.Utils.createSvgGradient(scheme.values);
-					svg.setAttributeNS(null, "class", `button-icon`);
+						const svg = Potree.Utils.createSvgGradient(scheme.values);
+						svg.setAttributeNS(null, "class", `button-icon`);
 
-					elScheme.append($(svg));
+						elScheme.append($(svg));
 
-					elScheme.click( () => {
-						material.gradient = Gradients[scheme.name];
+						elScheme.click( () => {
+							material.gradient = Gradients[scheme.name];
+						});
+
+						$(container).append(elScheme);
 					});
-
-					elSchemeContainer.append(elScheme);
 				}
 			}
 
@@ -76509,6 +76502,19 @@ ENDSEC
 
 				{
 					let elGradientRepeat = panel.find("#gradient_repeat_option");
+					elGradientRepeat.selectgroup({title: "Gradient"});
+
+					elGradientRepeat.find("input").click( (e) => {
+						this.viewer.setElevationGradientRepeat(ElevationGradientRepeat[e.target.value]);
+					});
+
+					let current = Object.keys(ElevationGradientRepeat)
+						.filter(key => ElevationGradientRepeat[key] === this.viewer.elevationGradientRepeat);
+					elGradientRepeat.find(`input[value=${current}]`).trigger("click");
+				}
+
+				{
+					let elGradientRepeat = panel.find("#extra_gradient_repeat_option");
 					elGradientRepeat.selectgroup({title: "Gradient"});
 
 					elGradientRepeat.find("input").click( (e) => {
@@ -80442,7 +80448,8 @@ ENDSEC
 				["ES", "es"],
 				["SE", "se"],
 				["ZH", "zh"],
-				["IT", "it"]
+				["IT", "it"],
+				["CA", "ca"]
 			];
 
 			let elLanguages = $('#potree_languages');
@@ -80828,7 +80835,7 @@ ENDSEC
 			};
 
 			let drop = (e) => {
-				viewer.scene.scene.remove(this.s);
+				this.viewer.scene.scene.remove(this.s);
 				this.s.removeEventListener("drag", drag);
 				this.s.removeEventListener("drop", drop);
 			};
@@ -89234,7 +89241,7 @@ ENDSEC
 				i18n.init({
 					lng: 'en',
 					resGetPath: Potree.resourcePath + '/lang/__lng__/__ns__.json',
-					preload: ['en', 'fr', 'de', 'jp', 'se', 'es', 'zh', 'it'],
+					preload: ['en', 'fr', 'de', 'jp', 'se', 'es', 'zh', 'it','ca'],
 					getAsync: true,
 					debug: false
 				}, function (t) {
@@ -90402,14 +90409,23 @@ ENDSEC
 			// load pointcloud
 			if (!path){
 				// TODO: callback? comment? Hello? Bueller? Anyone?
-			} else if (path.indexOf('ept.json') > 0) {
+			} else if (path.includes('ept.json')) {
 				EptLoader.load(path, function(geometry) {
 					if (!geometry) {
 						console.error(new Error(`failed to load point cloud from URL: ${path}`));
 					}
 					else {
 						let pointcloud = new PointCloudOctree(geometry);
-						//loaded(pointcloud);
+						resolve({type: 'pointcloud_loaded', pointcloud: pointcloud});
+					}
+				});
+			} else if (path.includes('.copc.laz')) {
+				CopcLoader.load(path, function(geometry) {
+					if (!geometry) {
+						console.error(new Error(`failed to load point cloud from URL: ${path}`));
+					}
+					else {
+						let pointcloud = new PointCloudOctree(geometry);
 						resolve({type: 'pointcloud_loaded', pointcloud: pointcloud});
 					}
 				});
@@ -90572,13 +90588,14 @@ ENDSEC
 	exports.ClipVolume = ClipVolume;
 	exports.ClippingTool = ClippingTool;
 	exports.Compass = Compass;
+	exports.CopcLaszipLoader = CopcLaszipLoader;
+	exports.CopcLoader = CopcLoader;
 	exports.DeviceOrientationControls = DeviceOrientationControls;
 	exports.EarthControls = EarthControls;
 	exports.ElevationGradientRepeat = ElevationGradientRepeat;
 	exports.Enum = Enum;
 	exports.EnumItem = EnumItem;
 	exports.EptBinaryLoader = EptBinaryLoader;
-	exports.EptKey = EptKey;
 	exports.EptLaszipLoader = EptLaszipLoader;
 	exports.EptLazBatcher = EptLazBatcher;
 	exports.EptLoader = EptLoader;
@@ -90614,8 +90631,9 @@ ENDSEC
 	exports.PointAttribute = PointAttribute;
 	exports.PointAttributeTypes = PointAttributeTypes;
 	exports.PointAttributes = PointAttributes;
+	exports.PointCloudCopcGeometry = PointCloudCopcGeometry;
+	exports.PointCloudCopcGeometryNode = PointCloudCopcGeometryNode;
 	exports.PointCloudEptGeometry = PointCloudEptGeometry;
-	exports.PointCloudEptGeometryNode = PointCloudEptGeometryNode;
 	exports.PointCloudMaterial = PointCloudMaterial$1;
 	exports.PointCloudOctree = PointCloudOctree;
 	exports.PointCloudOctreeGeometry = PointCloudOctreeGeometry;

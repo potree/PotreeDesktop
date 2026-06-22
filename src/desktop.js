@@ -479,6 +479,8 @@ export async function dropHandler(event){
 			cloudJsFiles.push(file.path);
 		}else if(isFile && path.indexOf("metadata.json") >= 0){
 			cloudJsFiles.push(file.path);
+		}else if(isFile && path.indexOf("copc.laz") >= 0){
+			cloudJsFiles.push(file.path);
 		}else if(isFile){
 			const extension = np.extname(path).toLowerCase();
 
